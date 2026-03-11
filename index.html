@@ -1,0 +1,1705 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Fin - Asisten Warung Mbah Marto</title>
+    
+    <!-- Konfigurasi PWA & Ikon Layar Utama -->
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Q-Nota">
+    <meta name="application-name" content="Q-Nota">
+    
+    <!-- Script Generate Logo PNG Kualitas Tinggi Otomatis -->
+    <script>
+        (function() {
+            var canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            var ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = '#4f46e5';
+            ctx.fillRect(0, 0, 512, 512);
+            
+            ctx.fillStyle = 'white';
+            ctx.font = '900 380px Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 20;
+            
+            ctx.strokeText('Q', 256, 285);
+            ctx.fillText('Q', 256, 285);
+            
+            var dataURL = canvas.toDataURL('image/png');
+            
+            var appleIcon = document.createElement('link');
+            appleIcon.rel = 'apple-touch-icon';
+            appleIcon.href = dataURL;
+            document.head.appendChild(appleIcon);
+            
+            var stdIcon = document.createElement('link');
+            stdIcon.rel = 'icon';
+            stdIcon.type = 'image/png';
+            stdIcon.href = dataURL;
+            document.head.appendChild(stdIcon);
+        })();
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore-compat.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        body { 
+            font-family: 'Inter', sans-serif; 
+            -webkit-tap-highlight-color: transparent; 
+            background-color: #f8fafc; 
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            overscroll-behavior-y: none;
+            transition: background-color 0.3s ease;
+        }
+
+        .dark body { background-color: #020617; } /* slate-950 */
+        
+        input, select, textarea {
+            -webkit-user-select: auto;
+            user-select: auto;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        input[type="date"], input[type="month"] { position: relative; }
+        input[type="date"]::-webkit-inner-spin-button, input[type="month"]::-webkit-inner-spin-button { display: none; -webkit-appearance: none; }
+        
+        .chat-enter { animation: slideUpFade 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        @keyframes slideUpFade { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        
+        .modal-enter { animation: modalIn 0.2s ease-out forwards; }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out forwards; }
+        .animate-status { animation: slideUpFade 0.3s ease-out forwards; }
+        
+        .glass-nav { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+        .dark .glass-nav { background: rgba(2, 6, 23, 0.95); border-color: rgba(255, 255, 255, 0.1); }
+        .glass-bubble { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+        .dark .glass-bubble { background: rgba(30, 41, 59, 0.9); border-color: rgba(71, 85, 105, 0.5); color: #f1f5f9; }
+
+        .markdown-body table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px; font-size: 11px; }
+        .markdown-body th { background-color: #e2e8f0; color: #1e293b; font-weight: 800; text-transform: uppercase; padding: 8px; border: 1px solid #cbd5e1; }
+        .markdown-body td { padding: 8px; border: 1px solid #e2e8f0; color: #334155; }
+        .markdown-body p { margin-bottom: 8px; }
+        .markdown-body strong { color: #4f46e5; font-weight: 800; }
+
+        /* Dark Mode Markdown Override */
+        .dark .markdown-body th { background-color: #1e293b; color: #f8fafc; border-color: #334155; }
+        .dark .markdown-body td { border-color: #334155; color: #cbd5e1; }
+        .dark .markdown-body strong { color: #818cf8; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        const Icons = {
+            Trash: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>,
+            Edit: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>,
+            ShopBag: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
+            Wallet: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9.42a2 2 0 0 0-1.5-1.92L4.5 6"/><path d="M15 13h2"/><path d="M15 17h2"/></svg>,
+            Bot: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/><path d="M12 2v2"/><path d="M12 8v0"/></svg>,
+            Calendar: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>,
+            Archive: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>,
+            Send: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>,
+            X: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>,
+            Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>,
+            Warn: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>,
+            Gear: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>,
+            ChevronUp: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>,
+            ChevronDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>,
+            Power: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>,
+            MessageCircle: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>,
+            Copy: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>,
+            Mic: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>,
+            Refresh: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>,
+            Chart: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>,
+            Camera: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>,
+            Minus: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>,
+            Sun: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>,
+            Moon: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        };
+
+        const initialItems = ["Ayam Gede (Mentah)", "Lele Segar", "Telur Ayam", "Beras", "Minyak Goreng", "Gula Pasir", "Gas LPG 3Kg", "Sabun Cuci", "Lunch Box Size M", "Cup Minum", "Kangkung", "Tahu Putih (Mentah)"];
+        const incomeTypes = ["Shopeefood", "Grabfood", "Gofood", "Offline Cash", "Offline QRIS"];
+        const commonUnits = ['Kg', 'Pcs', 'Gram', 'Liter', 'Ikat', 'Bungkus', 'Pack'];
+        const defaultSettings = { targetOmzet: 500000, maxBelanja: 300000, saldoAwal: 1000000 };
+
+        const getLocalDateStr = (d = new Date()) => {
+            const date = new Date(d);
+            return new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+        };
+
+        const toTitleCase = (str) => {
+            return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+        };
+
+        let isLocalMode = false;
+        let auth, db;
+        let appId = 'q-nota-local';
+
+        try {
+            const firebaseConfig = JSON.parse(__firebase_config);
+            appId = typeof __app_id !== 'undefined' ? __app_id : 'q-nota-app';
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+            auth = firebase.auth();
+            db = firebase.firestore();
+        } catch (e) {
+            isLocalMode = true;
+        }
+
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [status, setStatus] = useState({ show: false, message: '', type: 'success' });
+            const [showNav, setShowNav] = useState(true);
+            const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('fin-darkmode') === 'true');
+            
+            const [cart, setCart] = useState(() => JSON.parse(localStorage.getItem('fin-cart') || '[]'));
+            const [history, setHistory] = useState(() => JSON.parse(localStorage.getItem('fin-history') || '[]'));
+            const [incomes, setIncomes] = useState(() => JSON.parse(localStorage.getItem('fin-incomes') || '[]'));
+            const [agendas, setAgendas] = useState(() => JSON.parse(localStorage.getItem('fin-agendas') || '[]'));
+            const [itemsDB, setItemsDB] = useState(() => JSON.parse(localStorage.getItem('fin-master') || JSON.stringify(initialItems)));
+            const [settings, setSettings] = useState(() => JSON.parse(localStorage.getItem('fin-settings') || JSON.stringify(defaultSettings)));
+            const [holidays, setHolidays] = useState(() => JSON.parse(localStorage.getItem('fin-holidays') || '[]'));
+            
+            const [user, setUser] = useState(null);
+
+            const [isChatOpen, setIsChatOpen] = useState(false);
+            const [hasNewFinAlert, setHasNewFinAlert] = useState(false);
+            const [chats, setChats] = useState([]);
+            const [chatInput, setChatInput] = useState('');
+            const [isTyping, setIsTyping] = useState(false);
+            const [isListening, setIsListening] = useState(false);
+            const [showPrompts, setShowPrompts] = useState(false); 
+            const [attachedImage, setAttachedImage] = useState(null);
+            const fileInputRef = useRef(null);
+            const chatEndRef = useRef(null);
+
+            // STATE UNTUK DRAG BUBBLE FIN
+            const [finPos, setFinPos] = useState({ right: 20, bottom: 96 }); 
+            const isDraggingFin = useRef(false);
+            const finStartPos = useRef({ x: 0, y: 0, right: 0, bottom: 0 });
+            const [hasDragged, setHasDragged] = useState(false);
+
+            const [editingId, setEditingId] = useState(null);
+            const [itemName, setItemName] = useState('');
+            const [qty, setQty] = useState('');
+            const [unit, setUnit] = useState('Kg');
+            const [totalNominal, setTotalNominal] = useState('');
+            const [transactionDate, setTransactionDate] = useState(getLocalDateStr());
+            const [showSuggestions, setShowSuggestions] = useState(false);
+            const [currentNoteId, setCurrentNoteId] = useState(null);
+
+            const [incomeDate, setIncomeDate] = useState(getLocalDateStr());
+            const [incomeSource, setIncomeSource] = useState('');
+            const [incomeAmount, setIncomeAmount] = useState('');
+            const [showIncomeSuggestions, setShowIncomeSuggestions] = useState(false);
+
+            const [agendaDate, setAgendaDate] = useState(getLocalDateStr());
+            const [agendaTitle, setAgendaTitle] = useState('');
+            const [agendaAmount, setAgendaAmount] = useState('');
+            const [agendaType, setAgendaType] = useState('keluar');
+            const [reminderModal, setReminderModal] = useState({ show: false, items: [] });
+            const hasCheckedAgenda = useRef(false);
+
+            const [expandedDay, setExpandedDay] = useState(null);
+            const [filterMonth, setFilterMonth] = useState(getLocalDateStr().substring(0, 7));
+            const [dashboardMonth, setDashboardMonth] = useState(getLocalDateStr().substring(0, 7));
+
+            const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null });
+            const [showSettings, setShowSettings] = useState(false);
+            const [isSaving, setIsSaving] = useState(false);
+            const [isExited, setIsExited] = useState(false); 
+
+            useEffect(() => {
+                if (isDarkMode) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+                localStorage.setItem('fin-darkmode', isDarkMode);
+            }, [isDarkMode]);
+
+            const formatNumber = (num) => new Intl.NumberFormat('id-ID').format(num);
+
+            const formatInputRp = (val) => {
+                if (val === undefined || val === null || val === '') return '';
+                let numStr = val.toString().replace(/[^0-9]/g, '');
+                if (numStr === '') return '';
+                return 'Rp ' + formatNumber(numStr);
+            };
+            const parseInputRp = (val) => val.toString().replace(/[^0-9]/g, '');
+
+            const showStatus = (message, type = 'success') => {
+                setStatus({ show: true, message, type });
+                setTimeout(() => setStatus(prev => ({ ...prev, show: false })), 3000);
+            };
+
+            const paths = useMemo(() => {
+                if (isLocalMode || !user) return null;
+                return { history: `artifacts/${appId}/users/${user.uid}/history`, master: `artifacts/${appId}/users/${user.uid}/master/data`, cart: `artifacts/${appId}/users/${user.uid}/current/cart` };
+            }, [user]);
+
+            const handleResetAllData = () => {
+                setConfirmModal({
+                    show: true,
+                    title: 'Reset Data Bulanan?',
+                    message: 'AWAS! Semua data Pemasukan, Pengeluaran, Agenda, dan Arsip akan dihapus secara PERMANEN untuk memulai bulan baru. (Master bahan & Target Omzet aman). Lanjutkan?',
+                    onConfirm: async () => {
+                        setConfirmModal({ ...confirmModal, show: false });
+                        showStatus('Membersihkan data...', 'loading');
+                        
+                        setHistory([]); setIncomes([]); setAgendas([]); setCart([]);
+                        
+                        if (!isLocalMode && user && paths) {
+                            try {
+                                const snapshot = await db.collection(paths.history).get();
+                                const batch = db.batch();
+                                snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                                await batch.commit();
+                            } catch (e) { console.error("Gagal membersihkan cloud", e); }
+                        }
+                        
+                        setShowSettings(false);
+                        showStatus('Semua Data Berhasil Direset!');
+                    }
+                });
+            };
+
+            const handleResetChat = () => {
+                if(window.confirm('Bersihkan riwayat obrolan dengan Fin?')) {
+                    let greeting = `Halo Bos! Fin sekarang makin super lho. Bos bisa masukkan banyak data sekaligus pakai suara atau ketik secara bebas tanpa aturan kaku. \n\nContoh: *"fin catat pengeluaran beras 5 kg 50 rb dan ayam gede 3 kg 120 rb"* \n\nNanti Fin otomatis paham dan memasukkannya ke sistem. Ada yang mau dicatat? 🚀`;
+                    setChats([{ id: Date.now(), sender: 'fin', text: greeting, type: 'text' }]);
+                }
+            };
+
+            const handleExit = () => {
+                setConfirmModal({
+                    show: true,
+                    title: 'Keluar Aplikasi?',
+                    message: 'Ingin menutup sesi ini? Tenang Bos, semua data Anda sudah otomatis tersimpan di dalam brankas.',
+                    onConfirm: () => {
+                        setConfirmModal({ show: false, title: '', message: '', onConfirm: null });
+                        setIsExited(true); 
+                        
+                        setTimeout(() => { window.close(); }, 500);
+                    }
+                });
+            };
+
+            const getBalanceUpTo = (targetDateStr) => {
+                let bal = settings.saldoAwal;
+                bal += incomes.filter(i => i.date <= targetDateStr).reduce((s,i) => s + i.amount, 0);
+                bal -= history.filter(h => h.date <= targetDateStr).reduce((s,h) => s + h.total, 0);
+                agendas.filter(a => a.date <= targetDateStr).forEach(a => {
+                    if (a.type === 'masuk') bal += a.amount; else bal -= a.amount;
+                });
+                return bal;
+            };
+
+            const currentBalance = useMemo(() => getBalanceUpTo(getLocalDateStr()), [incomes, history, agendas, settings]);
+
+            useEffect(() => { localStorage.setItem('fin-cart', JSON.stringify(cart)); }, [cart]);
+            useEffect(() => { localStorage.setItem('fin-history', JSON.stringify(history)); }, [history]);
+            useEffect(() => { localStorage.setItem('fin-incomes', JSON.stringify(incomes)); }, [incomes]);
+            useEffect(() => { localStorage.setItem('fin-agendas', JSON.stringify(agendas)); }, [agendas]);
+            useEffect(() => { localStorage.setItem('fin-master', JSON.stringify(itemsDB)); }, [itemsDB]);
+            useEffect(() => { localStorage.setItem('fin-settings', JSON.stringify(settings)); }, [settings]);
+            useEffect(() => { localStorage.setItem('fin-holidays', JSON.stringify(holidays)); }, [holidays]);
+
+            useEffect(() => { if (isChatOpen) chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chats, isTyping, isChatOpen]);
+
+            useEffect(() => {
+                const login = async () => {
+                    if (isLocalMode) { setUser({ uid: 'local_user', displayName: 'Guest' }); return; }
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await auth.signInWithCustomToken(__initial_auth_token);
+                        else await auth.signInAnonymously();
+                    } catch (e) { console.error(e); }
+                };
+                login();
+                if (!isLocalMode) return auth.onAuthStateChanged(setUser);
+            }, []);
+
+            useEffect(() => {
+                if (isLocalMode || !user || !paths) return;
+                const unsubHistory = db.collection(paths.history).onSnapshot(snap => {
+                    const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    setHistory(data.sort((a, b) => b.timestamp - a.timestamp));
+                });
+                return () => unsubHistory();
+            }, [user, paths]);
+
+            useEffect(() => {
+                if (hasCheckedAgenda.current) return;
+                const checkAgendas = () => {
+                    const todayStr = getLocalDateStr();
+                    const todayObj = new Date(todayStr);
+                    const threeDaysObj = new Date(todayObj);
+                    threeDaysObj.setDate(todayObj.getDate() + 3);
+                    const threeDaysStr = getLocalDateStr(threeDaysObj);
+
+                    const pending = agendas.filter(a => {
+                        if (a.isPaid) return false;
+                        return a.date >= todayStr && a.date <= threeDaysStr;
+                    });
+
+                    if (pending.length > 0) {
+                        setReminderModal({ show: true, items: pending });
+                        hasCheckedAgenda.current = true;
+                    } else if (agendas.length > 0) {
+                        hasCheckedAgenda.current = true; 
+                    }
+                };
+                const timer = setTimeout(checkAgendas, 1500); 
+                return () => clearTimeout(timer);
+            }, [agendas]);
+
+            useEffect(() => {
+                if (chats.length === 0) {
+                    const todayStr = getLocalDateStr();
+                    const todayInc = incomes.filter(i => i.date === todayStr).reduce((s,i) => s + i.amount, 0);
+                    
+                    const todayObj = new Date(todayStr);
+                    const threeDaysObj = new Date(todayObj);
+                    threeDaysObj.setDate(todayObj.getDate() + 3);
+                    const threeDaysStr = getLocalDateStr(threeDaysObj);
+                    
+                    const pendingBills = agendas.filter(a => !a.isPaid && a.date >= todayStr && a.date <= threeDaysStr).slice(0, 2);
+
+                    let greeting = `Halo Bos! 👋\n\n`;
+                    if (todayInc === 0) {
+                        greeting += `Hari ini belum ada omzet masuk nih, tetap semangat ya bukanya! 💪\n\n`;
+                    } else {
+                        greeting += `Mantap, hari ini sudah ada pemasukan **Rp ${formatNumber(todayInc)}**. Gas terus Bos! 🔥\n\n`;
+                    }
+
+                    if (pendingBills.length > 0) {
+                        greeting += `⚠️ **Pengingat Tagihan Terdekat:**\n`;
+                        pendingBills.forEach(b => greeting += `- ${b.title} (Rp ${formatNumber(b.amount)})\n`);
+                        greeting += `\n`;
+                    }
+                    
+                    greeting += `Bos bisa langsung ketik transaksi baru (misal: *"beras 50rb ayam 100rb"*), atau tap tombol **Analisa Kas** di bawah agar Fin bantu cek profit & kebocoran warung bulan ini! 🚀`;
+
+                    setChats([{ id: Date.now(), sender: 'fin', text: greeting, type: 'text' }]);
+                }
+            }, []);
+
+            const processAddIncome = (data) => {
+                let rawAmount = (data.amount !== undefined && data.amount !== 0) ? data.amount : (data.total !== undefined ? data.total : 0);
+                let safeAmount = parseFloat(rawAmount.toString().replace(/[^0-9.-]/g, ''));
+                if (isNaN(safeAmount)) safeAmount = 0;
+                
+                const newIncome = { id: 'inc-' + Date.now() + Math.random(), date: data.date || getLocalDateStr(), source: toTitleCase(data.source || 'Pemasukan'), amount: safeAmount, timestamp: Date.now() };
+                setIncomes(prev => [newIncome, ...prev].sort((a,b) => b.timestamp - a.timestamp));
+                showStatus('Pemasukan Berhasil Ditambahkan Otomatis!');
+            };
+
+            const processAddAgenda = (data) => {
+                let rawAmount = (data.amount !== undefined && data.amount !== 0) ? data.amount : (data.total !== undefined ? data.total : 0);
+                let safeAmount = parseFloat(rawAmount.toString().replace(/[^0-9.-]/g, ''));
+                if (isNaN(safeAmount)) safeAmount = 0;
+
+                const newAg = { id: 'agd-'+Date.now() + Math.random(), date: data.date || getLocalDateStr(), title: toTitleCase(data.title || 'Agenda'), amount: safeAmount, type: data.agendaType || 'keluar', isPaid: false };
+                setAgendas(prev => [...prev, newAg].sort((a,b) => new Date(a.date) - new Date(b.date)));
+                showStatus('Tagihan/Operasional Berhasil Ditambahkan Otomatis!');
+            };
+
+            const processAddExpense = async (data) => {
+                let itemsList = Array.isArray(data.items) ? data.items : [];
+                let rawTotal = (data.total !== undefined && data.total !== 0) ? data.total : (data.amount !== undefined ? data.amount : 0);
+                let safeTotal = parseFloat(rawTotal.toString().replace(/[^0-9.-]/g, ''));
+                if (isNaN(safeTotal)) safeTotal = 0;
+                
+                itemsList = itemsList.map((i, idx) => {
+                    const iQty = i.qty ? parseFloat(i.qty.toString().replace(/[^0-9.-]/g, '')) : 1;
+                    const rawITotal = i.total || i.price || i.amount || 0;
+                    const iTotal = parseFloat(rawITotal.toString().replace(/[^0-9.-]/g, ''));
+                    return {
+                        id: Date.now() + idx + Math.random(),
+                        name: toTitleCase(i.name || 'Item Tidak Diketahui'),
+                        qty: isNaN(iQty) ? 1 : iQty,
+                        unit: i.unit || 'Pcs',
+                        total: isNaN(iTotal) ? 0 : iTotal
+                    };
+                });
+
+                if (itemsList.length === 0 && safeTotal > 0) {
+                    itemsList = [{ id: Date.now() + Math.random(), name: "Belanja Bahan Baku", qty: 1, unit: "Ls", total: safeTotal }];
+                } else if (itemsList.length > 0) {
+                    safeTotal = itemsList.reduce((acc, curr) => acc + curr.total, 0);
+                }
+
+                const noteId = (isLocalMode || !paths) ? 'local-' + Date.now() + Math.random() : db.collection(paths.history).doc().id;
+                const noteData = {
+                    id: noteId,
+                    date: data.date || getLocalDateStr(),
+                    items: itemsList,
+                    total: safeTotal,
+                    timestamp: Date.now()
+                };
+
+                if (isLocalMode || !paths) {
+                    setHistory(prev => [noteData, ...prev].sort((a, b) => b.timestamp - a.timestamp));
+                } else {
+                    await db.collection(paths.history).doc(noteId).set(noteData);
+                }
+                showStatus('Arsip Pengeluaran Ditambahkan!');
+            };
+
+            const handleFileChange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    setAttachedImage({
+                        url: event.target.result,
+                        data: event.target.result.split(',')[1],
+                        mimeType: file.type
+                    });
+                };
+                reader.readAsDataURL(file);
+            };
+
+            const fetchFinAI = async (userText, imageData, chatHistory) => {
+                const apiKey = "AIzaSyC1xfhcCcOwDpkKPD9x8qM4OBZ1NZ0MOu0"; 
+                var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
+                
+                const todayStr = getLocalDateStr();
+                const currentMonthStr = todayStr.substring(0, 7);
+                
+                const todayIncTotal = incomes.filter(i => i.date === todayStr).reduce((s,i) => s + i.amount, 0);
+                const todayExpTotal = history.filter(h => h.date === todayStr).reduce((s,h) => s + h.total, 0);
+                
+                const monthlyInc = incomes.filter(i => i.date.startsWith(currentMonthStr)).reduce((s,i) => s + i.amount, 0);
+                const monthlyExp = history.filter(h => h.date.startsWith(currentMonthStr)).reduce((s,h) => s + h.total, 0);
+
+                const sysPrompt = `Anda adalah "Fin", Asisten & Manajer Keuangan internal untuk web app "Warung Mbah Marto".
+Gaya bicara: Profesional, cerdas, santai, memanggil pengguna "Bos".
+
+Data Kas Saat Ini:
+- Kas Tersedia: Rp ${formatNumber(currentBalance)}
+- Rekap Hari Ini (${todayStr}) -> Masuk: Rp ${formatNumber(todayIncTotal)} | Keluar: Rp ${formatNumber(todayExpTotal)}
+
+ATURAN KHUSUS UNTUK GAMBAR (FOTO STRUK/SCREENSHOT):
+1. JANGAN langsung menghasilkan 'actions' saat baru menerima gambar. Analisa dan tanyakan konfirmasi dulu.
+2. ANALISA GAMBAR DENGAN TELITI: Pisahkan transaksi beda tanggal menjadi objek terpisah (MULTI TRANSAKSI). 
+   - NOTA STRUK: Rinci item belanja ke dalam array 'items'.
+   - REKAP PENGELUARAN (Hanya tanggal & nominal tanpa rincian item): WAJIB buat 1 item dummy di dalam array "items" dengan rincian persis seperti ini: {"name": "Belanja Bahan Baku", "qty": 1, "unit": "Ls", "total": <nominal_hari_itu>}.
+3. Tuliskan RINCIAN LENGKAP di 'reply' lalu TANYAKAN KONFIRMASI (Maukah Bos menyimpan data ini?). Kosongkan array 'actions' [].
+4. KETIKA PENGGUNA MENGONFIRMASI ("Ya", "Simpan", "Gass", "Oke"): 
+   - Anda WAJIB membaca ulang pesan Anda SEBELUMNYA yang berisi rincian.
+   - Ekstrak SEMUA rincian transaksi tersebut ke dalam array 'actions' HARI INI JUGA.
+   - JANGAN MENGHASILKAN ACTIONS KOSONG JIKA PENGGUNA BILANG "YA".
+   - Pastikan nominal uang (amount/total/qty) berisi ANGKA MURNI (Number) yang tepat sesuai rincian sebelumnya, bukan 0.
+
+ANDA WAJIB MEMBALAS HANYA DENGAN JSON MURNI DENGAN STRUKTUR SEPERTI INI:
+{
+  "reply": "Pesan balasan Anda. Gunakan \\n untuk baris baru.",
+  "actions": [
+     // Contoh format Pemasukan:
+     {"type": "add_income", "data": {"date": "YYYY-MM-DD", "source": "Grabfood", "amount": 102829}},
+     // Contoh format Belanja (Ada item rincian struk): 
+     {"type": "add_expense", "data": {"date": "YYYY-MM-DD", "items": [{"name": "Beras", "qty": 1, "unit": "Kg", "total": 15000}]}},
+     // Contoh format Pengeluaran (Hanya summary total/arsip screenshot tanpa rincian): 
+     {"type": "add_expense", "data": {"date": "YYYY-MM-DD", "items": [{"name": "Belanja Bahan Baku", "qty": 1, "unit": "Ls", "total": 250000}]}}
+  ]
+}
+
+ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
+
+                let conversationText = "=== RIWAYAT OBROLAN ===\n";
+                // Payload Diet - Hanya kirim 2 pesan terakhir untuk menghindari limit dan beban token berlebih
+                let safeHistory = chatHistory.slice(-2); 
+                
+                safeHistory.forEach((chat) => {
+                    const roleName = chat.sender === 'fin' ? 'Fin' : 'Bos';
+                    const msg = chat.text ? chat.text : "[Melampirkan Gambar]";
+                    conversationText += `${roleName}: ${msg}\n\n`;
+                });
+
+                conversationText += "Tugas: Berikan respons JSON murni sesuai instruksi sistem berdasarkan konteks riwayat obrolan di atas.";
+
+                let contentObj;
+                if (imageData) {
+                    contentObj = { role: "user", parts: [{ text: conversationText }, { inlineData: { mimeType: imageData.mimeType, data: imageData.data } }] };
+                } else {
+                    contentObj = { parts: [{ text: conversationText }] };
+                }
+
+                const payload = {
+                    contents: [contentObj],
+                    systemInstruction: { parts: [{ text: sysPrompt }] },
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        temperature: 0.2
+                    }
+                };
+
+                const backoffDelays = [3000, 8000, 15000, 30000]; // 3s, 8s, 15s, 30s
+                
+                for (let i = 0; i <= backoffDelays.length; i++) {
+                    try {
+                        const res = await fetch(url, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }});
+                        if (!res.ok) {
+                            let errMsg = res.statusText;
+                            try {
+                                const errData = await res.json();
+                                errMsg = errData.error?.message || errMsg;
+                            } catch(e) {}
+                            const error = new Error(`HTTP Error ${res.status}: ${errMsg}`);
+                            error.status = res.status;
+                            if (res.status === 400 || res.status === 401 || res.status === 403) error.isFatal = true;
+                            throw error;
+                        }
+                        const data = await res.json();
+                        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                        
+                        if (!rawText) throw new Error("AI memberikan respons kosong atau format diblokir.");
+
+                        let cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+                        cleanJson = cleanJson.replace(/\n(?! *["}\]])/g, "\\n"); 
+                        
+                        return JSON.parse(cleanJson);
+                    } catch (err) {
+                        if (err.isFatal || i === backoffDelays.length) {
+                            console.error("FetchFinAI Final Error:", err);
+                            let userMsg = `Waduh Bos, Fin agak pusing nih bacanya. Detail Error: ${err.message}. Coba ulangi dengan kalimat lain ya.`;
+                            
+                            if (err.status === 429) {
+                                userMsg = `Waduh Bos, Kuota API Harian kita benar-benar habis nih (Limit 429). Solusi permanen: Aktifkan billing Pay-as-you-go di Google AI Studio agar limit 20 request/hari ini dihapus oleh Google. 🙏`;
+                            }
+                            
+                            return { reply: userMsg, actions: [] };
+                        }
+
+                        if (err.status === 429 && i < backoffDelays.length) {
+                            showStatus(`Sistem antre (Limit API). Coba lagi otomatis dalam ${backoffDelays[i]/1000} dtk...`, 'loading');
+                        }
+                        
+                        await new Promise(r => setTimeout(r, backoffDelays[i]));
+                    }
+                }
+            };
+
+            const handleChatSubmit = async (e, forcedText = null) => {
+                if (e) e.preventDefault();
+                const text = forcedText || chatInput;
+                const imageToProcess = attachedImage;
+                
+                if (!text.trim() && !imageToProcess) return;
+
+                const newUserChat = { id: Date.now(), sender: 'user', text, image: imageToProcess?.url, type: 'text' };
+                setChats(prev => [...prev, newUserChat]);
+                
+                setChatInput('');
+                setAttachedImage(null);
+                setIsTyping(true);
+                
+                const historyToPass = [...chats, newUserChat];
+                const responseObj = await fetchFinAI(text, imageToProcess, historyToPass);
+                
+                setIsTyping(false);
+                
+                if (responseObj && responseObj.reply) {
+                    setChats(prev => [...prev, { id: Date.now()+1, sender: 'fin', text: responseObj.reply, type: 'text' }]);
+                    if (!isChatOpen) setHasNewFinAlert(true);
+
+                    if (responseObj.actions && responseObj.actions.length > 0) {
+                        for (let act of responseObj.actions) {
+                            if (act.type === 'add_income') processAddIncome(act.data);
+                            if (act.type === 'add_expense') processAddExpense(act.data);
+                            if (act.type === 'add_agenda') processAddAgenda(act.data);
+                        }
+                    }
+                }
+            };
+
+            const triggerFinSystemMessage = (msg) => {
+                setChats(prev => [...prev, { id: Date.now()+1, sender: 'fin', text: msg, type: 'text' }]);
+                if (!isChatOpen) setHasNewFinAlert(true);
+            };
+
+            const startListening = () => {
+                if (!('webkitSpeechRecognition' in window)) {
+                    alert("Maaf Bos, browser di perangkat ini belum mendukung fitur suara.");
+                    return;
+                }
+                const recognition = new window.webkitSpeechRecognition();
+                recognition.lang = 'id-ID';
+                recognition.continuous = false;
+                recognition.interimResults = false;
+
+                recognition.onstart = () => setIsListening(true);
+                recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    setChatInput(prev => (prev + " " + transcript).trim());
+                };
+                recognition.onerror = () => setIsListening(false);
+                recognition.onend = () => setIsListening(false);
+                recognition.start();
+            };
+
+            const handleDateChange = (e, setter) => {
+                const val = e.target.value;
+                if (!val) setter(getLocalDateStr()); else setter(val);
+            };
+
+            const handleAddItem = (e) => {
+                e.preventDefault();
+                if (!itemName || !qty) return;
+                const quantity = parseFloat(qty);
+                const total = totalNominal ? parseFloat(totalNominal.toString().replace(/[^0-9]/g, '')) : 0;
+                const standardizedName = toTitleCase(itemName.trim());
+                
+                let newCart = [...cart];
+                if (editingId) {
+                    newCart = cart.map(i => i.id === editingId ? { ...i, name: standardizedName, qty: quantity, unit, total } : i);
+                    setEditingId(null);
+                } else {
+                    newCart = [...cart, { id: Date.now(), name: standardizedName, qty: quantity, unit, total }];
+                }
+                setCart(newCart);
+                if (!itemsDB.some(i => i.toLowerCase() === standardizedName.toLowerCase())) setItemsDB([...itemsDB, standardizedName]);
+                
+                setItemName(''); setQty(''); setTotalNominal(''); setShowSuggestions(false);
+            };
+
+            const startEdit = (item) => {
+                setEditingId(item.id); setItemName(item.name); setQty(item.qty); setUnit(item.unit);
+                setTotalNominal(item.total || ''); setActiveTab('plan'); window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+
+            const handleSaveNote = async () => {
+                if (cart.length === 0) return;
+                setIsSaving(true);
+                showStatus('Menyimpan Nota...', 'loading');
+                
+                const cartTotal = cart.reduce((acc, curr) => acc + curr.total, 0);
+                const isUpdating = currentNoteId !== null;
+
+                try {
+                    const noteData = {
+                        id: currentNoteId || (isLocalMode ? 'local-' + Date.now() : db.collection(paths.history).doc().id),
+                        date: transactionDate,
+                        items: cart,
+                        total: cartTotal,
+                        timestamp: Date.now()
+                    };
+
+                    if (isLocalMode) {
+                        let localHistory = JSON.parse(localStorage.getItem('fin-history') || '[]');
+                        if (currentNoteId) localHistory = localHistory.map(h => h.id === currentNoteId ? noteData : h);
+                        else localHistory.push(noteData);
+                        setHistory(localHistory.sort((a, b) => b.timestamp - a.timestamp));
+                    } else {
+                        if (currentNoteId) await db.collection(paths.history).doc(currentNoteId).set(noteData);
+                        else { const ref = db.collection(paths.history).doc(); noteData.id = ref.id; await ref.set(noteData); }
+                    }
+
+                    if (!isUpdating) {
+                        const totalBelanjaHariIni = history.filter(h => h.date === transactionDate).reduce((sum, h) => sum + h.total, 0) + cartTotal;
+                        
+                        let todayInc = incomes.filter(i => i.date === transactionDate).reduce((s,i) => s + i.amount, 0);
+                        let prevDayObj = new Date(transactionDate); prevDayObj.setDate(prevDayObj.getDate() - 1);
+                        let prevInc = incomes.filter(i => i.date === getLocalDateStr(prevDayObj)).reduce((s,i) => s + i.amount, 0);
+                        let refOmzet = todayInc > 0 ? todayInc : prevInc;
+                        let idealDynamicBudget = refOmzet > 0 ? refOmzet * 0.5 : settings.maxBelanja; 
+
+                        let finMsg = `Bos, belanja senilai **Rp ${formatNumber(cartTotal)}** sudah Fin catat. Kas otomatis terpotong.\n\n`;
+                        
+                        if (totalBelanjaHariIni > idealDynamicBudget && refOmzet > 0) {
+                            let proporsi = Math.round((totalBelanjaHariIni / refOmzet) * 100);
+                            finMsg += `🚨 **WARNING OVERBUDGET!**\nTotal belanja hari ini (Rp ${formatNumber(totalBelanjaHariIni)}) telah menyedot **${proporsi}%** dari omzet acuan kita (Rp ${formatNumber(refOmzet)}).\nPadahal idealnya maksimal 50% lho Bos. Hati-hati profit menipis, besok wajib ngerem belanja ya! 📉`;
+                        } else if (totalBelanjaHariIni > settings.maxBelanja) {
+                            finMsg += `⚠️ **OVERBUDGET STANDAR!**\nTotal belanja hari ini (Rp ${formatNumber(totalBelanjaHariIni)}) melampaui setelan batas maksimal Bos. Cek ulang keranjang besok.`;
+                        } else {
+                            finMsg += `✅ **PROPORSI AMAN!**\nTotal belanja hari ini (Rp ${formatNumber(totalBelanjaHariIni)}) masih dalam batas yang sangat sehat (di bawah alokasi ideal 50%). Target profit terjaga dengan baik! 📈`;
+                        }
+                        triggerFinSystemMessage(finMsg);
+                    }
+
+                    setCart([]); setCurrentNoteId(null);
+                    setIsSaving(false); showStatus(currentNoteId ? 'Arsip Diperbarui!' : 'Belanja Tersimpan!');
+                } catch (e) {
+                    console.error(e); setIsSaving(false); showStatus('Gagal Simpan', 'error');
+                }
+            };
+
+            const triggerClearCart = () => {
+                setConfirmModal({ show: true, title: 'Reset Rencana?', message: 'Hapus semua daftar belanja dari rencana ini?', onConfirm: () => {
+                    setCart([]); setCurrentNoteId(null); setConfirmModal({...confirmModal, show:false}); showStatus('Direset!');
+                }});
+            };
+
+            const copyToClipboard = (text) => {
+                const el = document.createElement('textarea'); el.value = text; document.body.appendChild(el);
+                el.select(); document.execCommand('copy'); document.body.removeChild(el); showStatus('Prompt Disalin!');
+            };
+
+            const generatePrompt = (cartData, date) => {
+                const todayFormatted = new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                const itemCount = cartData.length;
+                let text = `Fina, tolong proses ${itemCount} transaksi pengeluaran bahan baku di bawah ini untuk tanggal ${todayFormatted}. Input satu per satu secara terpisah:\n`;
+                const itemsList = cartData.map((item, index) => `${index + 1}. Catat pengeluaran ${item.name} ${item.qty} ${item.unit} (${Math.round(item.total)})`).join('\n');
+                text += itemsList;
+                copyToClipboard(text);
+            };
+
+            const handleSaveIncome = (e) => {
+                e.preventDefault();
+                if (!incomeSource || !incomeAmount) { showStatus('Data Belum Lengkap', 'error'); return; }
+                const amount = parseFloat(incomeAmount.toString().replace(/[^0-9]/g, ''));
+                const stdSource = toTitleCase(incomeSource.trim());
+                
+                const newIncome = { id: 'inc-' + Date.now(), date: incomeDate, source: stdSource, amount: amount, timestamp: Date.now() };
+                
+                setIncomes(prev => [newIncome, ...prev].sort((a,b) => b.timestamp - a.timestamp));
+                setIncomeSource(''); setIncomeAmount(''); showStatus('Pemasukan Ditambahkan!');
+
+                let idealBelanjaBesok = amount * 0.5; // Alokasi 50% untuk HPP Belanja
+                let sisaOperasionalProfit = amount - idealBelanjaBesok; // 50% untuk untung dan operasional
+
+                let finMsg = `Mantap Bos! Pemasukan dari **${stdSource}** senilai **Rp ${formatNumber(amount)}** berhasil masuk brankas. 💰\n\n`;
+                finMsg += `💡 **Rencana Alokasi (Rule 50%):**\n`;
+                finMsg += `Dari omzet ini, Bos punya *budget* maksimal **Rp ${formatNumber(idealBelanjaBesok)}** untuk kulakan/belanja bahan baku besok.\n`;
+                finMsg += `Sisa **Rp ${formatNumber(sisaOperasionalProfit)}** aman untuk dialokasikan sebagai biaya operasional, gaji, dan tabungan Profit murni Bos!.\n\n`;
+
+                if (amount >= settings.targetOmzet) {
+                    finMsg += `🎉 Target omzet harian tercapai! Warung luar biasa hari ini.`;
+                } else {
+                    finMsg += `Target harian belum tercapai (kurang Rp ${formatNumber(settings.targetOmzet - amount)}). Gas terus!`;
+                }
+
+                triggerFinSystemMessage(finMsg);
+            };
+
+            const deleteIncome = (id) => {
+                setConfirmModal({
+                    show: true, title: 'Hapus Pemasukan?', message: 'Hapus histori pemasukan ini? Saldo akan terkoreksi otomatis.',
+                    onConfirm: () => {
+                        setIncomes(prev => prev.filter(i => i.id !== id));
+                        setConfirmModal({ show: false, title: '', message: '', onConfirm: null });
+                        showStatus('Pemasukan Terhapus!');
+                    }
+                });
+            };
+
+            const triggerIncomePrompt = (source, amount, date) => {
+                const dateFormatted = new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                copyToClipboard(`Fina, tolong catat Pemasukan dari ${source} pada tanggal ${dateFormatted} sebesar Rp ${amount}`);
+            };
+
+            const handleAddAgenda = (e) => {
+                e.preventDefault();
+                if(!agendaTitle || !agendaAmount) return;
+                const newAg = { id: 'agd-'+Date.now(), date: agendaDate, title: toTitleCase(agendaTitle), amount: parseFloat(agendaAmount.toString().replace(/[^0-9]/g, '')), type: agendaType, isPaid: false };
+                setAgendas(prev => [...prev, newAg].sort((a,b) => new Date(a.date) - new Date(b.date)));
+                setAgendaTitle(''); setAgendaAmount(''); showStatus('Operasional Tersimpan!');
+            };
+
+            const deleteAgenda = (id) => {
+                setConfirmModal({
+                    show: true, title: 'Hapus Agenda?', message: 'Hapus agenda/operasional ini?',
+                    onConfirm: () => {
+                        setAgendas(prev => prev.filter(a => a.id !== id));
+                        setConfirmModal({ show: false, title: '', message: '', onConfirm: null });
+                        showStatus('Terhapus!');
+                    }
+                });
+            };
+
+            const triggerAgendaPrompt = (agenda) => {
+                const dateFormatted = new Date(agenda.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                let text = `Fina, tolong catat ${agenda.type === 'keluar' ? 'pengeluaran Biaya Operasional' : 'pemasukan Biaya Operasional'} pada tanggal ${dateFormatted}.\n\n`;
+                text += `Detail: ${agenda.title} sebesar Rp ${agenda.amount}\n`;
+                copyToClipboard(text);
+            };
+
+            const toggleHoliday = (dateStr) => {
+                setHolidays(prev => {
+                    const newHols = prev.includes(dateStr) ? prev.filter(d => d !== dateStr) : [...prev, dateStr];
+                    return newHols;
+                });
+                showStatus(holidays.includes(dateStr) ? 'Hari Kerja Diaktifkan' : 'Warung Libur Diset!');
+            };
+
+            const renderAgendaSummary = () => {
+                const dStr = agendaDate;
+                let dayInc = incomes.filter(i => i.date === dStr).reduce((s,i) => s + i.amount, 0);
+                let dayExp = history.filter(h => h.date === dStr).reduce((s,h) => s + h.total, 0);
+                let agIn = agendas.filter(a => a.date === dStr && a.type === 'masuk').reduce((s,a) => s + a.amount, 0);
+                let agOut = agendas.filter(a => a.date === dStr && a.type === 'keluar').reduce((s,a) => s + a.amount, 0);
+
+                let totalIn = dayInc + agIn;
+                let totalOut = dayExp + agOut;
+
+                let prevDateObj = new Date(dStr);
+                prevDateObj.setDate(prevDateObj.getDate() - 1);
+                let prevBal = getBalanceUpTo(getLocalDateStr(prevDateObj));
+                let currentBal = prevBal + totalIn - totalOut;
+
+                return (
+                    <div className="bg-indigo-600 p-5 rounded-[2.5rem] shadow-lg mb-4 text-white relative overflow-hidden border border-indigo-500">
+                        <div className="absolute -right-5 -top-5 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-indigo-200 mb-3 border-b border-indigo-400/50 pb-2">Laporan Tgl {new Date(dStr).toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'})}</h3>
+                        
+                        <div className="flex justify-between items-center mb-1 text-[11px]">
+                            <span className="font-bold text-indigo-100">Saldo Awal (Pagi)</span>
+                            <span className="font-black">Rp {formatNumber(prevBal)}</span>
+                        </div>
+                        <div className="flex justify-between items-center mb-1 text-[11px]">
+                            <span className="font-bold text-green-300">Pemasukan Hari Ini</span>
+                            <span className="font-black text-green-300">+{formatNumber(totalIn)}</span>
+                        </div>
+                        <div className="flex justify-between items-center mb-3 text-[11px] border-b border-indigo-400/50 pb-2">
+                            <span className="font-bold text-red-300">Pengeluaran Hari Ini</span>
+                            <span className="font-black text-red-300">-{formatNumber(totalOut)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-2 py-1 rounded-md">Saldo Akhir</span>
+                            <span className="font-black text-base drop-shadow-md">Rp {formatNumber(currentBal)}</span>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderCalendar = () => {
+                const parts = agendaDate.split('-');
+                const year = parseInt(parts[0]);
+                const month = parseInt(parts[1]) - 1;
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                const firstDay = new Date(year, month, 1).getDay(); 
+                
+                let blanks = [];
+                for (let i = 0; i < firstDay; i++) blanks.push(<div key={`blank-${i}`} className="w-8 h-8"></div>);
+                
+                let daysElements = [];
+                const todayStr = getLocalDateStr();
+
+                for (let d = 1; d <= daysInMonth; d++) {
+                    let dObj = new Date(year, month, d);
+                    let dStr = getLocalDateStr(dObj);
+                    
+                    let isPast = dStr < todayStr;
+                    let hasAgenda = agendas.some(a => a.date === dStr && !a.isPaid);
+                    let isSelected = agendaDate === dStr;
+                    let isToday = dStr === todayStr;
+                    
+                    daysElements.push(
+                        <button key={dStr} onClick={() => setAgendaDate(dStr)} className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold relative transition-colors ${isSelected ? 'bg-indigo-600 text-white shadow-md' : (isToday ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700')}`}>
+                            {d}
+                            {hasAgenda && <span className={`absolute bottom-1 w-1 h-1 rounded-full ${isPast ? 'bg-slate-300 dark:bg-slate-600' : (isSelected ? 'bg-white' : 'bg-red-500')}`}></span>}
+                        </button>
+                    );
+                }
+                
+                return (
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 mb-4 transition-colors">
+                        <div className="flex justify-between items-center mb-3 px-2">
+                            <input type="month" value={agendaDate.substring(0,7)} onChange={(e) => setAgendaDate(e.target.value + '-01')} className="font-black text-slate-800 dark:text-slate-100 uppercase tracking-widest text-[11px] bg-transparent outline-none" />
+                        </div>
+                        <div className="grid grid-cols-7 gap-1 text-center mb-2">
+                            {['M','S','S','R','K','J','S'].map((day,i) => <div key={i} className="text-[10px] font-bold text-slate-400 dark:text-slate-500">{day}</div>)}
+                        </div>
+                        <div className="grid grid-cols-7 gap-1 justify-items-center">
+                            {blanks}{daysElements}
+                        </div>
+                    </div>
+                );
+            };
+
+            const getDashboardData = () => {
+                const todayStr = getLocalDateStr();
+                
+                const yesterdayObj = new Date();
+                yesterdayObj.setDate(yesterdayObj.getDate() - 1);
+                const yesterdayStr = getLocalDateStr(yesterdayObj);
+                
+                let todayIncomes = incomes.filter(i => i.date === todayStr);
+                if (todayIncomes.length === 0) {
+                    todayIncomes = incomes.filter(i => i.date === yesterdayStr);
+                }
+                const todayInc = todayIncomes.reduce((s,i) => s + i.amount, 0);
+
+                const todayExp = history.filter(h => h.date === todayStr).reduce((s,h) => s + h.total, 0);
+
+                const [yearStr, monthStr] = dashboardMonth.split('-');
+                const year = parseInt(yearStr);
+                const month = parseInt(monthStr) - 1;
+                const startDate = new Date(year, month, 1);
+                const endDate = new Date(year, month + 1, 0);
+
+                let reportDays = [];
+                let startStr = getLocalDateStr(startDate);
+                
+                let prevDateObj = new Date(startDate);
+                prevDateObj.setDate(prevDateObj.getDate() - 1);
+                let runningBalance = getBalanceUpTo(getLocalDateStr(prevDateObj));
+
+                for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                    let dStr = getLocalDateStr(d);
+                    let isFuture = dStr > todayStr;
+                    let isToday = dStr === todayStr;
+
+                    let dayIncomes = incomes.filter(i => i.date === dStr);
+                    let dayExpenses = history.filter(h => h.date === dStr);
+                    let dayAgendas = agendas.filter(a => a.date === dStr);
+
+                    let actualInc = dayIncomes.reduce((s, i) => s + i.amount, 0);
+                    let actualExp = dayExpenses.reduce((s, h) => s + h.total, 0);
+                    let agendaIn = dayAgendas.filter(a=>a.type==='masuk').reduce((s,a) => s + a.amount, 0);
+                    let agendaOut = dayAgendas.filter(a=>a.type==='keluar').reduce((s,a) => s + a.amount, 0);
+
+                    let isHoliday = holidays.includes(dStr);
+                    let dailyIn = isFuture && !actualInc && !agendaIn && !isHoliday ? settings.targetOmzet : (actualInc + agendaIn);
+                    let dailyOut = isFuture && !actualExp && !agendaOut && !isHoliday ? settings.maxBelanja : (actualExp + agendaOut);
+
+                    let saldoPagi = runningBalance;
+                    runningBalance = saldoPagi + dailyIn - dailyOut;
+
+                    reportDays.push({
+                        date: dStr,
+                        displayDate: d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
+                        isToday, isFuture, isHoliday, saldoPagi, dailyIn, dailyOut, saldoAkhir: runningBalance,
+                        hasData: actualInc > 0 || actualExp > 0 || agendaIn > 0 || agendaOut > 0,
+                        details: { incomes: dayIncomes, expenses: dayExpenses, agendas: dayAgendas }
+                    });
+                }
+
+                return { todayInc, todayExp, reportDays };
+            };
+
+            const renderDashboard = () => {
+                const data = getDashboardData();
+                const todayStr = getLocalDateStr();
+                const pastDays = data.reportDays.filter(d => d.date <= todayStr);
+                const daysPassed = pastDays.length || 1;
+                const totalExp = pastDays.reduce((sum, d) => sum + d.dailyOut, 0);
+                const avgExp = totalExp / daysPassed;
+                
+                const estAkhir = data.reportDays.length > 0 ? data.reportDays[data.reportDays.length - 1].saldoAkhir : 0;
+
+                const [yearStr, monthStr] = dashboardMonth.split('-');
+                const daysInMonth = new Date(parseInt(yearStr), parseInt(monthStr), 0).getDate();
+                
+                const monthlyIncomes = incomes.filter(i => i.date.startsWith(dashboardMonth));
+                const monthlyAgendas = agendas.filter(a => a.date.startsWith(dashboardMonth));
+                const monthlyHistory = history.filter(h => h.date.startsWith(dashboardMonth));
+
+                const omzetBulanIni = monthlyIncomes.reduce((s, i) => s + i.amount, 0) + monthlyAgendas.filter(a => a.type === 'masuk').reduce((s, a) => s + a.amount, 0);
+                const targetOmzetBulanan = settings.targetOmzet * daysInMonth;
+                const omzetPct = targetOmzetBulanan > 0 ? Math.min(100, (omzetBulanIni / targetOmzetBulanan) * 100) : 0;
+
+                const tagihanKeluar = monthlyAgendas.filter(a => a.type === 'keluar');
+                const totalTagihan = tagihanKeluar.reduce((s, a) => s + a.amount, 0);
+                const tagihanTerbayar = tagihanKeluar.filter(a => a.isPaid).reduce((s, a) => s + a.amount, 0);
+                const tagihanPct = totalTagihan === 0 ? 100 : Math.min(100, (tagihanTerbayar / totalTagihan) * 100);
+
+                const idealSisaKas = settings.saldoAwal + ((settings.targetOmzet - settings.maxBelanja) * daysInMonth);
+                const kasPct = idealSisaKas <= 0 ? 100 : Math.min(100, Math.max(0, (estAkhir / idealSisaKas) * 100));
+
+                const pengeluaranBulanIni = monthlyHistory.reduce((s,h)=>s+h.total, 0) + tagihanTerbayar;
+                const profitBulanIni = omzetBulanIni - pengeluaranBulanIni;
+
+                return (
+                    <div className="flex-1 overflow-y-auto no-scrollbar pb-32 space-y-4">
+                        <div className="bg-indigo-600 text-white p-6 rounded-[2.5rem] shadow-lg relative overflow-hidden mt-2 border border-indigo-500">
+                            <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-200 mb-1">Total Kas Realtime</p>
+                            <h2 className="text-3xl font-black tracking-tighter mb-4">Rp {formatNumber(currentBalance)}</h2>
+                            <div className="flex gap-4 border-t border-indigo-400/50 pt-4">
+                                <div className="flex-1">
+                                    <p className="text-[8px] font-bold uppercase tracking-wider text-indigo-200 mb-1">Masuk (Omzet H-1/H)</p>
+                                    <p className="font-black text-green-300 text-sm">+{formatNumber(data.todayInc)}</p>
+                                </div>
+                                <div className="w-px bg-indigo-400/50"></div>
+                                <div className="flex-1">
+                                    <p className="text-[8px] font-bold uppercase tracking-wider text-indigo-200 mb-1">Keluar Hari Ini</p>
+                                    <p className="font-black text-red-300 text-sm">-{formatNumber(data.todayExp)}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Visualisasi Target & Performa */}
+                        <div className="bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 mt-4 transition-colors">
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-100 mb-5 flex items-center gap-2">
+                                <div className="w-4 h-4 text-indigo-500"><Icons.Chart /></div> Performa Bulan Ini
+                            </h3>
+
+                            <div className="mb-4">
+                                <div className="flex justify-between items-end mb-1.5">
+                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Target Omzet ({Math.round(omzetPct)}%)</span>
+                                    <span className="text-xs font-black text-green-600 dark:text-green-400">Rp {formatNumber(omzetBulanIni)} <span className="text-[9px] text-slate-400 dark:text-slate-500 font-bold">/ Rp {formatNumber(targetOmzetBulanan)}</span></span>
+                                </div>
+                                <div className="w-full bg-slate-100 dark:bg-slate-700 h-3 rounded-full overflow-hidden relative">
+                                    <div className="bg-gradient-to-r from-green-400 to-green-500 h-full rounded-full transition-all duration-1000" style={{ width: `${omzetPct}%` }}></div>
+                                </div>
+                            </div>
+
+                            <div className="mb-4">
+                                <div className="flex justify-between items-end mb-1.5">
+                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Tagihan Lunas ({Math.round(tagihanPct)}%)</span>
+                                    <span className="text-xs font-black text-amber-500">Rp {formatNumber(tagihanTerbayar)} <span className="text-[9px] text-slate-400 dark:text-slate-500 font-bold">/ Rp {formatNumber(totalTagihan)}</span></span>
+                                </div>
+                                <div className="w-full bg-slate-100 dark:bg-slate-700 h-3 rounded-full overflow-hidden relative">
+                                    <div className="bg-gradient-to-r from-amber-400 to-amber-500 h-full rounded-full transition-all duration-1000" style={{ width: `${tagihanPct}%` }}></div>
+                                </div>
+                            </div>
+
+                            <div className="mb-5">
+                                <div className="flex justify-between items-end mb-1.5">
+                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Target Sisa Kas ({Math.round(kasPct)}%)</span>
+                                    <span className="text-xs font-black text-indigo-600 dark:text-indigo-400">Rp {formatNumber(estAkhir)} <span className="text-[9px] text-slate-400 dark:text-slate-500 font-bold">/ Rp {formatNumber(idealSisaKas)}</span></span>
+                                </div>
+                                <div className="w-full bg-slate-100 dark:bg-slate-700 h-3 rounded-full overflow-hidden relative">
+                                    <div className="bg-gradient-to-r from-indigo-400 to-indigo-500 h-full rounded-full transition-all duration-1000" style={{ width: `${kasPct}%` }}></div>
+                                </div>
+                            </div>
+
+                            <div className={`p-4 rounded-2xl flex items-center justify-between border ${profitBulanIni >= 0 ? 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800'}`}>
+                                <div>
+                                    <p className={`text-[9px] font-black uppercase tracking-widest ${profitBulanIni >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>Status Break Even</p>
+                                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-0.5">{profitBulanIni >= 0 ? 'Aman! Sudah tembus modal/untung.' : 'Waspada! Masih minus/rugi.'}</p>
+                                </div>
+                                <p className={`text-sm font-black ${profitBulanIni >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>{profitBulanIni >= 0 ? '+' : ''}Rp {formatNumber(profitBulanIni)}</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden transition-colors">
+                            <div className="p-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+                                <h3 className="font-black text-slate-800 dark:text-slate-100 text-xs uppercase tracking-widest flex items-center gap-2"><div className="w-4 h-4 text-indigo-500"><Icons.Calendar/></div> Cash Flow</h3>
+                                <input type="month" value={dashboardMonth} onChange={e => setDashboardMonth(e.target.value)} className="bg-transparent text-indigo-600 dark:text-indigo-400 font-bold text-xs outline-none" />
+                            </div>
+                            <div className="max-h-[50vh] overflow-y-auto no-scrollbar bg-slate-50 dark:bg-slate-900/50 p-3 space-y-2">
+                                {data.reportDays.map((day, i) => {
+                                    // Hitung Lencana Status (Profit/Over/Rugi) untuk hari yang sudah lewat atau hari ini
+                                    let badge = null;
+                                    const totalActualIn = day.details.incomes.reduce((s, i) => s + i.amount, 0) + day.details.agendas.filter(a=>a.type==='masuk').reduce((s,a) => s + a.amount, 0);
+                                    const totalActualOut = day.details.expenses.reduce((s, h) => s + h.total, 0) + day.details.agendas.filter(a=>a.type==='keluar').reduce((s,a) => s + a.amount, 0);
+                                    
+                                    if (day.hasData && !day.isFuture && !day.isHoliday) {
+                                        const dynamicBudgetLimit = totalActualIn > 0 ? totalActualIn * 0.5 : settings.maxBelanja;
+                                        if (totalActualOut > totalActualIn && totalActualIn > 0) {
+                                            badge = { text: 'RUGI', color: 'bg-red-500 text-white shadow-red-500/30' };
+                                        } else if (totalActualOut > dynamicBudgetLimit) {
+                                            badge = { text: 'OVER', color: 'bg-amber-500 text-white shadow-amber-500/30' };
+                                        } else if (totalActualIn > totalActualOut) {
+                                            badge = { text: 'PROFIT', color: 'bg-green-500 text-white shadow-green-500/30' };
+                                        }
+                                    }
+
+                                    return (
+                                        <div key={i} className={`p-4 rounded-[2rem] border transition-all ${day.isToday ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700 shadow-md scale-[1.02]' : (day.isHoliday ? 'bg-amber-50/50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/50 shadow-sm' : (day.isFuture ? 'bg-white dark:bg-slate-800 border-dashed border-slate-200 dark:border-slate-700 opacity-70' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 shadow-sm'))}`}>
+                                            
+                                            <div className="flex justify-between items-center mb-3">
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                    <span className={`font-black text-[11px] uppercase tracking-widest ${day.isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-300'}`}>
+                                                        {day.displayDate}
+                                                    </span>
+                                                    {day.isToday && <span className="bg-indigo-600 text-white px-2 py-0.5 rounded-full text-[8px] font-black uppercase">HARI INI</span>}
+                                                    {day.isHoliday && <span className="bg-amber-500 text-white px-2 py-0.5 rounded-full text-[8px] font-black uppercase shadow-sm">TUTUP</span>}
+                                                    {day.isFuture && !day.isHoliday && <span className="text-slate-400 dark:text-slate-500 text-[8px] font-bold">(Prediksi)</span>}
+                                                    {badge && <span className={`${badge.color} px-2 py-0.5 rounded-full text-[8px] font-black uppercase shadow-sm ml-1 animate-fadeIn`}>{badge.text}</span>}
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <button onClick={() => toggleHoliday(day.date)} className={`text-[8px] font-bold px-2 py-1 rounded-lg border transition-colors ${day.isHoliday ? 'bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700' : 'text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300'}`}>
+                                                        {day.isHoliday ? 'Batal Libur' : 'Set Libur'}
+                                                    </button>
+                                                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400" onClick={() => setExpandedDay(expandedDay === day.date ? null : day.date)}>
+                                                        {expandedDay === day.date ? 'Tutup ▲' : 'Detail ▼'}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1.5 text-[11px]">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-slate-500 dark:text-slate-400 font-bold">Saldo Pagi</span>
+                                                    <span className="font-black text-slate-700 dark:text-slate-200">Rp {formatNumber(day.saldoPagi)}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center bg-green-50/50 dark:bg-green-900/10 p-1.5 rounded-lg cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20" onClick={() => setExpandedDay(day.date)}>
+                                                    <span className="text-green-600 dark:text-green-400 font-bold flex items-center gap-1">➕ Pemasukan <span className="text-[8px] opacity-50">Klik</span></span>
+                                                    <span className="font-black text-green-600 dark:text-green-400">+{formatNumber(day.dailyIn)}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center bg-red-50/50 dark:bg-red-900/10 p-1.5 rounded-lg cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/20" onClick={() => setExpandedDay(day.date)}>
+                                                    <span className="text-red-600 dark:text-red-400 font-bold flex items-center gap-1">➖ Pengeluaran <span className="text-[8px] opacity-50">Klik</span></span>
+                                                    <span className="font-black text-red-600 dark:text-red-400">-{formatNumber(day.dailyOut)}</span>
+                                                </div>
+                                            </div>
+
+                                            {expandedDay === day.date && (
+                                                <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 space-y-1.5 animate-fadeIn">
+                                                    <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1">Rincian Transaksi</p>
+                                                    {day.details.incomes.map(inc => (
+                                                        <div key={inc.id} className="flex justify-between text-[10px]">
+                                                            <span className="font-bold text-slate-600 dark:text-slate-300 uppercase">🔹 {inc.source}</span>
+                                                            <span className="font-black text-green-600 dark:text-green-400">+{formatNumber(inc.amount)}</span>
+                                                        </div>
+                                                    ))}
+                                                    {day.details.agendas.filter(a=>a.type==='masuk').map(ag => (
+                                                        <div key={ag.id} className="flex justify-between text-[10px]">
+                                                            <span className="font-bold text-slate-600 dark:text-slate-300 uppercase">🔹 Opr: {ag.title}</span>
+                                                            <span className="font-black text-green-600 dark:text-green-400">+{formatNumber(ag.amount)}</span>
+                                                        </div>
+                                                    ))}
+                                                    {day.details.expenses.map(exp => (
+                                                        <div key={exp.id} className="flex justify-between text-[10px]">
+                                                            <span className="font-bold text-slate-600 dark:text-slate-300 uppercase">🔸 Belanja Bahan Baku</span>
+                                                            <span className="font-black text-red-500 dark:text-red-400">-{formatNumber(exp.total)}</span>
+                                                        </div>
+                                                    ))}
+                                                    {day.details.agendas.filter(a=>a.type==='keluar').map(ag => (
+                                                        <div key={ag.id} className="flex justify-between text-[10px]">
+                                                            <span className="font-bold text-slate-600 dark:text-slate-300 uppercase">🔸 Opr: {ag.title}</span>
+                                                            <span className="font-black text-red-500 dark:text-red-400">-{formatNumber(ag.amount)}</span>
+                                                        </div>
+                                                    ))}
+                                                    {(!day.details.incomes.length && !day.details.expenses.length && !day.details.agendas.length) && (
+                                                        <div className="text-center text-[9px] text-slate-400 dark:text-slate-500 italic font-bold">Tidak ada rincian data aktual</div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                        <div className="flex justify-between items-center border-t border-slate-200/60 dark:border-slate-700/60 mt-2.5 pt-2.5">
+                                            <span className="text-indigo-600 dark:text-indigo-400 font-black uppercase tracking-widest text-[10px]">Saldo Akhir Hari</span>
+                                            <span className="font-black text-indigo-700 dark:text-indigo-300 text-xs bg-indigo-100/50 dark:bg-indigo-900/50 px-2 py-1 rounded-lg">Rp {formatNumber(day.saldoAkhir)}</span>
+                                        </div>
+                                    </div>
+                                )})}
+                            </div>
+                        </div>
+
+                        {/* Insight Fin Terupdate */}
+                        <div className="bg-slate-900 text-white p-6 rounded-[2.5rem] shadow-xl border-t-4 border-indigo-500">
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-indigo-300 mb-4 flex items-center gap-2">
+                                <div className="w-4 h-4"><Icons.Bot /></div> Insight Estimasi Bulan {new Date(dashboardMonth + '-01').toLocaleDateString('id-ID', {month:'long'})}
+                            </h3>
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-center bg-white/5 p-3.5 rounded-2xl border border-white/10">
+                                    <span className="text-[10px] font-bold text-slate-300">Rata-rata Pengeluaran/Hari</span>
+                                    <span className="font-black text-red-400 text-sm">Rp {formatNumber(Math.round(avgExp))}</span>
+                                </div>
+                                <div className="flex justify-between items-center bg-indigo-500/20 p-3.5 rounded-2xl border border-indigo-500/30">
+                                    <span className="text-[10px] font-bold text-slate-300">Est. Saldo Akhir Bulan</span>
+                                    <span className="font-black text-indigo-300 text-base">Rp {formatNumber(Math.round(estAkhir))}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // FUNGSI DRAG BUBBLE FIN MENGGUNAKAN POINTER EVENTS
+            const handleFinPointerDown = (e) => {
+                isDraggingFin.current = true;
+                setHasDragged(false);
+                finStartPos.current = { 
+                    x: e.clientX || (e.touches && e.touches[0].clientX) || 0, 
+                    y: e.clientY || (e.touches && e.touches[0].clientY) || 0, 
+                    right: finPos.right, 
+                    bottom: finPos.bottom 
+                };
+                if (e.target.setPointerCapture && e.pointerId) e.target.setPointerCapture(e.pointerId);
+            };
+
+            const handleFinPointerMove = (e) => {
+                if (!isDraggingFin.current) return;
+                
+                const clientX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+                const clientY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
+                
+                const dx = finStartPos.current.x - clientX;
+                const dy = finStartPos.current.y - clientY;
+                
+                if (Math.abs(dx) > 5 || Math.abs(dy) > 5) setHasDragged(true);
+
+                setFinPos({
+                    right: Math.max(0, Math.min(window.innerWidth - 60, finStartPos.current.right + dx)),
+                    bottom: Math.max(0, Math.min(window.innerHeight - 60, finStartPos.current.bottom + dy))
+                });
+            };
+
+            const handleFinPointerUp = (e) => {
+                isDraggingFin.current = false;
+                if (e.target.releasePointerCapture && e.pointerId) e.target.releasePointerCapture(e.pointerId);
+            };
+
+            const handleFinClick = () => {
+                if (hasDragged) {
+                    setHasDragged(false); // Batalkan klik karena pengguna hanya menggeser
+                    return;
+                }
+                setIsChatOpen(true); 
+                setHasNewFinAlert(false);
+            };
+
+            // Tampilan Layar Penutup (Goodbye Screen) pengganti about:blank
+            if (isExited) {
+                return (
+                    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-center text-white font-sans selection:bg-indigo-500" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+                        <div className="w-20 h-20 bg-indigo-600 rounded-[1.2rem] flex items-center justify-center font-black text-4xl shadow-2xl rotate-3 mb-8">Q</div>
+                        <h1 className="text-3xl font-black tracking-tighter mb-4">Sesi Selesai 👋</h1>
+                        <p className="text-slate-400 font-medium mb-12 max-w-xs leading-relaxed">Data hari ini sudah diamankan.<br/><br/>Silakan tekan tombol Beranda atau usap layar ke atas (swipe) untuk menutup aplikasi.</p>
+                        <button onClick={() => setIsExited(false)} className="px-6 py-3 bg-white/10 border border-white/20 text-white rounded-full font-bold text-sm hover:bg-white/20 transition-colors">Buka Kembali Aplikasi</button>
+                    </div>
+                );
+            }
+
+            const renderFloatingFin = () => (
+                <div className={`fixed inset-0 z-[600] pointer-events-none flex flex-col justify-end transition-all duration-300 ${isChatOpen ? 'bg-black/40 pointer-events-auto backdrop-blur-sm' : ''}`}>
+                    <div className={`w-full max-w-md mx-auto bg-slate-50 dark:bg-slate-900 rounded-t-[2.5rem] shadow-2xl pointer-events-auto flex flex-col transition-transform duration-500 ease-in-out border-t border-slate-200 dark:border-slate-800 ${isChatOpen ? 'translate-y-0 h-[85vh]' : 'translate-y-full h-[85vh] opacity-0'}`}>
+                        <div className="bg-indigo-600 p-4 rounded-t-[2.5rem] flex justify-between items-center shadow-md">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white"><Icons.Bot /></div>
+                                <div><h3 className="font-black text-white leading-tight">Fin Assistant</h3><p className="text-[9px] text-indigo-200 uppercase tracking-widest font-bold">Auto-Input & Laporan</p></div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button onClick={handleResetChat} className="w-8 h-8 bg-white/10 text-white rounded-full flex items-center justify-center hover:bg-white/20 transition-colors" title="Bersihkan Obrolan"><div className="w-4 h-4"><Icons.Refresh/></div></button>
+                                {/* TOMBOL MINIMIZE DITAMBAHKAN DI SINI */}
+                                <button onClick={() => setIsChatOpen(false)} className="w-8 h-8 bg-white/10 text-white rounded-full flex items-center justify-center hover:bg-white/20 transition-colors" title="Minimize Chat"><div className="w-4 h-4"><Icons.Minus/></div></button>
+                            </div>
+                        </div>
+                        <div className="flex-1 p-4 overflow-y-auto no-scrollbar flex flex-col gap-4">
+                            {chats.map(chat => (
+                                <div key={chat.id} className={`flex w-full chat-enter ${chat.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-[85%] p-4 rounded-[1.5rem] shadow-sm text-[13px] leading-relaxed ${chat.sender === 'user' ? 'bg-indigo-600 text-white rounded-tr-sm' : 'glass-bubble text-slate-700 dark:text-slate-200 rounded-tl-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'}`}>
+                                        {chat.image && <img src={chat.image} alt="Upload" className="w-full max-w-[200px] rounded-xl mb-2 border border-white/20 shadow-sm" />}
+                                        {chat.sender === 'fin' ? (
+                                            <div className="markdown-body" dangerouslySetInnerHTML={{__html: window.marked ? window.marked.parse(chat.text) : chat.text}} />
+                                        ) : (
+                                            <span>{chat.text}</span>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                            {isTyping && (
+                                <div className="flex w-full chat-enter justify-start">
+                                    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 rounded-[1.5rem] rounded-tl-sm shadow-sm flex items-center gap-2 w-fit">
+                                        <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></div><div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay:'150ms'}}></div><div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay:'300ms'}}></div>
+                                    </div>
+                                </div>
+                            )}
+                            <div ref={chatEndRef} />
+                        </div>
+                        
+                        <div className="p-4 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] z-10 relative">
+                            <div className="flex justify-between items-center mb-2">
+                                <button type="button" onClick={() => setShowPrompts(!showPrompts)} className="text-[10px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1 bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+                                    💡 Saran Perintah {showPrompts ? 'Tutup 🔼' : 'Buka 🔽'}
+                                </button>
+                            </div>
+
+                            <div className={`transition-all duration-300 overflow-hidden ${showPrompts ? 'max-h-40 opacity-100 mb-3' : 'max-h-0 opacity-0 mb-0'}`}>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button onClick={() => { handleChatSubmit(null, "Fin, tolong analisa kas dan keuangan bulan ini. Apakah kita profit atau boncos?"); setShowPrompts(false); }} className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase p-2.5 rounded-xl border border-indigo-100 dark:border-indigo-800 flex items-center justify-center gap-1 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-center">📈 Analisa Kas</button>
+                                    <button onClick={() => { handleChatSubmit(null, "Cek tagihan dan agenda yang belum dibayar"); setShowPrompts(false); }} className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] font-black uppercase p-2.5 rounded-xl border border-red-100 dark:border-red-800 flex items-center justify-center gap-1 hover:bg-red-100 dark:hover:bg-red-900/50 text-center">⚠️ Tagihan</button>
+                                    <button onClick={() => { handleChatSubmit(null, "Buatkan rekap laporan total masuk dan keluar untuk Hari Ini"); setShowPrompts(false); }} className="bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-[10px] font-black uppercase p-2.5 rounded-xl border border-green-100 dark:border-green-800 flex items-center justify-center gap-1 hover:bg-green-100 dark:hover:bg-green-900/50 text-center">💰 Rekap Harian</button>
+                                    <button onClick={() => { handleChatSubmit(null, "Buatkan Laporan Bulanan"); setShowPrompts(false); }} className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase p-2.5 rounded-xl border border-blue-100 dark:border-blue-800 flex items-center justify-center gap-1 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-center">📅 Laporan Bulanan</button>
+                                </div>
+                            </div>
+
+                            {attachedImage && (
+                                <div className="mb-3 relative inline-block">
+                                    <img src={attachedImage.url} alt="Preview" className="h-20 w-auto rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm" />
+                                    <button type="button" onClick={() => setAttachedImage(null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md border-2 border-white dark:border-slate-800"><Icons.X /></button>
+                                </div>
+                            )}
+
+                            <form onSubmit={(e) => handleChatSubmit(e)} className="flex gap-2 relative items-center">
+                                <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+                                <button type="button" onClick={() => fileInputRef.current.click()} className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border bg-white dark:bg-slate-800 text-indigo-500 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                                    <div className="w-6 h-6"><Icons.Camera /></div>
+                                </button>
+                                <button type="button" onClick={startListening} className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border transition-colors ${isListening ? 'bg-red-500 text-white border-red-500 animate-pulse' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+                                    <div className="w-6 h-6"><Icons.Mic /></div>
+                                </button>
+                                <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Ketik, suara, atau foto..." className="flex-1 bg-slate-100 dark:bg-slate-900 p-4 rounded-2xl font-bold text-sm text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-500 placeholder-slate-400 dark:placeholder-slate-500" />
+                                <button type="submit" disabled={isTyping} className="w-14 h-14 text-white rounded-2xl flex items-center justify-center bg-indigo-600 shadow-lg shrink-0"><div className="w-6 h-6"><Icons.Send /></div></button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="max-w-md mx-auto min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 relative shadow-2xl font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+                    {status.show && (
+                        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[800] w-max">
+                            <div className="px-6 py-3 rounded-full shadow-2xl bg-slate-900 dark:bg-slate-800 text-white animate-status flex items-center gap-3 text-sm font-bold border border-slate-700 dark:border-slate-600">
+                                <div className="w-5 h-5 text-green-400"><Icons.Check /></div> {status.message}
+                            </div>
+                        </div>
+                    )}
+
+                    {reminderModal.show && (
+                        <div className="fixed inset-0 z-[700] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                            <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[2.5rem] p-6 modal-enter shadow-2xl border-4 border-red-100 dark:border-red-900 relative transition-colors">
+                                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/50 text-red-500 dark:text-red-400 rounded-full flex items-center justify-center mb-4 mx-auto animate-bounce"><Icons.Warn /></div>
+                                <h3 className="text-xl font-black text-center text-gray-800 dark:text-white mb-2">ALARM TAGIHAN!</h3>
+                                <p className="text-[13px] text-center text-gray-500 dark:text-gray-400 mb-6 font-medium">Bos, ada tagihan mendekati jatuh tempo. Siapkan dananya!</p>
+                                <div className="space-y-2 mb-6 max-h-48 overflow-y-auto no-scrollbar">
+                                    {reminderModal.items.map(item => (
+                                        <div key={item.id} className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900 p-3.5 rounded-[1.2rem] flex justify-between items-center">
+                                            <div><p className="font-black text-red-700 dark:text-red-400 text-xs uppercase">{item.title}</p><p className="text-[10px] text-red-400 dark:text-red-500 font-bold">{new Date(item.date).toLocaleDateString('id-ID', {day:'numeric', month:'short'})}</p></div>
+                                            <p className="font-black text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/50 px-2 py-1 rounded-lg text-sm">Rp {formatNumber(item.amount)}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="space-y-3">
+                                    <button onClick={() => { setReminderModal({ show: false, items: [] }); setActiveTab('agenda'); }} className="w-full py-4 bg-red-500 text-white font-black rounded-2xl shadow-lg shadow-red-500/30 uppercase text-[11px]">CEK AGENDA</button>
+                                    <button onClick={() => setReminderModal({ show: false, items: [] })} className="w-full py-3 text-gray-400 dark:text-gray-500 font-bold rounded-2xl uppercase text-[11px]">TUTUP DULU</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {showSettings && (
+                        <div className="fixed inset-0 z-[500] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+                            <div className="bg-white dark:bg-slate-800 w-full rounded-[2.5rem] p-6 modal-enter shadow-2xl transition-colors">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3 className="font-black text-lg text-slate-800 dark:text-white">Pengaturan Target</h3>
+                                    <button onClick={() => setShowSettings(false)} className="w-8 h-8 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400"><Icons.X /></button>
+                                </div>
+                                <div className="space-y-4">
+                                    <div><label className="text-[10px] text-gray-400 font-bold uppercase mb-1 block">Modal Awal / Saldo Dasar</label><input type="text" inputMode="numeric" value={formatInputRp(settings.saldoAwal)} onChange={e => setSettings({...settings, saldoAwal: parseInt(parseInputRp(e.target.value))||0})} className="w-full p-4 bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-2xl font-bold outline-none" /></div>
+                                    <div><label className="text-[10px] text-gray-400 font-bold uppercase mb-1 block">Target Omzet Harian</label><input type="text" inputMode="numeric" value={formatInputRp(settings.targetOmzet)} onChange={e => setSettings({...settings, targetOmzet: parseInt(parseInputRp(e.target.value))||0})} className="w-full p-4 bg-slate-100 dark:bg-slate-900 rounded-2xl font-bold text-green-600 dark:text-green-400 outline-none" /></div>
+                                    <div><label className="text-[10px] text-gray-400 font-bold uppercase mb-1 block">Batas Belanja Harian</label><input type="text" inputMode="numeric" value={formatInputRp(settings.maxBelanja)} onChange={e => setSettings({...settings, maxBelanja: parseInt(parseInputRp(e.target.value))||0})} className="w-full p-4 bg-slate-100 dark:bg-slate-900 rounded-2xl font-bold text-red-500 dark:text-red-400 outline-none" /></div>
+                                    <button onClick={() => setShowSettings(false)} className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg active:scale-[0.98] transition-all">SIMPAN PENGATURAN</button>
+                                </div>
+                                
+                                <div className="mt-8 pt-6 border-t border-red-100 dark:border-red-900/50">
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-red-500 mb-3 text-center">Zona Berbahaya</h4>
+                                    <button onClick={handleResetAllData} className="w-full py-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-black rounded-2xl border border-red-100 dark:border-red-900 flex items-center justify-center gap-2 active:bg-red-100 dark:active:bg-red-900/40 transition-colors">
+                                        <div className="w-4 h-4"><Icons.Trash /></div> RESET DATA BULAN INI
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {confirmModal.show && (
+                        <div className="fixed inset-0 z-[750] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                            <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[2rem] p-6 shadow-2xl modal-enter border border-white/20 dark:border-slate-700 transition-colors">
+                                <h3 className="text-lg font-black text-center text-slate-800 dark:text-white mb-2">{confirmModal.title}</h3>
+                                <p className="text-sm text-center text-slate-500 dark:text-slate-400 mb-6 font-medium leading-relaxed">{confirmModal.message}</p>
+                                <div className="flex gap-3">
+                                    <button onClick={() => setConfirmModal({ show: false, title: '', message: '', onConfirm: null })} className="flex-1 py-3 bg-slate-100 dark:bg-slate-700 font-bold rounded-xl text-slate-500 dark:text-slate-300">Batal</button>
+                                    <button onClick={confirmModal.onConfirm} className="flex-1 py-3 bg-red-500 font-bold rounded-xl text-white shadow-lg">Ya, Lanjutkan</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <header className="p-6 pt-10 flex justify-between items-center bg-transparent z-10 shrink-0">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-indigo-600 text-white rounded-[0.8rem] flex items-center justify-center font-black text-xl shadow-md rotate-3">Q</div>
+                            <div>
+                                <h1 className="text-2xl font-black tracking-tighter text-slate-900 dark:text-white">Q-Nota<span className="text-indigo-600">.</span></h1>
+                                <p className="text-[9px] uppercase font-bold text-slate-400 mt-0.5 tracking-[0.2em]">{isLocalMode ? 'Mode Offline' : 'Cloud Sync'}</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-10 h-10 bg-white dark:bg-slate-800 rounded-full shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                                <div className="w-5 h-5">{isDarkMode ? <Icons.Sun /> : <Icons.Moon />}</div>
+                            </button>
+                            <button onClick={() => setShowSettings(true)} className="w-10 h-10 bg-white dark:bg-slate-800 rounded-full shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"><div className="w-5 h-5"><Icons.Gear /></div></button>
+                            <button onClick={handleExit} className="w-10 h-10 bg-red-50 dark:bg-red-900/20 rounded-full shadow-sm border border-red-100 dark:border-red-900 flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition-colors"><div className="w-5 h-5"><Icons.Power /></div></button>
+                        </div>
+                    </header>
+
+                    <main className="flex-1 px-5 pb-5 overflow-hidden flex flex-col relative z-0">
+                        {activeTab === 'dashboard' && renderDashboard()}
+                        
+                        {activeTab === 'plan' && (
+                            <div className="flex-1 overflow-y-auto no-scrollbar pb-32 space-y-4">
+                                <div className="p-6 rounded-[2.5rem] bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700 transition-colors">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h2 className="font-extrabold text-slate-800 dark:text-slate-100 uppercase text-[10px] tracking-widest">{editingId ? 'Update Item' : 'Input Belanja'}</h2>
+                                        {editingId && <button onClick={() => {setItemName(''); setQty(''); setTotalNominal(''); setEditingId(null);}} className="text-amber-500 bg-amber-50 dark:bg-amber-900/30 w-6 h-6 rounded-full p-1"><Icons.X /></button>}
+                                    </div>
+                                    <form onSubmit={handleAddItem} className="space-y-3">
+                                        {!editingId && <input type="date" value={transactionDate} onChange={e => handleDateChange(e, setTransactionDate)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl font-bold text-slate-700 dark:text-slate-200 outline-none" />}
+                                        <div className="relative">
+                                            <input type="text" value={itemName} onChange={e => { setItemName(e.target.value); setShowSuggestions(true); }} placeholder="Nama Barang..." className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl font-bold uppercase outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-500 placeholder-slate-400 dark:placeholder-slate-500 text-slate-800 dark:text-slate-200" />
+                                            {showSuggestions && itemName && itemsDB.filter(i=>i.toLowerCase().includes(itemName.toLowerCase())).length > 0 && (
+                                                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-xl rounded-xl max-h-40 overflow-auto">
+                                                    {itemsDB.filter(i=>i.toLowerCase().includes(itemName.toLowerCase())).map((item, idx) => (
+                                                        <div key={idx} onMouseDown={(e) => { e.preventDefault(); setItemName(item); setShowSuggestions(false); }} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700 font-bold text-xs cursor-pointer text-slate-800 dark:text-slate-200">{item}</div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <input type="number" step="any" value={qty} onChange={e => setQty(e.target.value)} placeholder="Qty (Misal: 0.5)" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl font-bold text-center outline-none text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500" />
+                                            <select value={unit} onChange={e => setUnit(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl font-bold text-indigo-700 dark:text-indigo-400 text-center outline-none appearance-none">
+                                                {commonUnits.map(u => <option key={u} value={u}>{u}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <input type="text" inputMode="numeric" value={formatInputRp(totalNominal)} onChange={e => setTotalNominal(parseInputRp(e.target.value))} placeholder="Total Harga Keseluruhan (Rp)" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl font-bold text-right text-indigo-800 dark:text-indigo-400 outline-none placeholder-slate-400 dark:placeholder-slate-500" />
+                                        </div>
+                                        <button type="submit" className={`w-full py-4 text-white font-black rounded-xl shadow-lg mt-2 ${editingId ? 'bg-amber-500' : 'bg-indigo-600'}`}>{editingId ? 'UPDATE ITEM' : 'TAMBAH KE LIST'}</button>
+                                    </form>
+                                </div>
+                                
+                                {cart.length > 0 && (
+                                    <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden transition-colors">
+                                        <div className="p-5 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
+                                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{currentNoteId ? 'Mengedit Arsip' : 'Daftar Belanja'}</span>
+                                            <button onClick={triggerClearCart} className="text-red-500 text-[10px] font-black uppercase px-3 py-1 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center gap-1"><div className="w-3 h-3"><Icons.Trash/></div> HAPUS</button>
+                                        </div>
+                                        <div className="divide-y divide-slate-50 dark:divide-slate-700 max-h-[35vh] overflow-y-auto no-scrollbar">
+                                            {cart.map(item => (
+                                                <div key={item.id} className="p-5 flex justify-between items-center">
+                                                    <div><p className="font-black text-[13px] text-slate-800 dark:text-slate-100 uppercase">{item.name}</p><p className="text-[10px] text-slate-400 font-bold italic">{item.qty} {item.unit} — Rp {formatNumber(item.total)}</p></div>
+                                                    <div className="flex gap-2">
+                                                        <button onClick={() => startEdit(item)} className="text-indigo-500 p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg"><div className="w-4 h-4"><Icons.Edit/></div></button>
+                                                        <button onClick={() => setCart(cart.filter(i => i.id !== item.id))} className="text-red-400 p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"><div className="w-4 h-4"><Icons.Trash/></div></button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="p-6 bg-slate-900 text-white rounded-b-[2.5rem]">
+                                            <div className="flex justify-between items-center mb-4"><span className="text-[10px] font-bold opacity-50 uppercase">Total Pengeluaran</span><span className="text-xl font-black text-indigo-400">Rp {formatNumber(cart.reduce((a, b) => a + b.total, 0))}</span></div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <button onClick={handleSaveNote} disabled={isSaving} className="w-full py-4 bg-white/10 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-white/20">SIMPAN & POTONG KAS</button>
+                                                <button onClick={() => generatePrompt(cart, transactionDate)} className="w-full py-4 bg-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg">BUAT PROMPT</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {activeTab === 'income' && (
+                            <div className="flex-1 overflow-y-auto no-scrollbar pb-32 space-y-4">
+                                <div className="p-6 rounded-[2.5rem] bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700 transition-colors">
+                                    <h2 className="font-extrabold text-slate-800 dark:text-slate-100 uppercase text-[10px] tracking-widest mb-4 text-green-600 dark:text-green-400 flex items-center gap-2"><div className="w-4 h-4"><Icons.Wallet /></div> Input Pemasukan</h2>
+                                    <form onSubmit={handleSaveIncome} className="space-y-4">
+                                        <input type="date" value={incomeDate} onChange={e => handleDateChange(e, setIncomeDate)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl font-bold text-slate-700 dark:text-slate-200 outline-none" />
+                                        <div className="relative">
+                                            <input type="text" value={incomeSource} onChange={e => { setIncomeSource(e.target.value); setShowIncomeSuggestions(true); }} placeholder="Sumber (Grab, Kasir, dll)" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl font-bold uppercase outline-none text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500" />
+                                            {showIncomeSuggestions && (
+                                                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-xl rounded-xl overflow-hidden">
+                                                    {incomeTypes.map(t => <div key={t} onMouseDown={(e)=>{e.preventDefault(); setIncomeSource(t); setShowIncomeSuggestions(false);}} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700 font-bold text-xs cursor-pointer text-slate-800 dark:text-slate-200">{t}</div>)}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <input type="text" inputMode="numeric" value={formatInputRp(incomeAmount)} onChange={e => setIncomeAmount(parseInputRp(e.target.value))} placeholder="Nominal Bersih Rp" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl font-bold text-right text-green-700 dark:text-green-400 outline-none placeholder-slate-400 dark:placeholder-slate-500" />
+                                        <button type="submit" className="w-full py-4 bg-green-600 text-white font-black rounded-2xl shadow-lg text-[10px] uppercase tracking-widest mt-2">TAMBAH KE KAS</button>
+                                    </form>
+                                </div>
+                                <div className="px-2">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h3 className="font-bold text-slate-400 text-[10px] uppercase tracking-widest">Histori Pemasukan</h3>
+                                        <input type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)} className="bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-lg text-[10px] font-bold outline-none border border-transparent dark:border-slate-700" />
+                                    </div>
+                                    {incomes.filter(i => i.date.startsWith(filterMonth)).length === 0 ? <p className="text-xs text-center text-slate-400 py-4 font-bold">Belum ada pemasukan di bulan ini.</p> : 
+                                    incomes.filter(i => i.date.startsWith(filterMonth)).map(inc => (
+                                        <div key={inc.id} className="bg-white dark:bg-slate-800 p-4 rounded-2xl mb-2 flex justify-between items-center shadow-sm border border-slate-100 dark:border-slate-700 transition-colors">
+                                            <div>
+                                                <p className="font-black text-slate-700 dark:text-slate-200 text-[11px] uppercase">{inc.source}</p>
+                                                <p className="text-[9px] text-slate-400 font-bold">{new Date(inc.date).toLocaleDateString('id-ID', {day:'numeric', month:'short'})}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-black text-green-600 dark:text-green-400 text-sm mb-1">+ Rp {formatNumber(inc.amount)}</p>
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <button onClick={() => triggerIncomePrompt(inc.source, inc.amount, inc.date)} className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 rounded text-[8px] font-black uppercase flex items-center gap-1"><div className="w-2.5 h-2.5"><Icons.Copy/></div> Prompt</button>
+                                                    <button onClick={() => deleteIncome(inc.id)} className="p-1 bg-red-50 dark:bg-red-900/30 text-red-400 rounded"><div className="w-3.5 h-3.5"><Icons.Trash/></div></button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'agenda' && (
+                            <div className="flex-1 overflow-y-auto no-scrollbar pb-32 space-y-4">
+                                {renderCalendar()}
+                                {renderAgendaSummary()}
+                                
+                                <div className="p-6 rounded-[2.5rem] bg-slate-900 text-white shadow-xl">
+                                    <h2 className="font-extrabold uppercase text-[10px] tracking-widest mb-4 flex items-center gap-2"><div className="w-4 h-4"><Icons.Calendar /></div> Tambah Operasional / Tagihan</h2>
+                                    <form onSubmit={handleAddAgenda} className="space-y-4">
+                                        <input type="date" value={agendaDate} onChange={e => handleDateChange(e, setAgendaDate)} className="w-full p-4 bg-slate-800 border border-slate-700 rounded-2xl font-bold text-white outline-none" />
+                                        <input type="text" value={agendaTitle} onChange={e => setAgendaTitle(e.target.value)} placeholder="Misal: Sewa, Gaji, Uang Darurat" className="w-full p-4 bg-slate-800 border border-slate-700 rounded-2xl font-bold outline-none placeholder-slate-500" />
+                                        <div className="flex gap-2">
+                                            <select value={agendaType} onChange={e => setAgendaType(e.target.value)} className="w-2/5 py-4 px-2 bg-slate-800 border border-slate-700 rounded-2xl font-bold outline-none appearance-none text-center">
+                                                <option value="keluar">Keluar</option>
+                                                <option value="masuk">Masuk</option>
+                                            </select>
+                                            <input type="text" inputMode="numeric" value={formatInputRp(agendaAmount)} onChange={e => setAgendaAmount(parseInputRp(e.target.value))} placeholder="Nominal Rp" className="flex-1 p-4 bg-slate-800 border border-slate-700 rounded-2xl font-bold text-right outline-none placeholder-slate-500" />
+                                        </div>
+                                        <button type="submit" className="w-full py-4 bg-indigo-500 text-white font-black rounded-2xl text-[10px] uppercase tracking-widest">SIMPAN</button>
+                                    </form>
+                                </div>
+
+                                <div className="px-2">
+                                    <h3 className="font-bold text-slate-400 text-[10px] uppercase tracking-widest mb-3">Agenda / Opr: {new Date(agendaDate).toLocaleDateString('id-ID', {day:'numeric', month:'short'})}</h3>
+                                    {agendas.filter(a => a.date === agendaDate).length === 0 ? <p className="text-xs text-center text-slate-400 py-4 font-bold">Kosong.</p> : 
+                                    agendas.filter(a => a.date === agendaDate).map(ag => {
+                                        let isPast = ag.date < getLocalDateStr();
+                                        return (
+                                            <div key={ag.id} className={`p-4 rounded-2xl mb-2 flex items-center gap-3 shadow-sm border transition-all ${ag.isPaid || isPast ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 opacity-60' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
+                                                <button onClick={() => { if(!isPast) setAgendas(prev => prev.map(a => a.id === ag.id ? { ...a, isPaid: !a.isPaid } : a)); }} className={`w-8 h-8 shrink-0 rounded-full border-2 flex items-center justify-center transition-colors ${ag.isPaid || isPast ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 dark:border-slate-600 text-transparent'}`}>
+                                                    <div className="w-4 h-4"><Icons.Check /></div>
+                                                </button>
+                                                <div className="flex-1">
+                                                    <p className={`font-black text-xs uppercase ${ag.isPaid || isPast ? 'line-through text-slate-400' : 'text-slate-800 dark:text-slate-200'}`}>{ag.title}</p>
+                                                    {isPast && <span className="bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-[8px] px-1.5 py-0.5 rounded font-bold uppercase">Auto-Solved</span>}
+                                                </div>
+                                                <div className="text-right flex flex-col items-end">
+                                                    <p className={`font-black text-sm ${ag.type === 'keluar' ? 'text-red-500 dark:text-red-400' : 'text-green-500 dark:text-green-400'}`}>{ag.type==='keluar'?'-':'+'} {formatNumber(ag.amount)}</p>
+                                                    <div className="flex gap-2 items-center mt-1">
+                                                        <button onClick={() => triggerAgendaPrompt(ag)} className="text-[9px] text-indigo-400 font-bold uppercase hover:text-indigo-600 dark:hover:text-indigo-300 flex items-center gap-0.5">
+                                                            <div className="w-3 h-3"><Icons.Copy /></div> Prompt
+                                                        </button>
+                                                        <button onClick={() => deleteAgenda(ag.id)} className="text-[9px] text-red-300 dark:text-red-400 font-bold uppercase hover:text-red-500 ml-1">Hapus</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'arsip' && (
+                            <div className="flex-1 overflow-y-auto no-scrollbar pb-32 space-y-4">
+                                <div className="px-2 flex justify-between items-center mb-2">
+                                    <h2 className="font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-widest text-[11px] italic text-slate-400 dark:text-slate-500">Riwayat Belanja</h2>
+                                    <input type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)} className="bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-lg text-[10px] font-bold outline-none border border-transparent dark:border-slate-700" />
+                                </div>
+                                {history.filter(h => h.date.startsWith(filterMonth)).length === 0 ? (
+                                    <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-[2.5rem] border border-dashed border-slate-200 dark:border-slate-700 mx-2 transition-colors">
+                                        <div className="w-10 h-10 mx-auto text-slate-200 dark:text-slate-600 mb-3"><Icons.Archive /></div>
+                                        <p className="text-slate-300 dark:text-slate-500 font-bold uppercase text-[10px] tracking-widest">Kosong</p>
+                                    </div>
+                                ) : (
+                                    history.filter(h => h.date.startsWith(filterMonth)).map(note => (
+                                        <div key={note.id} className="bg-white dark:bg-slate-800 p-5 rounded-[2.2rem] border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden mb-4 transition-colors">
+                                            <div className="flex justify-between items-center mb-4">
+                                                <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-4 py-1.5 rounded-full uppercase tracking-widest font-mono italic">
+                                                    {new Date(note.date).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'})}
+                                                </span>
+                                                <span className="font-black text-slate-900 dark:text-slate-100 text-sm">Rp {formatNumber(note.total)}</span>
+                                            </div>
+                                            
+                                            <div className="mb-4">
+                                                {note.items.map((it, idx) => (
+                                                    <div key={idx} className="flex justify-between text-[11px] text-slate-600 dark:text-slate-300">
+                                                        <span>{it.name} {it.qty !== 1 ? `(${it.qty})` : ''}</span>
+                                                        <span className="font-bold">Rp {formatNumber(it.total)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            <div className="flex gap-2">
+                                                <button onClick={() => { setCart(note.items); setTransactionDate(note.date); setCurrentNoteId(note.id); setActiveTab('plan'); showStatus('Mode Edit Arsip'); }} className="flex-1 bg-slate-900 dark:bg-slate-700 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 dark:hover:bg-slate-600 shadow-md">DETAIL / EDIT</button>
+                                                <button onClick={() => generatePrompt(note.items, note.date)} className="w-12 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 rounded-xl flex justify-center items-center hover:bg-indigo-100 dark:hover:bg-indigo-900/50"><div className="w-5 h-5"><Icons.Copy /></div></button>
+                                                <button onClick={() => {
+                                                    setConfirmModal({ show: true, title: 'Hapus Arsip?', message: 'Data dihapus permanen?', onConfirm: async () => {
+                                                        setConfirmModal({ ...confirmModal, show: false }); showStatus('Menghapus...', 'loading');
+                                                        try {
+                                                            if (isLocalMode) setHistory(prev => prev.filter(h => h.id !== note.id));
+                                                            else if (user && paths) await db.collection(paths.history).doc(note.id).delete();
+                                                            showStatus('Arsip Dihapus!');
+                                                        } catch (e) { showStatus('Gagal Menghapus', 'error'); }
+                                                    }});
+                                                }} className="w-12 bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400 rounded-xl flex justify-center items-center hover:bg-red-100 dark:hover:bg-red-900/50"><div className="w-5 h-5"><Icons.Trash /></div></button>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        )}
+                    </main>
+
+                    {/* Draggable Fin AI Button Wrapper */}
+                    <div 
+                        className={`fixed z-[550] transition-opacity duration-300 ${isChatOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+                        style={{ right: `${finPos.right}px`, bottom: `${finPos.bottom}px`, touchAction: 'none' }}
+                        onPointerDown={handleFinPointerDown}
+                        onPointerMove={handleFinPointerMove}
+                        onPointerUp={handleFinPointerUp}
+                        onPointerCancel={handleFinPointerUp}
+                    >
+                        <button 
+                            onClick={handleFinClick} 
+                            className="relative bg-indigo-600 text-white p-4 rounded-full shadow-[0_10px_25px_rgba(79,70,229,0.5)] border border-indigo-400 active:scale-95 transition-transform"
+                        >
+                            <div className="w-6 h-6 pointer-events-none"><Icons.MessageCircle /></div>
+                            {hasNewFinAlert && <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-red-500 border-2 border-white rounded-full animate-pulse pointer-events-none"></span>}
+                        </button>
+                    </div>
+
+                    <div className={`fixed left-1/2 -translate-x-1/2 z-[160] transition-all duration-500 ease-in-out ${showNav ? 'bottom-28 opacity-0 pointer-events-none translate-y-10' : 'bottom-6 opacity-100 translate-y-0'}`}>
+                        <button onClick={() => setShowNav(true)} className="bg-slate-900/90 dark:bg-slate-800/90 backdrop-blur-md text-white px-5 py-3 rounded-full shadow-2xl border border-slate-700/50 flex items-center gap-2 hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors">
+                            <div className="w-5 h-5"><Icons.ChevronUp /></div>
+                            <span className="text-[11px] font-black uppercase tracking-widest">Menu Utama</span>
+                        </button>
+                    </div>
+
+                    <nav className={`fixed left-1/2 -translate-x-1/2 w-[95%] max-w-[420px] glass-nav rounded-[2.5rem] flex justify-between px-2 py-2 z-[150] shadow-2xl border border-slate-700/50 transition-all duration-500 ease-in-out ${showNav ? 'bottom-6 translate-y-0 opacity-100' : '-bottom-32 translate-y-full opacity-0 pointer-events-none'}`}>
+                        <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                            <button onClick={() => setShowNav(false)} className="w-16 h-5 bg-slate-900/95 dark:bg-slate-800/95 backdrop-blur-md rounded-t-full flex items-center justify-center border-t border-x border-slate-700/50 dark:border-slate-600/50 text-slate-400 hover:text-white cursor-pointer group shadow-lg">
+                                <div className="w-4 h-4 group-hover:translate-y-0.5 transition-transform"><Icons.ChevronDown /></div>
+                            </button>
+                        </div>
+
+                        <button onClick={() => setActiveTab('dashboard')} className={`flex-1 py-3 rounded-[2rem] flex flex-col items-center transition-all ${activeTab === 'dashboard' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}>
+                            <div className="w-5 h-5"><Icons.Bot /></div><span className="text-[7px] font-black uppercase mt-1 tracking-widest">C-Flow</span>
+                        </button>
+                        <button onClick={() => setActiveTab('plan')} className={`flex-1 py-3 rounded-[2rem] flex flex-col items-center transition-all ${activeTab === 'plan' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}>
+                            <div className="w-5 h-5"><Icons.ShopBag /></div><span className="text-[7px] font-black uppercase mt-1 tracking-widest">Belanja</span>
+                        </button>
+                        <button onClick={() => setActiveTab('income')} className={`flex-1 py-3 rounded-[2rem] flex flex-col items-center transition-all ${activeTab === 'income' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}>
+                            <div className="w-5 h-5"><Icons.Wallet /></div><span className="text-[7px] font-black uppercase mt-1 tracking-widest">Income</span>
+                        </button>
+                        <button onClick={() => setActiveTab('agenda')} className={`flex-1 py-3 rounded-[2rem] flex flex-col items-center transition-all ${activeTab === 'agenda' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}>
+                            <div className="w-5 h-5"><Icons.Calendar /></div><span className="text-[7px] font-black uppercase mt-1 tracking-widest">Operasi</span>
+                        </button>
+                        <button onClick={() => setActiveTab('arsip')} className={`flex-1 py-3 rounded-[2rem] flex flex-col items-center transition-all ${activeTab === 'arsip' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}>
+                            <div className="w-5 h-5"><Icons.Archive /></div><span className="text-[7px] font-black uppercase mt-1 tracking-widest">Arsip</span>
+                        </button>
+                    </nav>
+
+                    {renderFloatingFin()}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
