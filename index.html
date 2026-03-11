@@ -201,6 +201,7 @@
             const [attachedImage, setAttachedImage] = useState(null);
             const fileInputRef = useRef(null);
             const chatEndRef = useRef(null);
+            const todayRowRef = useRef(null); // Ref untuk auto scroll ke hari ini
 
             // STATE UNTUK DRAG BUBBLE FIN
             const [finPos, setFinPos] = useState({ right: 20, bottom: 96 }); 
@@ -246,6 +247,17 @@
                 }
                 localStorage.setItem('fin-darkmode', isDarkMode);
             }, [isDarkMode]);
+
+            // Auto-scroll ke Tanggal Hari Ini pada Cash Flow saat berada di Dashboard
+            useEffect(() => {
+                if (activeTab === 'dashboard') {
+                    setTimeout(() => {
+                        if (todayRowRef.current) {
+                            todayRowRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }, 300);
+                }
+            }, [activeTab, dashboardMonth]);
 
             const formatNumber = (num) => new Intl.NumberFormat('id-ID').format(num);
 
@@ -490,7 +502,7 @@
             };
 
             const fetchFinAI = async (userText, imageData, chatHistory) => {
-                const apiKey = "AIzaSyC1xfhcCcOwDpkKPD9x8qM4OBZ1NZ0MOu0"; 
+                const apiKey = "AIzaSyCQaNoQ7OCaoimyfS7KnLIFXKdU93iXu3g"; 
                 var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
                 
                 const todayStr = getLocalDateStr();
@@ -1022,7 +1034,8 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
 
                 const tagihanKeluar = monthlyAgendas.filter(a => a.type === 'keluar');
                 const totalTagihan = tagihanKeluar.reduce((s, a) => s + a.amount, 0);
-                const tagihanTerbayar = tagihanKeluar.filter(a => a.isPaid).reduce((s, a) => s + a.amount, 0);
+                // UPDATE PENTING: Hitung tagihan lunas ATAU tagihan yang sudah lewat dari hari ini
+                const tagihanTerbayar = tagihanKeluar.filter(a => a.isPaid || a.date < todayStr).reduce((s, a) => s + a.amount, 0);
                 const tagihanPct = totalTagihan === 0 ? 100 : Math.min(100, (tagihanTerbayar / totalTagihan) * 100);
 
                 const idealSisaKas = settings.saldoAwal + ((settings.targetOmzet - settings.maxBelanja) * daysInMonth);
@@ -1086,12 +1099,18 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                 </div>
                             </div>
 
-                            <div className={`p-4 rounded-2xl flex items-center justify-between border ${profitBulanIni >= 0 ? 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800'}`}>
-                                <div>
-                                    <p className={`text-[9px] font-black uppercase tracking-widest ${profitBulanIni >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>Status Break Even</p>
-                                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-0.5">{profitBulanIni >= 0 ? 'Aman! Sudah tembus modal/untung.' : 'Waspada! Masih minus/rugi.'}</p>
+                            <div className={`p-3.5 rounded-2xl border ${profitBulanIni >= 0 ? 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800'}`}>
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <p className={`text-[9px] font-black uppercase tracking-widest ${profitBulanIni >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>Status Break Even</p>
+                                        <p className="text-[9px] font-bold text-slate-500 dark:text-slate-400 mt-0.5">{profitBulanIni >= 0 ? 'Aman! Sudah tembus modal.' : 'Waspada! Belum balik modal.'}</p>
+                                    </div>
+                                    <p className={`text-xs font-black shrink-0 ml-2 ${profitBulanIni >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>{profitBulanIni >= 0 ? '+' : ''}Rp {formatNumber(profitBulanIni)}</p>
                                 </div>
-                                <p className={`text-sm font-black ${profitBulanIni >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>{profitBulanIni >= 0 ? '+' : ''}Rp {formatNumber(profitBulanIni)}</p>
+                                <div className="flex justify-between items-center text-[8.5px] font-bold text-slate-500 dark:text-slate-400 border-t border-slate-200/60 dark:border-slate-700/60 pt-2 mt-2">
+                                    <span>Total Masuk: Rp {formatNumber(omzetBulanIni)}</span>
+                                    <span>Total Modal: Rp {formatNumber(pengeluaranBulanIni)}</span>
+                                </div>
                             </div>
                         </div>
 
@@ -1100,7 +1119,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                 <h3 className="font-black text-slate-800 dark:text-slate-100 text-xs uppercase tracking-widest flex items-center gap-2"><div className="w-4 h-4 text-indigo-500"><Icons.Calendar/></div> Cash Flow</h3>
                                 <input type="month" value={dashboardMonth} onChange={e => setDashboardMonth(e.target.value)} className="bg-transparent text-indigo-600 dark:text-indigo-400 font-bold text-xs outline-none" />
                             </div>
-                            <div className="max-h-[50vh] overflow-y-auto no-scrollbar bg-slate-50 dark:bg-slate-900/50 p-3 space-y-2">
+                            <div className="max-h-[65vh] overflow-y-auto no-scrollbar bg-slate-50 dark:bg-slate-900/50 p-2 sm:p-3 space-y-2">
                                 {data.reportDays.map((day, i) => {
                                     // Hitung Lencana Status (Profit/Over/Rugi) untuk hari yang sudah lewat atau hari ini
                                     let badge = null;
@@ -1119,7 +1138,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                     }
 
                                     return (
-                                        <div key={i} className={`p-4 rounded-[2rem] border transition-all ${day.isToday ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700 shadow-md scale-[1.02]' : (day.isHoliday ? 'bg-amber-50/50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/50 shadow-sm' : (day.isFuture ? 'bg-white dark:bg-slate-800 border-dashed border-slate-200 dark:border-slate-700 opacity-70' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 shadow-sm'))}`}>
+                                        <div key={i} ref={day.isToday ? todayRowRef : null} className={`p-4 rounded-[2rem] border transition-all ${day.isToday ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700 shadow-md scale-[1.02]' : (day.isHoliday ? 'bg-amber-50/50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/50 shadow-sm' : (day.isFuture ? 'bg-white dark:bg-slate-800 border-dashed border-slate-200 dark:border-slate-700 opacity-70' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 shadow-sm'))}`}>
                                             
                                             <div className="flex justify-between items-center mb-3">
                                                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -1189,12 +1208,12 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                                 </div>
                                             )}
 
-                                        <div className="flex justify-between items-center border-t border-slate-200/60 dark:border-slate-700/60 mt-2.5 pt-2.5">
-                                            <span className="text-indigo-600 dark:text-indigo-400 font-black uppercase tracking-widest text-[10px]">Saldo Akhir Hari</span>
-                                            <span className="font-black text-indigo-700 dark:text-indigo-300 text-xs bg-indigo-100/50 dark:bg-indigo-900/50 px-2 py-1 rounded-lg">Rp {formatNumber(day.saldoAkhir)}</span>
+                                            <div className="flex justify-between items-center border-t border-slate-200/60 dark:border-slate-700/60 mt-2.5 pt-2.5">
+                                                <span className="text-indigo-600 dark:text-indigo-400 font-black uppercase tracking-widest text-[10px]">Saldo Akhir Hari</span>
+                                                <span className="font-black text-indigo-700 dark:text-indigo-300 text-xs bg-indigo-100/50 dark:bg-indigo-900/50 px-2 py-1 rounded-lg">Rp {formatNumber(day.saldoAkhir)}</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                )})}
+                                    )})}
                             </div>
                         </div>
 
@@ -1349,6 +1368,19 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                     </div>
                 </div>
             );
+
+            // Perhitungan list diurutkan berdasarkan tanggal terbaru terlebih dahulu (untuk Income & Arsip)
+            const filteredIncomes = incomes.filter(i => i.date.startsWith(filterMonth))
+                .sort((a, b) => {
+                    if (a.date === b.date) return b.timestamp - a.timestamp;
+                    return new Date(b.date) - new Date(a.date);
+                });
+
+            const filteredHistory = history.filter(h => h.date.startsWith(filterMonth))
+                .sort((a, b) => {
+                    if (a.date === b.date) return b.timestamp - a.timestamp;
+                    return new Date(b.date) - new Date(a.date);
+                });
 
             return (
                 <div className="max-w-md mx-auto min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 relative shadow-2xl font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
@@ -1523,8 +1555,8 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                         <h3 className="font-bold text-slate-400 text-[10px] uppercase tracking-widest">Histori Pemasukan</h3>
                                         <input type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)} className="bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-lg text-[10px] font-bold outline-none border border-transparent dark:border-slate-700" />
                                     </div>
-                                    {incomes.filter(i => i.date.startsWith(filterMonth)).length === 0 ? <p className="text-xs text-center text-slate-400 py-4 font-bold">Belum ada pemasukan di bulan ini.</p> : 
-                                    incomes.filter(i => i.date.startsWith(filterMonth)).map(inc => (
+                                    {filteredIncomes.length === 0 ? <p className="text-xs text-center text-slate-400 py-4 font-bold">Belum ada pemasukan di bulan ini.</p> : 
+                                    filteredIncomes.map(inc => (
                                         <div key={inc.id} className="bg-white dark:bg-slate-800 p-4 rounded-2xl mb-2 flex justify-between items-center shadow-sm border border-slate-100 dark:border-slate-700 transition-colors">
                                             <div>
                                                 <p className="font-black text-slate-700 dark:text-slate-200 text-[11px] uppercase">{inc.source}</p>
@@ -1600,13 +1632,13 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                     <h2 className="font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-widest text-[11px] italic text-slate-400 dark:text-slate-500">Riwayat Belanja</h2>
                                     <input type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)} className="bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-lg text-[10px] font-bold outline-none border border-transparent dark:border-slate-700" />
                                 </div>
-                                {history.filter(h => h.date.startsWith(filterMonth)).length === 0 ? (
+                                {filteredHistory.length === 0 ? (
                                     <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-[2.5rem] border border-dashed border-slate-200 dark:border-slate-700 mx-2 transition-colors">
                                         <div className="w-10 h-10 mx-auto text-slate-200 dark:text-slate-600 mb-3"><Icons.Archive /></div>
                                         <p className="text-slate-300 dark:text-slate-500 font-bold uppercase text-[10px] tracking-widest">Kosong</p>
                                     </div>
                                 ) : (
-                                    history.filter(h => h.date.startsWith(filterMonth)).map(note => (
+                                    filteredHistory.map(note => (
                                         <div key={note.id} className="bg-white dark:bg-slate-800 p-5 rounded-[2.2rem] border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden mb-4 transition-colors">
                                             <div className="flex justify-between items-center mb-4">
                                                 <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-4 py-1.5 rounded-full uppercase tracking-widest font-mono italic">
