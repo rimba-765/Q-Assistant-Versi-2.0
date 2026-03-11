@@ -300,7 +300,7 @@
                         }
                         
                         setShowSettings(false);
-                        showStatus('Semua Data Berhasil Direset!');
+                        showStatus('Semua Data Berhasil Direset!', 'success');
                     }
                 });
             };
@@ -432,17 +432,23 @@
                 
                 const newIncome = { id: 'inc-' + Date.now() + Math.random(), date: data.date || getLocalDateStr(), source: toTitleCase(data.source || 'Pemasukan'), amount: safeAmount, timestamp: Date.now() };
                 setIncomes(prev => [newIncome, ...prev].sort((a,b) => b.timestamp - a.timestamp));
-                showStatus('Pemasukan Berhasil Ditambahkan Otomatis!');
+                showStatus('Pemasukan Berhasil Ditambahkan Otomatis!', 'success');
             };
 
             const processAddAgenda = (data) => {
                 let rawAmount = (data.amount !== undefined && data.amount !== 0) ? data.amount : (data.total !== undefined ? data.total : 0);
                 let safeAmount = parseFloat(rawAmount.toString().replace(/[^0-9.-]/g, ''));
                 if (isNaN(safeAmount)) safeAmount = 0;
-
-                const newAg = { id: 'agd-'+Date.now() + Math.random(), date: data.date || getLocalDateStr(), title: toTitleCase(data.title || 'Agenda'), amount: safeAmount, type: data.agendaType || 'keluar', isPaid: false };
+                
+                const type = data.agendaType || 'keluar';
+                const newAg = { id: 'agd-'+Date.now() + Math.random(), date: data.date || getLocalDateStr(), title: toTitleCase(data.title || 'Agenda'), amount: safeAmount, type: type, isPaid: false };
                 setAgendas(prev => [...prev, newAg].sort((a,b) => new Date(a.date) - new Date(b.date)));
-                showStatus('Tagihan/Operasional Berhasil Ditambahkan Otomatis!');
+                
+                if(type === 'masuk'){
+                    showStatus('Agenda Pemasukan Ditambahkan Otomatis!', 'success');
+                } else {
+                    showStatus('Agenda Tagihan Ditambahkan Otomatis!', 'error'); // Merah untuk keluar/tagihan
+                }
             };
 
             const processAddExpense = async (data) => {
@@ -484,7 +490,7 @@
                 } else {
                     await db.collection(paths.history).doc(noteId).set(noteData);
                 }
-                showStatus('Arsip Pengeluaran Ditambahkan!');
+                showStatus('Arsip Pengeluaran Ditambahkan!', 'success');
             };
 
             const handleFileChange = (e) => {
@@ -501,8 +507,48 @@
                 reader.readAsDataURL(file);
             };
 
+            // LOGIKA PEMBUATAN REPORT LOKAL (HYBRID)
+            const generateLocalSystemReport = (text) => {
+                const lowerText = text.toLowerCase();
+                const todayStr = getLocalDateStr();
+                const currentMonthStr = todayStr.substring(0, 7);
+
+                if (lowerText.includes("analisa kas") || lowerText.includes("laporan bulanan") || lowerText.includes("profit atau boncos")) {
+                    const monthlyInc = incomes.filter(i => i.date.startsWith(currentMonthStr)).reduce((s,i) => s + i.amount, 0);
+                    const monthlyExp = history.filter(h => h.date.startsWith(currentMonthStr)).reduce((s,h) => s + h.total, 0);
+                    const profit = monthlyInc - monthlyExp;
+                    const status = profit >= 0 ? "✅ PROFIT (Untung)" : "🚨 BONCOS (Rugi)";
+
+                    return `📊 **DATA SISTEM: Analisa Kas & Laporan Bulanan**\n` +
+                           `- **Total Kas Saat Ini:** Rp ${formatNumber(currentBalance)}\n` +
+                           `- **Pemasukan Bulan Ini:** Rp ${formatNumber(monthlyInc)}\n` +
+                           `- **Pengeluaran Bulan Ini:** Rp ${formatNumber(monthlyExp)}\n` +
+                           `- **Status:** ${status} Rp ${formatNumber(Math.abs(profit))}`;
+                }
+
+                if (lowerText.includes("tagihan") || lowerText.includes("agenda yang belum dibayar")) {
+                    const unpaid = agendas.filter(a => !a.isPaid && a.type === 'keluar');
+                    if(unpaid.length === 0) return `✅ **DATA SISTEM: Tagihan Aman!**\nTidak ada tagihan operasional yang belum dibayar bulan ini.`;
+
+                    let report = `⚠️ **DATA SISTEM: Daftar Tagihan Belum Lunas**\n`;
+                    unpaid.forEach(a => report += `- ${a.title}: **Rp ${formatNumber(a.amount)}** (Tgl: ${a.date})\n`);
+                    return report;
+                }
+
+                if (lowerText.includes("rekap harian") || lowerText.includes("rekap laporan total masuk dan keluar")) {
+                    const todayInc = incomes.filter(i => i.date === todayStr).reduce((s,i) => s + i.amount, 0);
+                    const todayExp = history.filter(h => h.date === todayStr).reduce((s,h) => s + h.total, 0);
+                    return `📝 **DATA SISTEM: Rekap Harian (${todayStr})**\n` +
+                           `- **Total Kas Realtime:** Rp ${formatNumber(currentBalance)}\n` +
+                           `- **Pemasukan Hari Ini:** Rp ${formatNumber(todayInc)}\n` +
+                           `- **Pengeluaran Hari Ini:** Rp ${formatNumber(todayExp)}`;
+                }
+
+                return null;
+            };
+
             const fetchFinAI = async (userText, imageData, chatHistory) => {
-                const apiKey = "AIzaSyCQaNoQ7OCaoimyfS7KnLIFXKdU93iXu3g"; 
+                const apiKey = "AIzaSyAwIRu7h4FmdhKPm5nsOrZoQRQdFxrC7sQ"; 
                 var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
                 
                 const todayStr = getLocalDateStr();
@@ -542,7 +588,9 @@ ANDA WAJIB MEMBALAS HANYA DENGAN JSON MURNI DENGAN STRUKTUR SEPERTI INI:
      // Contoh format Belanja (Ada item rincian struk): 
      {"type": "add_expense", "data": {"date": "YYYY-MM-DD", "items": [{"name": "Beras", "qty": 1, "unit": "Kg", "total": 15000}]}},
      // Contoh format Pengeluaran (Hanya summary total/arsip screenshot tanpa rincian): 
-     {"type": "add_expense", "data": {"date": "YYYY-MM-DD", "items": [{"name": "Belanja Bahan Baku", "qty": 1, "unit": "Ls", "total": 250000}]}}
+     {"type": "add_expense", "data": {"date": "YYYY-MM-DD", "items": [{"name": "Belanja Bahan Baku", "qty": 1, "unit": "Ls", "total": 250000}]}},
+     // Contoh format Tagihan/Agenda (Tipe masuk / keluar):
+     {"type": "add_agenda", "data": {"date": "YYYY-MM-DD", "title": "Sewa Kios", "amount": 500000, "agendaType": "keluar"}}
   ]
 }
 
@@ -607,10 +655,11 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                             let userMsg = `Waduh Bos, Fin agak pusing nih bacanya. Detail Error: ${err.message}. Coba ulangi dengan kalimat lain ya.`;
                             
                             if (err.status === 429) {
-                                userMsg = `Waduh Bos, Kuota API Harian kita benar-benar habis nih (Limit 429). Solusi permanen: Aktifkan billing Pay-as-you-go di Google AI Studio agar limit 20 request/hari ini dihapus oleh Google. 🙏`;
+                                userMsg = `Waduh Bos, Kuota API Harian kita benar-benar habis nih (Limit 429). Solusi permanen: Aktifkan billing Pay-as-you-go di Google AI Studio agar limit request/hari dihapus oleh Google. 🙏`;
                             }
                             
-                            return { reply: userMsg, actions: [] };
+                            // Ditambahkan flag isError: true agar sistem Hybrid tahu AI gagal
+                            return { reply: userMsg, actions: [], isError: true };
                         }
 
                         if (err.status === 429 && i < backoffDelays.length) {
@@ -636,16 +685,45 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 setAttachedImage(null);
                 setIsTyping(true);
                 
+                // --- HYBRID LOGIC START ---
+                // Cek apakah ada laporan lokal (Analisa, Rekap, dll)
+                const localSystemReport = generateLocalSystemReport(text);
+                let aiPromptText = text;
+
+                // Jika terdeteksi laporan, perintahkan AI HANYA untuk memberi Insight/Saran, jangan mengubah data
+                if (localSystemReport) {
+                    aiPromptText = `Saya meminta laporan keuangan. Ini adalah data valid dari sistem:\n\n${localSystemReport}\n\nTugasmu HANYA berikan 1 atau 2 paragraf singkat berisi "Insight / Saran / Semangat" untuk Bos berdasarkan data di atas. Gunakan bahasa santai memanggil Bos. JANGAN buat actions array.`;
+                }
+
                 const historyToPass = [...chats, newUserChat];
-                const responseObj = await fetchFinAI(text, imageToProcess, historyToPass);
+                const responseObj = await fetchFinAI(aiPromptText, imageToProcess, historyToPass);
                 
                 setIsTyping(false);
                 
-                if (responseObj && responseObj.reply) {
-                    setChats(prev => [...prev, { id: Date.now()+1, sender: 'fin', text: responseObj.reply, type: 'text' }]);
+                let finalReply = "";
+
+                // Jika kita tadi meminta laporan lokal
+                if (localSystemReport) {
+                    finalReply = localSystemReport + "\n\n";
+                    // Jika AI gagal/error, beritahu bahwa insight gagal, TAPI data lokalnya tetap tampil
+                    if (responseObj && responseObj.isError) {
+                        finalReply += `*(💡 Insight AI sedang tidak tersedia karena masalah koneksi/limit, namun data di atas 100% akurat dari sistem).*`;
+                    } else if (responseObj && responseObj.reply) {
+                        // Jika AI berhasil, tempelkan insightnya di bawah
+                        finalReply += `💡 **Insight Fin:**\n${responseObj.reply}`;
+                    }
+                } else {
+                    // Chat normal (tidak mendeteksi perintah laporan lokal)
+                    if (responseObj && responseObj.reply) {
+                        finalReply = responseObj.reply;
+                    }
+                }
+
+                if (finalReply) {
+                    setChats(prev => [...prev, { id: Date.now()+1, sender: 'fin', text: finalReply, type: 'text' }]);
                     if (!isChatOpen) setHasNewFinAlert(true);
 
-                    if (responseObj.actions && responseObj.actions.length > 0) {
+                    if (responseObj && responseObj.actions && responseObj.actions.length > 0) {
                         for (let act of responseObj.actions) {
                             if (act.type === 'add_income') processAddIncome(act.data);
                             if (act.type === 'add_expense') processAddExpense(act.data);
@@ -760,7 +838,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                     }
 
                     setCart([]); setCurrentNoteId(null);
-                    setIsSaving(false); showStatus(currentNoteId ? 'Arsip Diperbarui!' : 'Belanja Tersimpan!');
+                    setIsSaving(false); showStatus(currentNoteId ? 'Arsip Diperbarui!' : 'Belanja Tersimpan!', 'success');
                 } catch (e) {
                     console.error(e); setIsSaving(false); showStatus('Gagal Simpan', 'error');
                 }
@@ -768,13 +846,13 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
 
             const triggerClearCart = () => {
                 setConfirmModal({ show: true, title: 'Reset Rencana?', message: 'Hapus semua daftar belanja dari rencana ini?', onConfirm: () => {
-                    setCart([]); setCurrentNoteId(null); setConfirmModal({...confirmModal, show:false}); showStatus('Direset!');
+                    setCart([]); setCurrentNoteId(null); setConfirmModal({...confirmModal, show:false}); showStatus('Direset!', 'success');
                 }});
             };
 
             const copyToClipboard = (text) => {
                 const el = document.createElement('textarea'); el.value = text; document.body.appendChild(el);
-                el.select(); document.execCommand('copy'); document.body.removeChild(el); showStatus('Prompt Disalin!');
+                el.select(); document.execCommand('copy'); document.body.removeChild(el); showStatus('Prompt Disalin!', 'success');
             };
 
             const generatePrompt = (cartData, date) => {
@@ -796,7 +874,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 const newIncome = { id: 'inc-' + Date.now(), date: incomeDate, source: stdSource, amount: amount, timestamp: Date.now() };
                 
                 setIncomes(prev => [newIncome, ...prev].sort((a,b) => b.timestamp - a.timestamp));
-                setIncomeSource(''); setIncomeAmount(''); showStatus('Pemasukan Ditambahkan!');
+                setIncomeSource(''); setIncomeAmount(''); showStatus('Pemasukan Ditambahkan!', 'success');
 
                 let idealBelanjaBesok = amount * 0.5; // Alokasi 50% untuk HPP Belanja
                 let sisaOperasionalProfit = amount - idealBelanjaBesok; // 50% untuk untung dan operasional
@@ -821,7 +899,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                     onConfirm: () => {
                         setIncomes(prev => prev.filter(i => i.id !== id));
                         setConfirmModal({ show: false, title: '', message: '', onConfirm: null });
-                        showStatus('Pemasukan Terhapus!');
+                        showStatus('Pemasukan Terhapus!', 'success');
                     }
                 });
             };
@@ -836,7 +914,12 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 if(!agendaTitle || !agendaAmount) return;
                 const newAg = { id: 'agd-'+Date.now(), date: agendaDate, title: toTitleCase(agendaTitle), amount: parseFloat(agendaAmount.toString().replace(/[^0-9]/g, '')), type: agendaType, isPaid: false };
                 setAgendas(prev => [...prev, newAg].sort((a,b) => new Date(a.date) - new Date(b.date)));
-                setAgendaTitle(''); setAgendaAmount(''); showStatus('Operasional Tersimpan!');
+                setAgendaTitle(''); setAgendaAmount('');
+                if(agendaType === 'keluar') {
+                    showStatus('Tagihan/Operasional Tersimpan!', 'error'); // error class untk bg merah
+                } else {
+                    showStatus('Agenda Pemasukan Tersimpan!', 'success');
+                }
             };
 
             const deleteAgenda = (id) => {
@@ -845,7 +928,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                     onConfirm: () => {
                         setAgendas(prev => prev.filter(a => a.id !== id));
                         setConfirmModal({ show: false, title: '', message: '', onConfirm: null });
-                        showStatus('Terhapus!');
+                        showStatus('Terhapus!', 'success');
                     }
                 });
             };
@@ -862,7 +945,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                     const newHols = prev.includes(dateStr) ? prev.filter(d => d !== dateStr) : [...prev, dateStr];
                     return newHols;
                 });
-                showStatus(holidays.includes(dateStr) ? 'Hari Kerja Diaktifkan' : 'Warung Libur Diset!');
+                showStatus(holidays.includes(dateStr) ? 'Hari Kerja Diaktifkan' : 'Warung Libur Diset!', 'success');
             };
 
             const renderAgendaSummary = () => {
@@ -993,8 +1076,13 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                     let agendaOut = dayAgendas.filter(a=>a.type==='keluar').reduce((s,a) => s + a.amount, 0);
 
                     let isHoliday = holidays.includes(dStr);
-                    let dailyIn = isFuture && !actualInc && !agendaIn && !isHoliday ? settings.targetOmzet : (actualInc + agendaIn);
-                    let dailyOut = isFuture && !actualExp && !agendaOut && !isHoliday ? settings.maxBelanja : (actualExp + agendaOut);
+
+                    // PERBAIKAN: Selama input riil belum ada (actual = 0), tetap gunakan target/setting harian agar estimasi tidak hilang hanya karena agenda sudah ada.
+                    let baseIn = (isFuture || (isToday && actualInc === 0)) && !isHoliday ? settings.targetOmzet : actualInc;
+                    let dailyIn = baseIn + agendaIn;
+
+                    let baseOut = (isFuture || (isToday && actualExp === 0)) && !isHoliday ? settings.maxBelanja : actualExp;
+                    let dailyOut = baseOut + agendaOut;
 
                     let saldoPagi = runningBalance;
                     runningBalance = saldoPagi + dailyIn - dailyOut;
@@ -1029,12 +1117,13 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 const monthlyHistory = history.filter(h => h.date.startsWith(dashboardMonth));
 
                 const omzetBulanIni = monthlyIncomes.reduce((s, i) => s + i.amount, 0) + monthlyAgendas.filter(a => a.type === 'masuk').reduce((s, a) => s + a.amount, 0);
+                const avgInc = omzetBulanIni / daysPassed; // RATA-RATA PEMASUKAN
+
                 const targetOmzetBulanan = settings.targetOmzet * daysInMonth;
                 const omzetPct = targetOmzetBulanan > 0 ? Math.min(100, (omzetBulanIni / targetOmzetBulanan) * 100) : 0;
 
                 const tagihanKeluar = monthlyAgendas.filter(a => a.type === 'keluar');
                 const totalTagihan = tagihanKeluar.reduce((s, a) => s + a.amount, 0);
-                // UPDATE PENTING: Hitung tagihan lunas ATAU tagihan yang sudah lewat dari hari ini
                 const tagihanTerbayar = tagihanKeluar.filter(a => a.isPaid || a.date < todayStr).reduce((s, a) => s + a.amount, 0);
                 const tagihanPct = totalTagihan === 0 ? 100 : Math.min(100, (tagihanTerbayar / totalTagihan) * 100);
 
@@ -1223,6 +1312,10 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                 <div className="w-4 h-4"><Icons.Bot /></div> Insight Estimasi Bulan {new Date(dashboardMonth + '-01').toLocaleDateString('id-ID', {month:'long'})}
                             </h3>
                             <div className="space-y-3">
+                                <div className="flex justify-between items-center bg-green-500/10 p-3.5 rounded-2xl border border-green-500/20">
+                                    <span className="text-[10px] font-bold text-slate-300">Rata-rata Pemasukan/Hari</span>
+                                    <span className="font-black text-green-400 text-sm">Rp {formatNumber(Math.round(avgInc))}</span>
+                                </div>
                                 <div className="flex justify-between items-center bg-white/5 p-3.5 rounded-2xl border border-white/10">
                                     <span className="text-[10px] font-bold text-slate-300">Rata-rata Pengeluaran/Hari</span>
                                     <span className="font-black text-red-400 text-sm">Rp {formatNumber(Math.round(avgExp))}</span>
@@ -1281,7 +1374,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 setHasNewFinAlert(false);
             };
 
-            // Tampilan Layar Penutup (Goodbye Screen) pengganti about:blank
+            // Tampilan Layar Penutup (Goodbye Screen)
             if (isExited) {
                 return (
                     <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-center text-white font-sans selection:bg-indigo-500" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
@@ -1303,7 +1396,6 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                             </div>
                             <div className="flex items-center gap-2">
                                 <button onClick={handleResetChat} className="w-8 h-8 bg-white/10 text-white rounded-full flex items-center justify-center hover:bg-white/20 transition-colors" title="Bersihkan Obrolan"><div className="w-4 h-4"><Icons.Refresh/></div></button>
-                                {/* TOMBOL MINIMIZE DITAMBAHKAN DI SINI */}
                                 <button onClick={() => setIsChatOpen(false)} className="w-8 h-8 bg-white/10 text-white rounded-full flex items-center justify-center hover:bg-white/20 transition-colors" title="Minimize Chat"><div className="w-4 h-4"><Icons.Minus/></div></button>
                             </div>
                         </div>
@@ -1375,19 +1467,29 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                     if (a.date === b.date) return b.timestamp - a.timestamp;
                     return new Date(b.date) - new Date(a.date);
                 });
-
+                
             const filteredHistory = history.filter(h => h.date.startsWith(filterMonth))
                 .sort((a, b) => {
                     if (a.date === b.date) return b.timestamp - a.timestamp;
                     return new Date(b.date) - new Date(a.date);
                 });
 
+            // Perhitungan Ringkasan (Summary) Pemasukan
+            const incomeSummary = filteredIncomes.reduce((acc, curr) => {
+                acc[curr.source] = (acc[curr.source] || 0) + curr.amount;
+                return acc;
+            }, {});
+            const totalFilteredIncome = filteredIncomes.reduce((s, i) => s + i.amount, 0);
+
             return (
                 <div className="max-w-md mx-auto min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 relative shadow-2xl font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
                     {status.show && (
                         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[800] w-max">
-                            <div className="px-6 py-3 rounded-full shadow-2xl bg-slate-900 dark:bg-slate-800 text-white animate-status flex items-center gap-3 text-sm font-bold border border-slate-700 dark:border-slate-600">
-                                <div className="w-5 h-5 text-green-400"><Icons.Check /></div> {status.message}
+                            <div className={`px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 text-sm font-bold border transition-colors ${status.type === 'error' ? 'bg-red-500 text-white border-red-600' : 'bg-slate-900 dark:bg-slate-800 text-white border-slate-700 dark:border-slate-600 animate-status'}`}>
+                                <div className={`w-5 h-5 ${status.type === 'error' ? 'text-white' : 'text-green-400'}`}>
+                                    {status.type === 'error' ? <Icons.Warn /> : (status.type === 'loading' ? <Icons.Refresh /> : <Icons.Check />)}
+                                </div>
+                                {status.message}
                             </div>
                         </div>
                     )}
@@ -1555,6 +1657,29 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                         <h3 className="font-bold text-slate-400 text-[10px] uppercase tracking-widest">Histori Pemasukan</h3>
                                         <input type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)} className="bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-lg text-[10px] font-bold outline-none border border-transparent dark:border-slate-700" />
                                     </div>
+                                    
+                                    {/* RINGKASAN PEMASUKAN BULANAN */}
+                                    {filteredIncomes.length > 0 && (
+                                        <div className="mb-4 bg-indigo-50 dark:bg-slate-800 p-4 rounded-2xl border border-indigo-100 dark:border-slate-700">
+                                            <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400 mb-3 border-b border-indigo-200 dark:border-slate-700 pb-2 flex justify-between">
+                                                <span>Ringkasan Sumber</span>
+                                                <span className="text-slate-400">{new Date(filterMonth + '-01').toLocaleDateString('id-ID', {month:'short', year:'numeric'})}</span>
+                                            </h4>
+                                            <div className="grid grid-cols-2 gap-2 mb-3">
+                                                {Object.entries(incomeSummary).sort((a,b)=>b[1]-a[1]).map(([source, amount]) => (
+                                                    <div key={source} className="bg-white dark:bg-slate-900 p-2.5 rounded-xl flex flex-col shadow-sm border border-slate-100 dark:border-slate-700">
+                                                        <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase truncate" title={source}>{source}</span>
+                                                        <span className="text-[11px] font-black text-green-600 dark:text-green-400 mt-1">Rp {formatNumber(amount)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="flex justify-between items-center pt-2 border-t border-indigo-200 dark:border-slate-700">
+                                                <span className="text-[10px] font-black uppercase text-slate-600 dark:text-slate-300">Total Filter Ini</span>
+                                                <span className="font-black text-indigo-600 dark:text-indigo-400">Rp {formatNumber(totalFilteredIncome)}</span>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {filteredIncomes.length === 0 ? <p className="text-xs text-center text-slate-400 py-4 font-bold">Belum ada pemasukan di bulan ini.</p> : 
                                     filteredIncomes.map(inc => (
                                         <div key={inc.id} className="bg-white dark:bg-slate-800 p-4 rounded-2xl mb-2 flex justify-between items-center shadow-sm border border-slate-100 dark:border-slate-700 transition-colors">
@@ -1665,7 +1790,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                                         try {
                                                             if (isLocalMode) setHistory(prev => prev.filter(h => h.id !== note.id));
                                                             else if (user && paths) await db.collection(paths.history).doc(note.id).delete();
-                                                            showStatus('Arsip Dihapus!');
+                                                            showStatus('Arsip Dihapus!', 'success');
                                                         } catch (e) { showStatus('Gagal Menghapus', 'error'); }
                                                     }});
                                                 }} className="w-12 bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400 rounded-xl flex justify-center items-center hover:bg-red-100 dark:hover:bg-red-900/50"><div className="w-5 h-5"><Icons.Trash /></div></button>
