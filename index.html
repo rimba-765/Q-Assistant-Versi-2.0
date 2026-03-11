@@ -768,7 +768,8 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
             const generatePrompt = (cartData, date) => {
                 const todayFormatted = new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
                 const itemCount = cartData.length;
-                let text = `Fina, tolong proses ${itemCount} transaksi pengeluaran bahan baku di bawah ini untuk tanggal ${todayFormatted}. Input satu per satu secara terpisah:\n`;
+                const totalNominal = cartData.reduce((acc, curr) => acc + curr.total, 0);
+                let text = `Total Nominal: Rp ${formatNumber(totalNominal)}\nFina, tolong proses ${itemCount} transaksi pengeluaran bahan baku di bawah ini untuk tanggal ${todayFormatted}. Input satu per satu secara terpisah:\n`;
                 const itemsList = cartData.map((item, index) => `${index + 1}. Catat pengeluaran ${item.name} ${item.qty} ${item.unit} (${Math.round(item.total)})`).join('\n');
                 text += itemsList;
                 copyToClipboard(text);
