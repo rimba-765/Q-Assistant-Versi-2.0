@@ -189,6 +189,9 @@
             const [settings, setSettings] = useState(() => JSON.parse(localStorage.getItem('fin-settings') || JSON.stringify(defaultSettings)));
             const [holidays, setHolidays] = useState(() => JSON.parse(localStorage.getItem('fin-holidays') || '[]'));
             
+            // Tambahkan State untuk menyimpan API Key Gemini
+            const [geminiApiKey, setGeminiApiKey] = useState(() => localStorage.getItem('fin-gemini-api-key') || '');
+            
             const [user, setUser] = useState(null);
 
             const [isChatOpen, setIsChatOpen] = useState(false);
@@ -201,7 +204,7 @@
             const [attachedImage, setAttachedImage] = useState(null);
             const fileInputRef = useRef(null);
             const chatEndRef = useRef(null);
-            const todayRowRef = useRef(null); // Ref untuk auto scroll ke hari ini
+            const todayRowRef = useRef(null);
 
             // STATE UNTUK DRAG BUBBLE FIN
             const [finPos, setFinPos] = useState({ right: 20, bottom: 96 }); 
@@ -548,7 +551,18 @@
             };
 
             const fetchFinAI = async (userText, imageData, chatHistory) => {
-                const apiKey = "AIzaSyAwIRu7h4FmdhKPm5nsOrZoQRQdFxrC7sQ"; 
+                // Ambil API Key dari memori browser HP (Local Storage)
+                const apiKey = localStorage.getItem('fin-gemini-api-key') || ""; 
+                
+                // Jika API Key masih kosong, tolak permintaan dan minta user mengisi
+                if (!apiKey) {
+                    return { 
+                        reply: "Waduh Bos, API Key Gemini belum diatur nih! 😅\n\nSilakan buka menu **Pengaturan (ikon Gear ⚙️ di kanan atas)** lalu masukkan API Key Anda agar Fin bisa jalan.", 
+                        actions: [], 
+                        isError: true 
+                    };
+                }
+
                 var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
                 
                 const todayStr = getLocalDateStr();
@@ -855,13 +869,16 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 el.select(); document.execCommand('copy'); document.body.removeChild(el); showStatus('Prompt Disalin!', 'success');
             };
 
+            // PERBAIKAN: Format Prompt Belanja Baru
             const generatePrompt = (cartData, date) => {
                 const todayFormatted = new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-                const itemCount = cartData.length;
                 const totalNominal = cartData.reduce((acc, curr) => acc + curr.total, 0);
-                let text = `Total Nominal: Rp ${formatNumber(totalNominal)}\nFina, tolong proses ${itemCount} transaksi pengeluaran bahan baku di bawah ini untuk tanggal ${todayFormatted}. Input satu per satu secara terpisah:\n`;
-                const itemsList = cartData.map((item, index) => `${index + 1}. Catat pengeluaran ${item.name} ${item.qty} ${item.unit} (${Math.round(item.total)})`).join('\n');
+                
+                let text = `Fin, catat pengeluaran bahan baku tanggal ${todayFormatted} dengan total belanja Rp${totalNominal}, (Mohon jangan hilangkan nominal di dalam kurung dideskripsi), deskripsinya berikut:\n\n`;
+                
+                const itemsList = cartData.map((item) => `${item.name} ${item.qty} ${item.unit} (${Math.round(item.total)})`).join(', ');
                 text += itemsList;
+                
                 copyToClipboard(text);
             };
 
@@ -1077,11 +1094,11 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
 
                     let isHoliday = holidays.includes(dStr);
 
-                    // PERBAIKAN: Selama input riil belum ada (actual = 0), tetap gunakan target/setting harian agar estimasi tidak hilang hanya karena agenda sudah ada.
-                    let baseIn = (isFuture || (isToday && actualInc === 0)) && !isHoliday ? settings.targetOmzet : actualInc;
+                    // PERBAIKAN: Jika hari H (isToday) belum ada inputan, biarkan kosong (actual) agar saldo realtime terlihat tanpa prediksi. Prediksi hanya untuk hari esok (isFuture).
+                    let baseIn = (isFuture && !isHoliday) ? settings.targetOmzet : actualInc;
                     let dailyIn = baseIn + agendaIn;
 
-                    let baseOut = (isFuture || (isToday && actualExp === 0)) && !isHoliday ? settings.maxBelanja : actualExp;
+                    let baseOut = (isFuture && !isHoliday) ? settings.maxBelanja : actualExp;
                     let dailyOut = baseOut + agendaOut;
 
                     let saldoPagi = runningBalance;
@@ -1527,6 +1544,16 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                     <div><label className="text-[10px] text-gray-400 font-bold uppercase mb-1 block">Modal Awal / Saldo Dasar</label><input type="text" inputMode="numeric" value={formatInputRp(settings.saldoAwal)} onChange={e => setSettings({...settings, saldoAwal: parseInt(parseInputRp(e.target.value))||0})} className="w-full p-4 bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-2xl font-bold outline-none" /></div>
                                     <div><label className="text-[10px] text-gray-400 font-bold uppercase mb-1 block">Target Omzet Harian</label><input type="text" inputMode="numeric" value={formatInputRp(settings.targetOmzet)} onChange={e => setSettings({...settings, targetOmzet: parseInt(parseInputRp(e.target.value))||0})} className="w-full p-4 bg-slate-100 dark:bg-slate-900 rounded-2xl font-bold text-green-600 dark:text-green-400 outline-none" /></div>
                                     <div><label className="text-[10px] text-gray-400 font-bold uppercase mb-1 block">Batas Belanja Harian</label><input type="text" inputMode="numeric" value={formatInputRp(settings.maxBelanja)} onChange={e => setSettings({...settings, maxBelanja: parseInt(parseInputRp(e.target.value))||0})} className="w-full p-4 bg-slate-100 dark:bg-slate-900 rounded-2xl font-bold text-red-500 dark:text-red-400 outline-none" /></div>
+                                    
+                                    {/* Kolom Input Baru untuk Gemini API Key */}
+                                    <div>
+                                        <label className="text-[10px] text-gray-400 font-bold uppercase mb-1 block">Gemini API Key (Khusus AI)</label>
+                                        <input type="password" value={geminiApiKey} onChange={e => {
+                                            setGeminiApiKey(e.target.value);
+                                            localStorage.setItem('fin-gemini-api-key', e.target.value);
+                                        }} placeholder="Tempel/Paste API Key AIzaSy..." className="w-full p-4 bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-2xl font-bold outline-none font-mono text-xs" />
+                                    </div>
+
                                     <button onClick={() => setShowSettings(false)} className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg active:scale-[0.98] transition-all">SIMPAN PENGATURAN</button>
                                 </div>
                                 
