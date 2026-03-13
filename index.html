@@ -107,6 +107,7 @@
         .markdown-body td { padding: 8px; border: 1px solid #e2e8f0; color: #334155; }
         .markdown-body p { margin-bottom: 8px; }
         .markdown-body strong { color: #4f46e5; font-weight: 800; }
+        .markdown-body ul { list-style-type: disc; padding-left: 20px; margin-bottom: 8px; }
 
         /* Dark Mode Markdown Override */
         .dark .markdown-body th { background-color: #1e293b; color: #f8fafc; border-color: #334155; }
@@ -144,12 +145,13 @@
             Camera: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>,
             Minus: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>,
             Sun: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>,
-            Moon: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+            Moon: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>,
+            Play: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
         };
 
         const initialItems = ["Ayam Gede (Mentah)", "Lele Segar", "Telur Ayam", "Beras", "Minyak Goreng", "Gula Pasir", "Gas LPG 3Kg", "Sabun Cuci", "Lunch Box Size M", "Cup Minum", "Kangkung", "Tahu Putih (Mentah)"];
         const incomeTypes = ["Shopeefood", "Grabfood", "Gofood", "Offline Cash", "Offline QRIS"];
-        const commonUnits = ['Kg', 'Pcs', 'Gram', 'Liter', 'Ikat', 'Bungkus', 'Pack'];
+        const commonUnits = ['Kg', 'Pcs', 'Gram', 'Liter', 'Ikat', 'Bungkus', 'Pack', 'Ls'];
         const defaultSettings = { targetOmzet: 500000, maxBelanja: 300000, saldoAwal: 1000000 };
 
         const getLocalDateStr = (d = new Date()) => {
@@ -181,7 +183,11 @@
             const [showNav, setShowNav] = useState(true);
             const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('fin-darkmode') === 'true');
             
-            const [cart, setCart] = useState(() => JSON.parse(localStorage.getItem('fin-cart') || '[]'));
+            // Perbarui state cart agar mendukung fitur Market Mode (actualTotal, isBought)
+            const [cart, setCart] = useState(() => {
+                const stored = JSON.parse(localStorage.getItem('fin-cart') || '[]');
+                return stored.map(item => ({...item, actualTotal: item.actualTotal || '', isBought: item.isBought || false}));
+            });
             const [history, setHistory] = useState(() => JSON.parse(localStorage.getItem('fin-history') || '[]'));
             const [incomes, setIncomes] = useState(() => JSON.parse(localStorage.getItem('fin-incomes') || '[]'));
             const [agendas, setAgendas] = useState(() => JSON.parse(localStorage.getItem('fin-agendas') || '[]'));
@@ -189,9 +195,7 @@
             const [settings, setSettings] = useState(() => JSON.parse(localStorage.getItem('fin-settings') || JSON.stringify(defaultSettings)));
             const [holidays, setHolidays] = useState(() => JSON.parse(localStorage.getItem('fin-holidays') || '[]'));
             
-            // Tambahkan State untuk menyimpan API Key Gemini
             const [geminiApiKey, setGeminiApiKey] = useState(() => localStorage.getItem('fin-gemini-api-key') || '');
-            
             const [user, setUser] = useState(null);
 
             const [isChatOpen, setIsChatOpen] = useState(false);
@@ -206,7 +210,9 @@
             const chatEndRef = useRef(null);
             const todayRowRef = useRef(null);
 
-            // STATE UNTUK DRAG BUBBLE FIN
+            // MARKET MODE STATE
+            const [showMarketMode, setShowMarketMode] = useState(false);
+
             const [finPos, setFinPos] = useState({ right: 20, bottom: 96 }); 
             const isDraggingFin = useRef(false);
             const finStartPos = useRef({ x: 0, y: 0, right: 0, bottom: 0 });
@@ -251,7 +257,6 @@
                 localStorage.setItem('fin-darkmode', isDarkMode);
             }, [isDarkMode]);
 
-            // Auto-scroll ke Tanggal Hari Ini pada Cash Flow saat berada di Dashboard
             useEffect(() => {
                 if (activeTab === 'dashboard') {
                     setTimeout(() => {
@@ -270,7 +275,10 @@
                 if (numStr === '') return '';
                 return 'Rp ' + formatNumber(numStr);
             };
-            const parseInputRp = (val) => val.toString().replace(/[^0-9]/g, '');
+            const parseInputRp = (val) => {
+                if(val === undefined || val === null) return '';
+                return val.toString().replace(/[^0-9]/g, '');
+            }
 
             const showStatus = (message, type = 'success') => {
                 setStatus({ show: true, message, type });
@@ -450,7 +458,7 @@
                 if(type === 'masuk'){
                     showStatus('Agenda Pemasukan Ditambahkan Otomatis!', 'success');
                 } else {
-                    showStatus('Agenda Tagihan Ditambahkan Otomatis!', 'error'); // Merah untuk keluar/tagihan
+                    showStatus('Agenda Tagihan Ditambahkan Otomatis!', 'error'); 
                 }
             };
 
@@ -510,23 +518,53 @@
                 reader.readAsDataURL(file);
             };
 
-            // LOGIKA PEMBUATAN REPORT LOKAL (HYBRID)
             const generateLocalSystemReport = (text) => {
                 const lowerText = text.toLowerCase();
                 const todayStr = getLocalDateStr();
                 const currentMonthStr = todayStr.substring(0, 7);
+                const prevMonthStr = new Date(new Date().getFullYear(), new Date().getMonth()-1, 1).toISOString().substring(0,7);
 
-                if (lowerText.includes("analisa kas") || lowerText.includes("laporan bulanan") || lowerText.includes("profit atau boncos")) {
+                if (lowerText.includes("analisa kas") || lowerText.includes("analisa bisnis") || lowerText.includes("evaluasi") || lowerText.includes("laporan bulanan") || lowerText.includes("profit atau boncos")) {
                     const monthlyInc = incomes.filter(i => i.date.startsWith(currentMonthStr)).reduce((s,i) => s + i.amount, 0);
-                    const monthlyExp = history.filter(h => h.date.startsWith(currentMonthStr)).reduce((s,h) => s + h.total, 0);
-                    const profit = monthlyInc - monthlyExp;
-                    const status = profit >= 0 ? "✅ PROFIT (Untung)" : "🚨 BONCOS (Rugi)";
+                    const monthlyHPP = history.filter(h => h.date.startsWith(currentMonthStr)).reduce((s,h) => s + h.total, 0);
+                    const monthlyOpr = agendas.filter(a => a.date.startsWith(currentMonthStr) && a.type === 'keluar' && a.isPaid).reduce((s,a) => s + a.amount, 0);
+                    const pendingAgendas = agendas.filter(a => !a.isPaid && a.type === 'keluar');
+                    
+                    const totalExp = monthlyHPP + monthlyOpr;
+                    const profit = monthlyInc - totalExp;
+                    const grossProfit = monthlyInc - monthlyHPP;
+                    const status = profit >= 0 ? "✅ PROFIT" : "🚨 BONCOS/RUGI";
 
-                    return `📊 **DATA SISTEM: Analisa Kas & Laporan Bulanan**\n` +
-                           `- **Total Kas Saat Ini:** Rp ${formatNumber(currentBalance)}\n` +
-                           `- **Pemasukan Bulan Ini:** Rp ${formatNumber(monthlyInc)}\n` +
-                           `- **Pengeluaran Bulan Ini:** Rp ${formatNumber(monthlyExp)}\n` +
-                           `- **Status:** ${status} Rp ${formatNumber(Math.abs(profit))}`;
+                    let belanjaHarian = {};
+                    history.filter(h => h.date.startsWith(currentMonthStr)).forEach(h => {
+                        belanjaHarian[h.date] = (belanjaHarian[h.date] || 0) + h.total;
+                    });
+                    const maxBelanjaDate = Object.keys(belanjaHarian).length > 0 ? Object.keys(belanjaHarian).reduce((a, b) => belanjaHarian[a] > belanjaHarian[b] ? a : b) : "Belum Ada";
+                    const maxBelanjaVal = maxBelanjaDate !== "Belum Ada" ? belanjaHarian[maxBelanjaDate] : 0;
+
+                    let yesterdayObj = new Date(); yesterdayObj.setDate(yesterdayObj.getDate() - 1);
+                    const yesterdayStr = getLocalDateStr(yesterdayObj);
+                    let baseOmzet = incomes.filter(i => i.date === todayStr).reduce((s,i) => s + i.amount, 0);
+                    if(baseOmzet === 0) baseOmzet = incomes.filter(i => i.date === yesterdayStr).reduce((s,i) => s + i.amount, 0);
+                    const sisaBudgetBesok = baseOmzet > 0 ? (baseOmzet * 0.5) : settings.maxBelanja;
+
+                    let report = `📊 **DATA ANALITIK SISTEM BULAN INI (${currentMonthStr})**\n`;
+                    report += `- Total Pemasukan: Rp ${formatNumber(monthlyInc)}\n`;
+                    report += `- Belanja Bahan Baku (HPP): Rp ${formatNumber(monthlyHPP)}\n`;
+                    report += `- Biaya Operasional (Lunas): Rp ${formatNumber(monthlyOpr)}\n`;
+                    report += `- Total Pengeluaran: Rp ${formatNumber(totalExp)}\n`;
+                    report += `- Laba Kotor (Inc - HPP): Rp ${formatNumber(grossProfit)}\n`;
+                    report += `- LABA BERSIH: ${status} Rp ${formatNumber(Math.abs(profit))}\n\n`;
+                    report += `🔍 **DETEKSI KEBOCORAN & BUDGET:**\n`;
+                    report += `- Rekor belanja bahan termahal bulan ini: Rp ${formatNumber(maxBelanjaVal)} pada tanggal ${maxBelanjaDate}.\n`;
+                    report += `- Estimasi / Budget aman belanja besok: Maksimal Rp ${formatNumber(sisaBudgetBesok)}.\n\n`;
+                    
+                    if(pendingAgendas.length > 0) {
+                        report += `⚠️ **TAGIHAN BELUM LUNAS:**\n`;
+                        pendingAgendas.forEach(a => report += `- ${a.title}: Rp ${formatNumber(a.amount)} (Tgl: ${a.date})\n`);
+                    }
+
+                    return report;
                 }
 
                 if (lowerText.includes("tagihan") || lowerText.includes("agenda yang belum dibayar")) {
@@ -551,10 +589,8 @@
             };
 
             const fetchFinAI = async (userText, imageData, chatHistory) => {
-                // Ambil API Key dari memori browser HP (Local Storage)
                 const apiKey = localStorage.getItem('fin-gemini-api-key') || ""; 
                 
-                // Jika API Key masih kosong, tolak permintaan dan minta user mengisi
                 if (!apiKey) {
                     return { 
                         reply: "Waduh Bos, API Key Gemini belum diatur nih! 😅\n\nSilakan buka menu **Pengaturan (ikon Gear ⚙️ di kanan atas)** lalu masukkan API Key Anda agar Fin bisa jalan.", 
@@ -571,11 +607,8 @@
                 const todayIncTotal = incomes.filter(i => i.date === todayStr).reduce((s,i) => s + i.amount, 0);
                 const todayExpTotal = history.filter(h => h.date === todayStr).reduce((s,h) => s + h.total, 0);
                 
-                const monthlyInc = incomes.filter(i => i.date.startsWith(currentMonthStr)).reduce((s,i) => s + i.amount, 0);
-                const monthlyExp = history.filter(h => h.date.startsWith(currentMonthStr)).reduce((s,h) => s + h.total, 0);
-
                 const sysPrompt = `Anda adalah "Fin", Asisten & Manajer Keuangan internal untuk web app "Warung Mbah Marto".
-Gaya bicara: Profesional, cerdas, santai, memanggil pengguna "Bos".
+Gaya bicara: Profesional, cerdas, tajam, santai, memanggil pengguna "Bos".
 
 Data Kas Saat Ini:
 - Kas Tersedia: Rp ${formatNumber(currentBalance)}
@@ -583,27 +616,16 @@ Data Kas Saat Ini:
 
 ATURAN KHUSUS UNTUK GAMBAR (FOTO STRUK/SCREENSHOT):
 1. JANGAN langsung menghasilkan 'actions' saat baru menerima gambar. Analisa dan tanyakan konfirmasi dulu.
-2. ANALISA GAMBAR DENGAN TELITI: Pisahkan transaksi beda tanggal menjadi objek terpisah (MULTI TRANSAKSI). 
-   - NOTA STRUK: Rinci item belanja ke dalam array 'items'.
-   - REKAP PENGELUARAN (Hanya tanggal & nominal tanpa rincian item): WAJIB buat 1 item dummy di dalam array "items" dengan rincian persis seperti ini: {"name": "Belanja Bahan Baku", "qty": 1, "unit": "Ls", "total": <nominal_hari_itu>}.
-3. Tuliskan RINCIAN LENGKAP di 'reply' lalu TANYAKAN KONFIRMASI (Maukah Bos menyimpan data ini?). Kosongkan array 'actions' [].
-4. KETIKA PENGGUNA MENGONFIRMASI ("Ya", "Simpan", "Gass", "Oke"): 
-   - Anda WAJIB membaca ulang pesan Anda SEBELUMNYA yang berisi rincian.
-   - Ekstrak SEMUA rincian transaksi tersebut ke dalam array 'actions' HARI INI JUGA.
-   - JANGAN MENGHASILKAN ACTIONS KOSONG JIKA PENGGUNA BILANG "YA".
-   - Pastikan nominal uang (amount/total/qty) berisi ANGKA MURNI (Number) yang tepat sesuai rincian sebelumnya, bukan 0.
+2. ANALISA GAMBAR DENGAN TELITI: Pisahkan transaksi beda tanggal menjadi objek terpisah. 
+3. Tuliskan RINCIAN LENGKAP di 'reply' lalu TANYAKAN KONFIRMASI. Kosongkan array 'actions' [].
+4. KETIKA PENGGUNA MENGONFIRMASI ("Ya", "Simpan"): Ekstrak SEMUA rincian transaksi tersebut ke dalam array 'actions'.
 
 ANDA WAJIB MEMBALAS HANYA DENGAN JSON MURNI DENGAN STRUKTUR SEPERTI INI:
 {
-  "reply": "Pesan balasan Anda. Gunakan \\n untuk baris baru.",
+  "reply": "Pesan balasan Anda. Gunakan format Markdown (bold, list) agar rapi.",
   "actions": [
-     // Contoh format Pemasukan:
      {"type": "add_income", "data": {"date": "YYYY-MM-DD", "source": "Grabfood", "amount": 102829}},
-     // Contoh format Belanja (Ada item rincian struk): 
      {"type": "add_expense", "data": {"date": "YYYY-MM-DD", "items": [{"name": "Beras", "qty": 1, "unit": "Kg", "total": 15000}]}},
-     // Contoh format Pengeluaran (Hanya summary total/arsip screenshot tanpa rincian): 
-     {"type": "add_expense", "data": {"date": "YYYY-MM-DD", "items": [{"name": "Belanja Bahan Baku", "qty": 1, "unit": "Ls", "total": 250000}]}},
-     // Contoh format Tagihan/Agenda (Tipe masuk / keluar):
      {"type": "add_agenda", "data": {"date": "YYYY-MM-DD", "title": "Sewa Kios", "amount": 500000, "agendaType": "keluar"}}
   ]
 }
@@ -611,7 +633,6 @@ ANDA WAJIB MEMBALAS HANYA DENGAN JSON MURNI DENGAN STRUKTUR SEPERTI INI:
 ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
 
                 let conversationText = "=== RIWAYAT OBROLAN ===\n";
-                // Payload Diet - Hanya kirim 2 pesan terakhir untuk menghindari limit dan beban token berlebih
                 let safeHistory = chatHistory.slice(-2); 
                 
                 safeHistory.forEach((chat) => {
@@ -632,23 +653,17 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 const payload = {
                     contents: [contentObj],
                     systemInstruction: { parts: [{ text: sysPrompt }] },
-                    generationConfig: {
-                        responseMimeType: "application/json",
-                        temperature: 0.2
-                    }
+                    generationConfig: { responseMimeType: "application/json", temperature: 0.2 }
                 };
 
-                const backoffDelays = [3000, 8000, 15000, 30000]; // 3s, 8s, 15s, 30s
+                const backoffDelays = [3000, 8000, 15000, 30000]; 
                 
                 for (let i = 0; i <= backoffDelays.length; i++) {
                     try {
                         const res = await fetch(url, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }});
                         if (!res.ok) {
                             let errMsg = res.statusText;
-                            try {
-                                const errData = await res.json();
-                                errMsg = errData.error?.message || errMsg;
-                            } catch(e) {}
+                            try { const errData = await res.json(); errMsg = errData.error?.message || errMsg; } catch(e) {}
                             const error = new Error(`HTTP Error ${res.status}: ${errMsg}`);
                             error.status = res.status;
                             if (res.status === 400 || res.status === 401 || res.status === 403) error.isFatal = true;
@@ -667,19 +682,10 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                         if (err.isFatal || i === backoffDelays.length) {
                             console.error("FetchFinAI Final Error:", err);
                             let userMsg = `Waduh Bos, Fin agak pusing nih bacanya. Detail Error: ${err.message}. Coba ulangi dengan kalimat lain ya.`;
-                            
-                            if (err.status === 429) {
-                                userMsg = `Waduh Bos, Kuota API Harian kita benar-benar habis nih (Limit 429). Solusi permanen: Aktifkan billing Pay-as-you-go di Google AI Studio agar limit request/hari dihapus oleh Google. 🙏`;
-                            }
-                            
-                            // Ditambahkan flag isError: true agar sistem Hybrid tahu AI gagal
+                            if (err.status === 429) userMsg = `Waduh Bos, Kuota API Harian kita habis nih (Limit 429). Aktifkan billing Pay-as-you-go di Google AI Studio agar limit dihapus. 🙏`;
                             return { reply: userMsg, actions: [], isError: true };
                         }
-
-                        if (err.status === 429 && i < backoffDelays.length) {
-                            showStatus(`Sistem antre (Limit API). Coba lagi otomatis dalam ${backoffDelays[i]/1000} dtk...`, 'loading');
-                        }
-                        
+                        if (err.status === 429 && i < backoffDelays.length) showStatus(`Sistem antre (Limit API). Coba lagi otomatis dalam ${backoffDelays[i]/1000} dtk...`, 'loading');
                         await new Promise(r => setTimeout(r, backoffDelays[i]));
                     }
                 }
@@ -700,34 +706,26 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 setIsTyping(true);
                 
                 // --- HYBRID LOGIC START ---
-                // Cek apakah ada laporan lokal (Analisa, Rekap, dll)
                 const localSystemReport = generateLocalSystemReport(text);
                 let aiPromptText = text;
 
-                // Jika terdeteksi laporan, perintahkan AI HANYA untuk memberi Insight/Saran, jangan mengubah data
                 if (localSystemReport) {
-                    aiPromptText = `Saya meminta laporan keuangan. Ini adalah data valid dari sistem:\n\n${localSystemReport}\n\nTugasmu HANYA berikan 1 atau 2 paragraf singkat berisi "Insight / Saran / Semangat" untuk Bos berdasarkan data di atas. Gunakan bahasa santai memanggil Bos. JANGAN buat actions array.`;
+                    aiPromptText = `Saya meminta analisa/evaluasi bisnis. Ini adalah data valid dari sistem:\n\n${localSystemReport}\n\nTugasmu: Bertindaklah sebagai penasihat keuangan (CFO). Berikan analisis mendalam berdasarkan data di atas. \n1. Tanggapi kondisi Laba Bersih/Kotor.\n2. Beri peringatan spesifik pada "Deteksi Kebocoran" (Komentari apakah belanja maksimal itu wajar dan ingatkan soal budget besok).\n3. Beri rekomendasi konkrit mana dari "Tagihan Belum Lunas" yang harus dibayar duluan atau ditunda.\nGunakan format Markdown (bold, bullet points) agar cantik dibaca. Jangan mengubah data!`;
                 }
 
                 const historyToPass = [...chats, newUserChat];
                 const responseObj = await fetchFinAI(aiPromptText, imageToProcess, historyToPass);
                 
                 setIsTyping(false);
-                
                 let finalReply = "";
 
-                // Jika kita tadi meminta laporan lokal
                 if (localSystemReport) {
-                    finalReply = localSystemReport + "\n\n";
-                    // Jika AI gagal/error, beritahu bahwa insight gagal, TAPI data lokalnya tetap tampil
                     if (responseObj && responseObj.isError) {
-                        finalReply += `*(💡 Insight AI sedang tidak tersedia karena masalah koneksi/limit, namun data di atas 100% akurat dari sistem).*`;
+                        finalReply = localSystemReport + "\n\n*(💡 Insight AI sedang tidak tersedia karena masalah koneksi/limit, namun data di atas 100% akurat dari sistem).*";
                     } else if (responseObj && responseObj.reply) {
-                        // Jika AI berhasil, tempelkan insightnya di bawah
-                        finalReply += `💡 **Insight Fin:**\n${responseObj.reply}`;
+                        finalReply = responseObj.reply;
                     }
                 } else {
-                    // Chat normal (tidak mendeteksi perintah laporan lokal)
                     if (responseObj && responseObj.reply) {
                         finalReply = responseObj.reply;
                     }
@@ -786,10 +784,19 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 
                 let newCart = [...cart];
                 if (editingId) {
-                    newCart = cart.map(i => i.id === editingId ? { ...i, name: standardizedName, qty: quantity, unit, total } : i);
+                    newCart = cart.map(i => {
+                        if (i.id === editingId) {
+                            if (i.actualTotal) {
+                                return { ...i, name: standardizedName, qty: quantity, unit, actualTotal: total };
+                            } else {
+                                return { ...i, name: standardizedName, qty: quantity, unit, total };
+                            }
+                        }
+                        return i;
+                    });
                     setEditingId(null);
                 } else {
-                    newCart = [...cart, { id: Date.now(), name: standardizedName, qty: quantity, unit, total }];
+                    newCart = [...cart, { id: Date.now(), name: standardizedName, qty: quantity, unit, total, actualTotal: '', isBought: false }];
                 }
                 setCart(newCart);
                 if (!itemsDB.some(i => i.toLowerCase() === standardizedName.toLowerCase())) setItemsDB([...itemsDB, standardizedName]);
@@ -799,7 +806,20 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
 
             const startEdit = (item) => {
                 setEditingId(item.id); setItemName(item.name); setQty(item.qty); setUnit(item.unit);
-                setTotalNominal(item.total || ''); setActiveTab('plan'); window.scrollTo({ top: 0, behavior: 'smooth' });
+                setTotalNominal(item.actualTotal ? item.actualTotal : (item.total || '')); setActiveTab('plan'); window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+
+            const updateCartActual = (id, field, value) => {
+                setCart(cart.map(item => {
+                    if (item.id === id) {
+                        let updated = { ...item, [field]: value };
+                        if (field === 'actualTotal' && value !== '') {
+                            updated.isBought = true;
+                        }
+                        return updated;
+                    }
+                    return item;
+                }));
             };
 
             const handleSaveNote = async () => {
@@ -807,14 +827,23 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 setIsSaving(true);
                 showStatus('Menyimpan Nota...', 'loading');
                 
-                const cartTotal = cart.reduce((acc, curr) => acc + curr.total, 0);
+                const finalCart = cart.map(item => {
+                    let finalPrice = item.total;
+                    if (item.actualTotal !== undefined && item.actualTotal !== '') {
+                        let parsedActual = parseFloat(item.actualTotal.toString().replace(/[^0-9]/g, ''));
+                        if (!isNaN(parsedActual)) finalPrice = parsedActual;
+                    }
+                    return { ...item, total: finalPrice }; 
+                });
+
+                const cartTotal = finalCart.reduce((acc, curr) => acc + curr.total, 0);
                 const isUpdating = currentNoteId !== null;
 
                 try {
                     const noteData = {
                         id: currentNoteId || (isLocalMode ? 'local-' + Date.now() : db.collection(paths.history).doc().id),
                         date: transactionDate,
-                        items: cart,
+                        items: finalCart,
                         total: cartTotal,
                         timestamp: Date.now()
                     };
@@ -851,10 +880,28 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                         triggerFinSystemMessage(finMsg);
                     }
 
-                    setCart([]); setCurrentNoteId(null);
+                    setCart([]); setCurrentNoteId(null); setShowMarketMode(false);
                     setIsSaving(false); showStatus(currentNoteId ? 'Arsip Diperbarui!' : 'Belanja Tersimpan!', 'success');
                 } catch (e) {
                     console.error(e); setIsSaving(false); showStatus('Gagal Simpan', 'error');
+                }
+            };
+
+            const handleFinalizeMarket = () => {
+                const hasEmptyActualPrice = cart.some(item => !item.actualTotal || parseFloat(item.actualTotal.toString().replace(/[^0-9]/g, '')) === 0);
+
+                if (hasEmptyActualPrice) {
+                    setConfirmModal({
+                        show: true,
+                        title: 'Peringatan Harga Asli',
+                        message: 'Terdapat barang yang harga aslinya belum diisi. Jika dilanjutkan, sistem akan menggunakan harga estimasi untuk barang tersebut. Tetap simpan & potong kas?',
+                        onConfirm: () => {
+                            setConfirmModal({ show: false, title: '', message: '', onConfirm: null });
+                            handleSaveNote();
+                        }
+                    });
+                } else {
+                    handleSaveNote();
                 }
             };
 
@@ -869,17 +916,37 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 el.select(); document.execCommand('copy'); document.body.removeChild(el); showStatus('Prompt Disalin!', 'success');
             };
 
-            // PERBAIKAN: Format Prompt Belanja Baru
-            const generatePrompt = (cartData, date) => {
+            const executePrompt = (cartData, date) => {
                 const todayFormatted = new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-                const totalNominal = cartData.reduce((acc, curr) => acc + curr.total, 0);
+                let totalNominal = 0;
                 
-                let text = `Fin, catat pengeluaran bahan baku tanggal ${todayFormatted} dengan total belanja Rp${totalNominal}, (Mohon jangan hilangkan nominal di dalam kurung dideskripsi), deskripsinya berikut:\n\n`;
+                const itemsList = cartData.map((item) => {
+                    let actual = parseFloat(item.actualTotal.toString().replace(/[^0-9]/g, ''));
+                    let finalPrice = (!isNaN(actual) && actual > 0) ? actual : item.total;
+                    totalNominal += finalPrice;
+                    return `${item.name} ${item.qty} ${item.unit} (${Math.round(finalPrice)})`;
+                }).join(', ');
                 
-                const itemsList = cartData.map((item) => `${item.name} ${item.qty} ${item.unit} (${Math.round(item.total)})`).join(', ');
-                text += itemsList;
-                
+                let text = `Fin, catat pengeluaran bahan baku tanggal ${todayFormatted} dengan total belanja Rp${totalNominal}, (Mohon jangan hilangkan nominal di dalam kurung dideskripsi), deskripsinya berikut:\n\n${itemsList}`;
                 copyToClipboard(text);
+            };
+
+            const handleGeneratePrompt = (cartData, date) => {
+                const hasEmptyActual = cartData.some(item => !item.actualTotal || parseFloat(item.actualTotal.toString().replace(/[^0-9]/g, '')) === 0);
+                
+                if (hasEmptyActual) {
+                    setConfirmModal({
+                        show: true,
+                        title: 'Harga Asli Belum Lengkap',
+                        message: 'Ada barang yang belum diisi Harga Aslinya. Fitur prompt akan menggunakan harga estimasi untuk barang tersebut. Lanjutkan?',
+                        onConfirm: () => {
+                            setConfirmModal({ show: false, title: '', message: '', onConfirm: null });
+                            executePrompt(cartData, date);
+                        }
+                    });
+                } else {
+                    executePrompt(cartData, date);
+                }
             };
 
             const handleSaveIncome = (e) => {
@@ -893,8 +960,8 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 setIncomes(prev => [newIncome, ...prev].sort((a,b) => b.timestamp - a.timestamp));
                 setIncomeSource(''); setIncomeAmount(''); showStatus('Pemasukan Ditambahkan!', 'success');
 
-                let idealBelanjaBesok = amount * 0.5; // Alokasi 50% untuk HPP Belanja
-                let sisaOperasionalProfit = amount - idealBelanjaBesok; // 50% untuk untung dan operasional
+                let idealBelanjaBesok = amount * 0.5;
+                let sisaOperasionalProfit = amount - idealBelanjaBesok;
 
                 let finMsg = `Mantap Bos! Pemasukan dari **${stdSource}** senilai **Rp ${formatNumber(amount)}** berhasil masuk brankas. 💰\n\n`;
                 finMsg += `💡 **Rencana Alokasi (Rule 50%):**\n`;
@@ -933,7 +1000,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 setAgendas(prev => [...prev, newAg].sort((a,b) => new Date(a.date) - new Date(b.date)));
                 setAgendaTitle(''); setAgendaAmount('');
                 if(agendaType === 'keluar') {
-                    showStatus('Tagihan/Operasional Tersimpan!', 'error'); // error class untk bg merah
+                    showStatus('Tagihan/Operasional Tersimpan!', 'error'); 
                 } else {
                     showStatus('Agenda Pemasukan Tersimpan!', 'success');
                 }
@@ -1050,6 +1117,77 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 );
             };
 
+            const renderMarketMode = () => {
+                const totalEstimasi = cart.reduce((acc, curr) => acc + curr.total, 0);
+                const totalRealita = cart.reduce((acc, curr) => {
+                    let parsed = parseFloat(curr.actualTotal.toString().replace(/[^0-9]/g, ''));
+                    return acc + (isNaN(parsed) ? 0 : parsed);
+                }, 0);
+
+                return (
+                    <div className="fixed inset-0 z-[900] bg-slate-50 dark:bg-slate-900 overflow-y-auto no-scrollbar pb-32 flex flex-col transition-colors animate-fadeIn" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+                        {/* Header Market Mode */}
+                        <div className="sticky top-0 z-10 bg-indigo-600 p-4 shadow-lg flex justify-between items-center text-white shrink-0">
+                            <div>
+                                <h2 className="font-black text-lg flex items-center gap-2"><div className="w-5 h-5"><Icons.ShopBag/></div> Mode Pasar</h2>
+                                <p className="text-[10px] text-indigo-200 uppercase tracking-widest font-bold mt-1">Satu baris, praktis & ringkas.</p>
+                            </div>
+                            <button onClick={() => setShowMarketMode(false)} className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors">
+                                <Icons.X />
+                            </button>
+                        </div>
+
+                        {/* Daftar Belanja Interaktif */}
+                        <div className="flex-1 p-3 space-y-2 overflow-y-auto">
+                            {cart.length === 0 ? <p className="text-center text-slate-400 font-bold py-10">Daftar belanja masih kosong.</p> : 
+                            cart.map(item => (
+                                <div key={item.id} className={`p-3 rounded-2xl border flex items-center gap-3 transition-all ${item.isBought ? 'bg-green-50/50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm'}`}>
+                                    
+                                    <button onClick={() => updateCartActual(item.id, 'isBought', !item.isBought)} className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center border-2 transition-colors shadow-sm ${item.isBought ? 'bg-green-500 border-green-500 text-white' : 'bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-600 text-transparent'}`}>
+                                        <div className="w-4 h-4"><Icons.Check/></div>
+                                    </button>
+
+                                    <div className="flex-1 min-w-0" onClick={() => updateCartActual(item.id, 'isBought', !item.isBought)}>
+                                        <p className={`font-black text-[13px] uppercase truncate mb-0.5 ${item.isBought ? 'text-slate-500 line-through' : 'text-slate-800 dark:text-slate-100'}`}>
+                                            {item.name}
+                                        </p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase">
+                                            {item.qty} {item.unit} • Est: Rp {formatNumber(item.total)}
+                                        </p>
+                                    </div>
+
+                                    <div className="w-[90px] shrink-0 relative">
+                                        <input type="text" inputMode="numeric" value={formatInputRp(item.actualTotal)} onChange={(e) => updateCartActual(item.id, 'actualTotal', parseInputRp(e.target.value))} placeholder="H. Asli" className={`w-full px-2 py-2 rounded-xl text-[11px] font-black outline-none focus:ring-2 focus:ring-green-400 transition-colors text-right ${item.isBought ? 'bg-white dark:bg-slate-900 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800' : 'bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700'}`} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Footer Market Mode (Total & Action) */}
+                        <div className="fixed bottom-0 left-0 right-0 bg-slate-900 p-4 rounded-t-[2.5rem] shadow-[0_-10px_25px_rgba(0,0,0,0.2)]">
+                            <div className="flex justify-between items-center mb-4 px-2">
+                                <div>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase">Total Estimasi</p>
+                                    <p className="text-sm font-black text-slate-300">Rp {formatNumber(totalEstimasi)}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[10px] font-bold text-green-400 uppercase tracking-widest">Total Realita</p>
+                                    <p className="text-xl font-black text-green-500">Rp {formatNumber(totalRealita || 0)}</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={() => setShowMarketMode(false)} className="w-[40%] py-3.5 bg-slate-700 text-white rounded-2xl font-black uppercase text-[10px] shadow-lg hover:bg-slate-600 active:scale-[0.98] transition-all">
+                                    SIMPAN SAJA
+                                </button>
+                                <button onClick={handleFinalizeMarket} disabled={isSaving || cart.length===0} className="w-[60%] py-3.5 bg-green-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-green-600 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-1">
+                                    ✅ POTONG KAS
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
             const getDashboardData = () => {
                 const todayStr = getLocalDateStr();
                 
@@ -1094,7 +1232,6 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
 
                     let isHoliday = holidays.includes(dStr);
 
-                    // PERBAIKAN: Jika hari H (isToday) belum ada inputan, biarkan kosong (actual) agar saldo realtime terlihat tanpa prediksi. Prediksi hanya untuk hari esok (isFuture).
                     let baseIn = (isFuture && !isHoliday) ? settings.targetOmzet : actualInc;
                     let dailyIn = baseIn + agendaIn;
 
@@ -1134,7 +1271,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 const monthlyHistory = history.filter(h => h.date.startsWith(dashboardMonth));
 
                 const omzetBulanIni = monthlyIncomes.reduce((s, i) => s + i.amount, 0) + monthlyAgendas.filter(a => a.type === 'masuk').reduce((s, a) => s + a.amount, 0);
-                const avgInc = omzetBulanIni / daysPassed; // RATA-RATA PEMASUKAN
+                const avgInc = omzetBulanIni / daysPassed; 
 
                 const targetOmzetBulanan = settings.targetOmzet * daysInMonth;
                 const omzetPct = targetOmzetBulanan > 0 ? Math.min(100, (omzetBulanIni / targetOmzetBulanan) * 100) : 0;
@@ -1142,13 +1279,30 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 const tagihanKeluar = monthlyAgendas.filter(a => a.type === 'keluar');
                 const totalTagihan = tagihanKeluar.reduce((s, a) => s + a.amount, 0);
                 const tagihanTerbayar = tagihanKeluar.filter(a => a.isPaid || a.date < todayStr).reduce((s, a) => s + a.amount, 0);
-                const tagihanPct = totalTagihan === 0 ? 100 : Math.min(100, (tagihanTerbayar / totalTagihan) * 100);
-
+                
                 const idealSisaKas = settings.saldoAwal + ((settings.targetOmzet - settings.maxBelanja) * daysInMonth);
                 const kasPct = idealSisaKas <= 0 ? 100 : Math.min(100, Math.max(0, (estAkhir / idealSisaKas) * 100));
 
-                const pengeluaranBulanIni = monthlyHistory.reduce((s,h)=>s+h.total, 0) + tagihanTerbayar;
+                const HPPBulanIni = monthlyHistory.reduce((s,h)=>s+h.total, 0);
+                const pengeluaranBulanIni = HPPBulanIni + tagihanTerbayar;
+                
+                const profitKotor = omzetBulanIni - HPPBulanIni;
                 const profitBulanIni = omzetBulanIni - pengeluaranBulanIni;
+
+                // Break Even logic
+                const totalCappedKotor = Math.max(omzetBulanIni, HPPBulanIni);
+                const pctOmzetKotor = totalCappedKotor > 0 ? (omzetBulanIni / totalCappedKotor) * 100 : 0;
+                const pctHPPKotor = totalCappedKotor > 0 ? (HPPBulanIni / totalCappedKotor) * 100 : 0;
+
+                const totalCappedBersih = Math.max(omzetBulanIni, pengeluaranBulanIni);
+                const pctOmzetBersih = totalCappedBersih > 0 ? (omzetBulanIni / totalCappedBersih) * 100 : 0;
+                const pctExpBersih = totalCappedBersih > 0 ? (pengeluaranBulanIni / totalCappedBersih) * 100 : 0;
+
+                const marginKotorPct = omzetBulanIni > 0 ? (profitKotor / omzetBulanIni) * 100 : 0;
+                const marginBersihPct = omzetBulanIni > 0 ? (profitBulanIni / omzetBulanIni) * 100 : 0;
+
+                let statusKotor = marginKotorPct >= 50 ? '✨ IDEAL (Standar RM)' : '⚠️ HPP KEMAHALAN';
+                let statusBersih = marginBersihPct > 20 ? '🔥 SANGAT SEHAT' : (marginBersihPct > 0 ? '✅ PROFIT TIPIS' : '🚨 BONCOS');
 
                 return (
                     <div className="flex-1 overflow-y-auto no-scrollbar pb-32 space-y-4">
@@ -1169,15 +1323,95 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                             </div>
                         </div>
 
-                        {/* Visualisasi Target & Performa */}
+                        {/* FITUR 1: Visualisasi 2 Bar Break Even */}
                         <div className="bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 mt-4 transition-colors">
                             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-100 mb-5 flex items-center gap-2">
-                                <div className="w-4 h-4 text-indigo-500"><Icons.Chart /></div> Performa Bulan Ini
+                                <div className="w-4 h-4 text-indigo-500"><Icons.Chart /></div> Performa & Break Even
                             </h3>
+
+                            {/* Bar 1: Laba Kotor (Penjualan vs HPP) */}
+                            <div className="mb-5 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-[1.5rem] border border-slate-100 dark:border-slate-700">
+                                <div className="flex justify-between items-center mb-4">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">1. Laba Kotor (Bahan)</span>
+                                    <span className={`text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-widest ${profitKotor >= 0 && marginKotorPct >= 50 ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400'}`}>
+                                        {statusKotor}
+                                    </span>
+                                </div>
+                                
+                                <div className="space-y-2 mb-4">
+                                    <div className="flex justify-between items-center text-[11px]">
+                                        <span className="text-slate-500 dark:text-slate-400 font-bold">Total Omzet</span>
+                                        <span className="font-black text-slate-800 dark:text-slate-200">Rp {formatNumber(omzetBulanIni)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-[11px]">
+                                        <span className="text-slate-500 dark:text-slate-400 font-bold">HPP (Bahan Baku)</span>
+                                        <span className="font-black text-orange-500 dark:text-orange-400">- Rp {formatNumber(HPPBulanIni)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-[12px] pt-2 border-t border-slate-200 dark:border-slate-700">
+                                        <span className="text-slate-800 dark:text-slate-200 font-black">Profit Kotor ({Math.round(marginKotorPct)}%)</span>
+                                        <span className={`font-black ${profitKotor >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                            {profitKotor >= 0 ? '+' : ''}Rp {formatNumber(profitKotor)}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5 relative">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-12 text-[8px] font-bold text-slate-400 text-right">OMZET</div>
+                                        <div className="flex-1 h-3 bg-slate-200 dark:bg-slate-700 rounded-r-full overflow-hidden">
+                                            <div className="h-full bg-green-400 rounded-r-full" style={{ width: `${pctOmzetKotor}%` }}></div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-12 text-[8px] font-bold text-slate-400 text-right">BAHAN</div>
+                                        <div className="flex-1 h-3 bg-slate-200 dark:bg-slate-700 rounded-r-full overflow-hidden">
+                                            <div className="h-full bg-orange-400 rounded-r-full" style={{ width: `${pctHPPKotor}%` }}></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Bar 2: Laba Bersih (Penjualan vs Total Pengeluaran) */}
+                            <div className="mb-5 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-[1.5rem] border border-slate-100 dark:border-slate-700">
+                                <div className="flex justify-between items-center mb-4">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">2. Laba Bersih Akhir</span>
+                                    <span className={`text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-widest ${profitBulanIni > 0 ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400' : 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400'}`}>
+                                        {statusBersih}
+                                    </span>
+                                </div>
+
+                                <div className="space-y-2 mb-4">
+                                    <div className="flex justify-between items-center text-[11px]">
+                                        <span className="text-slate-500 dark:text-slate-400 font-bold">Total Modal (HPP + Opr)</span>
+                                        <span className="font-black text-red-500 dark:text-red-400">- Rp {formatNumber(pengeluaranBulanIni)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-[12px] pt-2 border-t border-slate-200 dark:border-slate-700">
+                                        <span className="text-slate-800 dark:text-slate-200 font-black">Net Profit ({Math.round(marginBersihPct)}%)</span>
+                                        <span className={`font-black ${profitBulanIni >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-red-600 dark:text-red-400'}`}>
+                                            {profitBulanIni >= 0 ? '+' : ''}Rp {formatNumber(profitBulanIni)}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5 relative">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-12 text-[8px] font-bold text-slate-400 text-right">OMZET</div>
+                                        <div className="flex-1 h-3 bg-slate-200 dark:bg-slate-700 rounded-r-full overflow-hidden">
+                                            <div className="h-full bg-indigo-400 rounded-r-full" style={{ width: `${pctOmzetBersih}%` }}></div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-12 text-[8px] font-bold text-slate-400 text-right">MODAL</div>
+                                        <div className="flex-1 h-3 bg-slate-200 dark:bg-slate-700 rounded-r-full overflow-hidden">
+                                            <div className="h-full bg-red-500 rounded-r-full" style={{ width: `${pctExpBersih}%` }}></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
                             <div className="mb-4">
                                 <div className="flex justify-between items-end mb-1.5">
-                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Target Omzet ({Math.round(omzetPct)}%)</span>
+                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Pencapaian Omzet ({Math.round(omzetPct)}%)</span>
                                     <span className="text-xs font-black text-green-600 dark:text-green-400">Rp {formatNumber(omzetBulanIni)} <span className="text-[9px] text-slate-400 dark:text-slate-500 font-bold">/ Rp {formatNumber(targetOmzetBulanan)}</span></span>
                                 </div>
                                 <div className="w-full bg-slate-100 dark:bg-slate-700 h-3 rounded-full overflow-hidden relative">
@@ -1185,37 +1419,13 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                 </div>
                             </div>
 
-                            <div className="mb-4">
-                                <div className="flex justify-between items-end mb-1.5">
-                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Tagihan Lunas ({Math.round(tagihanPct)}%)</span>
-                                    <span className="text-xs font-black text-amber-500">Rp {formatNumber(tagihanTerbayar)} <span className="text-[9px] text-slate-400 dark:text-slate-500 font-bold">/ Rp {formatNumber(totalTagihan)}</span></span>
-                                </div>
-                                <div className="w-full bg-slate-100 dark:bg-slate-700 h-3 rounded-full overflow-hidden relative">
-                                    <div className="bg-gradient-to-r from-amber-400 to-amber-500 h-full rounded-full transition-all duration-1000" style={{ width: `${tagihanPct}%` }}></div>
-                                </div>
-                            </div>
-
                             <div className="mb-5">
                                 <div className="flex justify-between items-end mb-1.5">
-                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Target Sisa Kas ({Math.round(kasPct)}%)</span>
+                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Sisa Kas Prediksi ({Math.round(kasPct)}%)</span>
                                     <span className="text-xs font-black text-indigo-600 dark:text-indigo-400">Rp {formatNumber(estAkhir)} <span className="text-[9px] text-slate-400 dark:text-slate-500 font-bold">/ Rp {formatNumber(idealSisaKas)}</span></span>
                                 </div>
                                 <div className="w-full bg-slate-100 dark:bg-slate-700 h-3 rounded-full overflow-hidden relative">
                                     <div className="bg-gradient-to-r from-indigo-400 to-indigo-500 h-full rounded-full transition-all duration-1000" style={{ width: `${kasPct}%` }}></div>
-                                </div>
-                            </div>
-
-                            <div className={`p-3.5 rounded-2xl border ${profitBulanIni >= 0 ? 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800'}`}>
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <p className={`text-[9px] font-black uppercase tracking-widest ${profitBulanIni >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>Status Break Even</p>
-                                        <p className="text-[9px] font-bold text-slate-500 dark:text-slate-400 mt-0.5">{profitBulanIni >= 0 ? 'Aman! Sudah tembus modal.' : 'Waspada! Belum balik modal.'}</p>
-                                    </div>
-                                    <p className={`text-xs font-black shrink-0 ml-2 ${profitBulanIni >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>{profitBulanIni >= 0 ? '+' : ''}Rp {formatNumber(profitBulanIni)}</p>
-                                </div>
-                                <div className="flex justify-between items-center text-[8.5px] font-bold text-slate-500 dark:text-slate-400 border-t border-slate-200/60 dark:border-slate-700/60 pt-2 mt-2">
-                                    <span>Total Masuk: Rp {formatNumber(omzetBulanIni)}</span>
-                                    <span>Total Modal: Rp {formatNumber(pengeluaranBulanIni)}</span>
                                 </div>
                             </div>
                         </div>
@@ -1227,7 +1437,6 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                             </div>
                             <div className="max-h-[65vh] overflow-y-auto no-scrollbar bg-slate-50 dark:bg-slate-900/50 p-2 sm:p-3 space-y-2">
                                 {data.reportDays.map((day, i) => {
-                                    // Hitung Lencana Status (Profit/Over/Rugi) untuk hari yang sudah lewat atau hari ini
                                     let badge = null;
                                     const totalActualIn = day.details.incomes.reduce((s, i) => s + i.amount, 0) + day.details.agendas.filter(a=>a.type==='masuk').reduce((s,a) => s + a.amount, 0);
                                     const totalActualOut = day.details.expenses.reduce((s, h) => s + h.total, 0) + day.details.agendas.filter(a=>a.type==='keluar').reduce((s,a) => s + a.amount, 0);
@@ -1319,11 +1528,10 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                                 <span className="font-black text-indigo-700 dark:text-indigo-300 text-xs bg-indigo-100/50 dark:bg-indigo-900/50 px-2 py-1 rounded-lg">Rp {formatNumber(day.saldoAkhir)}</span>
                                             </div>
                                         </div>
-                                    )})}
+                                )})}
                             </div>
                         </div>
 
-                        {/* Insight Fin Terupdate */}
                         <div className="bg-slate-900 text-white p-6 rounded-[2.5rem] shadow-xl border-t-4 border-indigo-500">
                             <h3 className="text-[10px] font-black uppercase tracking-widest text-indigo-300 mb-4 flex items-center gap-2">
                                 <div className="w-4 h-4"><Icons.Bot /></div> Insight Estimasi Bulan {new Date(dashboardMonth + '-01').toLocaleDateString('id-ID', {month:'long'})}
@@ -1347,7 +1555,6 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 );
             };
 
-            // FUNGSI DRAG BUBBLE FIN MENGGUNAKAN POINTER EVENTS
             const handleFinPointerDown = (e) => {
                 isDraggingFin.current = true;
                 setHasDragged(false);
@@ -1384,14 +1591,13 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
 
             const handleFinClick = () => {
                 if (hasDragged) {
-                    setHasDragged(false); // Batalkan klik karena pengguna hanya menggeser
+                    setHasDragged(false); 
                     return;
                 }
                 setIsChatOpen(true); 
                 setHasNewFinAlert(false);
             };
 
-            // Tampilan Layar Penutup (Goodbye Screen)
             if (isExited) {
                 return (
                     <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-center text-white font-sans selection:bg-indigo-500" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
@@ -1409,7 +1615,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                         <div className="bg-indigo-600 p-4 rounded-t-[2.5rem] flex justify-between items-center shadow-md">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white"><Icons.Bot /></div>
-                                <div><h3 className="font-black text-white leading-tight">Fin Assistant</h3><p className="text-[9px] text-indigo-200 uppercase tracking-widest font-bold">Auto-Input & Laporan</p></div>
+                                <div><h3 className="font-black text-white leading-tight">Fin Assistant</h3><p className="text-[9px] text-indigo-200 uppercase tracking-widest font-bold">CFO & Data Entry AI</p></div>
                             </div>
                             <div className="flex items-center gap-2">
                                 <button onClick={handleResetChat} className="w-8 h-8 bg-white/10 text-white rounded-full flex items-center justify-center hover:bg-white/20 transition-colors" title="Bersihkan Obrolan"><div className="w-4 h-4"><Icons.Refresh/></div></button>
@@ -1448,10 +1654,9 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
 
                             <div className={`transition-all duration-300 overflow-hidden ${showPrompts ? 'max-h-40 opacity-100 mb-3' : 'max-h-0 opacity-0 mb-0'}`}>
                                 <div className="grid grid-cols-2 gap-2">
-                                    <button onClick={() => { handleChatSubmit(null, "Fin, tolong analisa kas dan keuangan bulan ini. Apakah kita profit atau boncos?"); setShowPrompts(false); }} className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase p-2.5 rounded-xl border border-indigo-100 dark:border-indigo-800 flex items-center justify-center gap-1 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-center">📈 Analisa Kas</button>
-                                    <button onClick={() => { handleChatSubmit(null, "Cek tagihan dan agenda yang belum dibayar"); setShowPrompts(false); }} className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] font-black uppercase p-2.5 rounded-xl border border-red-100 dark:border-red-800 flex items-center justify-center gap-1 hover:bg-red-100 dark:hover:bg-red-900/50 text-center">⚠️ Tagihan</button>
+                                    <button onClick={() => { handleChatSubmit(null, "Fin, tolong analisa bisnis bulan ini. Cek kebocoran budget dan beri saran."); setShowPrompts(false); }} className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase p-2.5 rounded-xl border border-indigo-100 dark:border-indigo-800 flex items-center justify-center gap-1 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-center">📈 Deep Analisa</button>
+                                    <button onClick={() => { handleChatSubmit(null, "Evaluasi keuangan, cek tagihan apa yang harus dibayar duluan"); setShowPrompts(false); }} className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] font-black uppercase p-2.5 rounded-xl border border-red-100 dark:border-red-800 flex items-center justify-center gap-1 hover:bg-red-100 dark:hover:bg-red-900/50 text-center">⚠️ Evaluasi Tagihan</button>
                                     <button onClick={() => { handleChatSubmit(null, "Buatkan rekap laporan total masuk dan keluar untuk Hari Ini"); setShowPrompts(false); }} className="bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-[10px] font-black uppercase p-2.5 rounded-xl border border-green-100 dark:border-green-800 flex items-center justify-center gap-1 hover:bg-green-100 dark:hover:bg-green-900/50 text-center">💰 Rekap Harian</button>
-                                    <button onClick={() => { handleChatSubmit(null, "Buatkan Laporan Bulanan"); setShowPrompts(false); }} className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase p-2.5 rounded-xl border border-blue-100 dark:border-blue-800 flex items-center justify-center gap-1 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-center">📅 Laporan Bulanan</button>
                                 </div>
                             </div>
 
@@ -1478,7 +1683,6 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 </div>
             );
 
-            // Perhitungan list diurutkan berdasarkan tanggal terbaru terlebih dahulu (untuk Income & Arsip)
             const filteredIncomes = incomes.filter(i => i.date.startsWith(filterMonth))
                 .sort((a, b) => {
                     if (a.date === b.date) return b.timestamp - a.timestamp;
@@ -1491,7 +1695,6 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                     return new Date(b.date) - new Date(a.date);
                 });
 
-            // Perhitungan Ringkasan (Summary) Pemasukan
             const incomeSummary = filteredIncomes.reduce((acc, curr) => {
                 acc[curr.source] = (acc[curr.source] || 0) + curr.amount;
                 return acc;
@@ -1545,7 +1748,6 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                     <div><label className="text-[10px] text-gray-400 font-bold uppercase mb-1 block">Target Omzet Harian</label><input type="text" inputMode="numeric" value={formatInputRp(settings.targetOmzet)} onChange={e => setSettings({...settings, targetOmzet: parseInt(parseInputRp(e.target.value))||0})} className="w-full p-4 bg-slate-100 dark:bg-slate-900 rounded-2xl font-bold text-green-600 dark:text-green-400 outline-none" /></div>
                                     <div><label className="text-[10px] text-gray-400 font-bold uppercase mb-1 block">Batas Belanja Harian</label><input type="text" inputMode="numeric" value={formatInputRp(settings.maxBelanja)} onChange={e => setSettings({...settings, maxBelanja: parseInt(parseInputRp(e.target.value))||0})} className="w-full p-4 bg-slate-100 dark:bg-slate-900 rounded-2xl font-bold text-red-500 dark:text-red-400 outline-none" /></div>
                                     
-                                    {/* Kolom Input Baru untuk Gemini API Key */}
                                     <div>
                                         <label className="text-[10px] text-gray-400 font-bold uppercase mb-1 block">Gemini API Key (Khusus AI)</label>
                                         <input type="password" value={geminiApiKey} onChange={e => {
@@ -1626,7 +1828,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                             </select>
                                         </div>
                                         <div>
-                                            <input type="text" inputMode="numeric" value={formatInputRp(totalNominal)} onChange={e => setTotalNominal(parseInputRp(e.target.value))} placeholder="Total Harga Keseluruhan (Rp)" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl font-bold text-right text-indigo-800 dark:text-indigo-400 outline-none placeholder-slate-400 dark:placeholder-slate-500" />
+                                            <input type="text" inputMode="numeric" value={formatInputRp(totalNominal)} onChange={e => setTotalNominal(parseInputRp(e.target.value))} placeholder={editingId && cart.find(i => i.id === editingId)?.actualTotal ? "Total Harga Asli (Rp)" : "Total Harga Estimasi (Rp)"} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl font-bold text-right text-indigo-800 dark:text-indigo-400 outline-none placeholder-slate-400 dark:placeholder-slate-500" />
                                         </div>
                                         <button type="submit" className={`w-full py-4 text-white font-black rounded-xl shadow-lg mt-2 ${editingId ? 'bg-amber-500' : 'bg-indigo-600'}`}>{editingId ? 'UPDATE ITEM' : 'TAMBAH KE LIST'}</button>
                                     </form>
@@ -1641,8 +1843,18 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                         <div className="divide-y divide-slate-50 dark:divide-slate-700 max-h-[35vh] overflow-y-auto no-scrollbar">
                                             {cart.map(item => (
                                                 <div key={item.id} className="p-5 flex justify-between items-center">
-                                                    <div><p className="font-black text-[13px] text-slate-800 dark:text-slate-100 uppercase">{item.name}</p><p className="text-[10px] text-slate-400 font-bold italic">{item.qty} {item.unit} — Rp {formatNumber(item.total)}</p></div>
-                                                    <div className="flex gap-2">
+                                                    <div>
+                                                        <p className="font-black text-[13px] text-slate-800 dark:text-slate-100 uppercase">{item.name}</p>
+                                                        <div className="text-[10px] font-bold mt-1">
+                                                            <span className="text-slate-400">Est: Rp {formatNumber(item.total)}</span>
+                                                            {item.actualTotal && (
+                                                                <span className="ml-2 text-green-500 dark:text-green-400">
+                                                                    | Asli: Rp {formatNumber(parseInputRp(item.actualTotal))}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex gap-2 shrink-0 ml-2">
                                                         <button onClick={() => startEdit(item)} className="text-indigo-500 p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg"><div className="w-4 h-4"><Icons.Edit/></div></button>
                                                         <button onClick={() => setCart(cart.filter(i => i.id !== item.id))} className="text-red-400 p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"><div className="w-4 h-4"><Icons.Trash/></div></button>
                                                     </div>
@@ -1650,10 +1862,22 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                             ))}
                                         </div>
                                         <div className="p-6 bg-slate-900 text-white rounded-b-[2.5rem]">
-                                            <div className="flex justify-between items-center mb-4"><span className="text-[10px] font-bold opacity-50 uppercase">Total Pengeluaran</span><span className="text-xl font-black text-indigo-400">Rp {formatNumber(cart.reduce((a, b) => a + b.total, 0))}</span></div>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <button onClick={handleSaveNote} disabled={isSaving} className="w-full py-4 bg-white/10 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-white/20">SIMPAN & POTONG KAS</button>
-                                                <button onClick={() => generatePrompt(cart, transactionDate)} className="w-full py-4 bg-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg">BUAT PROMPT</button>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <span className="text-[10px] font-bold opacity-50 uppercase">Total Estimasi</span>
+                                                <span className="text-lg font-black text-indigo-400">Rp {formatNumber(cart.reduce((a, b) => a + b.total, 0))}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center mb-4">
+                                                <span className="text-[10px] font-bold text-green-400 opacity-80 uppercase tracking-widest">Total Harga Asli</span>
+                                                <span className="text-xl font-black text-green-500">Rp {formatNumber(cart.reduce((acc, curr) => { let parsed = parseFloat(curr.actualTotal.toString().replace(/[^0-9]/g, '')); return acc + (isNaN(parsed) ? 0 : parsed); }, 0))}</span>
+                                            </div>
+                                            <div className="flex flex-col gap-3">
+                                                <button onClick={() => setShowMarketMode(true)} className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-emerald-500 to-green-600 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg hover:opacity-90 transition-opacity">
+                                                    <div className="w-4 h-4"><Icons.Play /></div> BUKA MODE PASAR (PREVIEW)
+                                                </button>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <button onClick={handleFinalizeMarket} disabled={isSaving} className="w-full py-4 bg-white/10 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-white/20">SIMPAN LANGSUNG</button>
+                                                    <button onClick={() => handleGeneratePrompt(cart, transactionDate)} className="w-full py-4 bg-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg">BUAT PROMPT</button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -1685,7 +1909,6 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                         <input type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)} className="bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-lg text-[10px] font-bold outline-none border border-transparent dark:border-slate-700" />
                                     </div>
                                     
-                                    {/* RINGKASAN PEMASUKAN BULANAN */}
                                     {filteredIncomes.length > 0 && (
                                         <div className="mb-4 bg-indigo-50 dark:bg-slate-800 p-4 rounded-2xl border border-indigo-100 dark:border-slate-700">
                                             <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400 mb-3 border-b border-indigo-200 dark:border-slate-700 pb-2 flex justify-between">
@@ -1809,8 +2032,8 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                             </div>
 
                                             <div className="flex gap-2">
-                                                <button onClick={() => { setCart(note.items); setTransactionDate(note.date); setCurrentNoteId(note.id); setActiveTab('plan'); showStatus('Mode Edit Arsip'); }} className="flex-1 bg-slate-900 dark:bg-slate-700 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 dark:hover:bg-slate-600 shadow-md">DETAIL / EDIT</button>
-                                                <button onClick={() => generatePrompt(note.items, note.date)} className="w-12 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 rounded-xl flex justify-center items-center hover:bg-indigo-100 dark:hover:bg-indigo-900/50"><div className="w-5 h-5"><Icons.Copy /></div></button>
+                                                <button onClick={() => { setCart(note.items.map(it => ({...it, actualTotal: '', isBought: false}))); setTransactionDate(note.date); setCurrentNoteId(note.id); setActiveTab('plan'); showStatus('Mode Edit Arsip'); }} className="flex-1 bg-slate-900 dark:bg-slate-700 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 dark:hover:bg-slate-600 shadow-md">DETAIL / EDIT</button>
+                                                <button onClick={() => executePrompt(note.items, note.date)} className="w-12 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 rounded-xl flex justify-center items-center hover:bg-indigo-100 dark:hover:bg-indigo-900/50"><div className="w-5 h-5"><Icons.Copy /></div></button>
                                                 <button onClick={() => {
                                                     setConfirmModal({ show: true, title: 'Hapus Arsip?', message: 'Data dihapus permanen?', onConfirm: async () => {
                                                         setConfirmModal({ ...confirmModal, show: false }); showStatus('Menghapus...', 'loading');
@@ -1827,11 +2050,14 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                 )}
                             </div>
                         )}
+                        
+                        {/* RENDER MARKET MODE JIKA DIAKTIFKAN */}
+                        {showMarketMode && renderMarketMode()}
                     </main>
 
                     {/* Draggable Fin AI Button Wrapper */}
                     <div 
-                        className={`fixed z-[550] transition-opacity duration-300 ${isChatOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+                        className={`fixed z-[550] transition-opacity duration-300 ${isChatOpen || showMarketMode ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
                         style={{ right: `${finPos.right}px`, bottom: `${finPos.bottom}px`, touchAction: 'none' }}
                         onPointerDown={handleFinPointerDown}
                         onPointerMove={handleFinPointerMove}
@@ -1847,14 +2073,14 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                         </button>
                     </div>
 
-                    <div className={`fixed left-1/2 -translate-x-1/2 z-[160] transition-all duration-500 ease-in-out ${showNav ? 'bottom-28 opacity-0 pointer-events-none translate-y-10' : 'bottom-6 opacity-100 translate-y-0'}`}>
+                    <div className={`fixed left-1/2 -translate-x-1/2 z-[160] transition-all duration-500 ease-in-out ${showNav || showMarketMode ? 'bottom-28 opacity-0 pointer-events-none translate-y-10' : 'bottom-6 opacity-100 translate-y-0'}`}>
                         <button onClick={() => setShowNav(true)} className="bg-slate-900/90 dark:bg-slate-800/90 backdrop-blur-md text-white px-5 py-3 rounded-full shadow-2xl border border-slate-700/50 flex items-center gap-2 hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors">
                             <div className="w-5 h-5"><Icons.ChevronUp /></div>
                             <span className="text-[11px] font-black uppercase tracking-widest">Menu Utama</span>
                         </button>
                     </div>
 
-                    <nav className={`fixed left-1/2 -translate-x-1/2 w-[95%] max-w-[420px] glass-nav rounded-[2.5rem] flex justify-between px-2 py-2 z-[150] shadow-2xl border border-slate-700/50 transition-all duration-500 ease-in-out ${showNav ? 'bottom-6 translate-y-0 opacity-100' : '-bottom-32 translate-y-full opacity-0 pointer-events-none'}`}>
+                    <nav className={`fixed left-1/2 -translate-x-1/2 w-[95%] max-w-[420px] glass-nav rounded-[2.5rem] flex justify-between px-2 py-2 z-[150] shadow-2xl border border-slate-700/50 transition-all duration-500 ease-in-out ${showNav && !showMarketMode ? 'bottom-6 translate-y-0 opacity-100' : '-bottom-32 translate-y-full opacity-0 pointer-events-none'}`}>
                         <div className="absolute -top-4 left-1/2 -translate-x-1/2">
                             <button onClick={() => setShowNav(false)} className="w-16 h-5 bg-slate-900/95 dark:bg-slate-800/95 backdrop-blur-md rounded-t-full flex items-center justify-center border-t border-x border-slate-700/50 dark:border-slate-600/50 text-slate-400 hover:text-white cursor-pointer group shadow-lg">
                                 <div className="w-4 h-4 group-hover:translate-y-0.5 transition-transform"><Icons.ChevronDown /></div>
