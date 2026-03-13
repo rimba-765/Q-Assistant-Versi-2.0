@@ -1125,9 +1125,9 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 }, 0);
 
                 return (
-                    <div className="fixed inset-0 z-[900] bg-slate-50 dark:bg-slate-900 overflow-y-auto no-scrollbar pb-32 flex flex-col transition-colors animate-fadeIn" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+                    <div className="fixed inset-0 z-[900] bg-slate-50 dark:bg-slate-900 flex flex-col transition-colors animate-fadeIn" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
                         {/* Header Market Mode */}
-                        <div className="sticky top-0 z-10 bg-indigo-600 p-4 shadow-lg flex justify-between items-center text-white shrink-0">
+                        <div className="bg-indigo-600 p-4 shadow-lg flex justify-between items-center text-white shrink-0 z-10">
                             <div>
                                 <h2 className="font-black text-lg flex items-center gap-2"><div className="w-5 h-5"><Icons.ShopBag/></div> Mode Pasar</h2>
                                 <p className="text-[10px] text-indigo-200 uppercase tracking-widest font-bold mt-1">Satu baris, praktis & ringkas.</p>
@@ -1138,7 +1138,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                         </div>
 
                         {/* Daftar Belanja Interaktif */}
-                        <div className="flex-1 p-3 space-y-2 overflow-y-auto">
+                        <div className="flex-1 p-3 space-y-2 overflow-y-auto no-scrollbar">
                             {cart.length === 0 ? <p className="text-center text-slate-400 font-bold py-10">Daftar belanja masih kosong.</p> : 
                             cart.map(item => (
                                 <div key={item.id} className={`p-3 rounded-2xl border flex items-center gap-3 transition-all ${item.isBought ? 'bg-green-50/50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm'}`}>
@@ -1164,7 +1164,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                         </div>
 
                         {/* Footer Market Mode (Total & Action) */}
-                        <div className="fixed bottom-0 left-0 right-0 bg-slate-900 p-4 rounded-t-[2.5rem] shadow-[0_-10px_25px_rgba(0,0,0,0.2)]">
+                        <div className="bg-slate-900 p-4 rounded-t-[2.5rem] shadow-[0_-10px_25px_rgba(0,0,0,0.2)] shrink-0 z-10 relative">
                             <div className="flex justify-between items-center mb-4 px-2">
                                 <div>
                                     <p className="text-[10px] font-bold text-slate-400 uppercase">Total Estimasi</p>
