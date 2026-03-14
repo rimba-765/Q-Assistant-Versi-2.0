@@ -212,6 +212,8 @@
 
             // MARKET MODE STATE
             const [showMarketMode, setShowMarketMode] = useState(false);
+            // MONTHLY AGENDA DETAILS STATE
+            const [showMonthlyAgenda, setShowMonthlyAgenda] = useState(false);
 
             const [finPos, setFinPos] = useState({ right: 20, bottom: 96 }); 
             const isDraggingFin = useRef(false);
@@ -439,7 +441,7 @@
                         greeting += `\n`;
                     }
                     
-                    greeting += `Bos bisa langsung ketik transaksi baru (misal: *"beras 50rb ayam 100rb"*), atau tap tombol **Analisa Kas** di bawah agar Fin bantu cek profit & kebocoran warung bulan ini! 🚀`;
+                    greeting += `Bos bisa langsung ketik transaksi baru (misal: *"beras 50rb ayam 100rb"*), atau tap tombol **Saran Perintah (Buka 🔽)** di bawah agar Fin bantu analisa profit bulanan! 🚀`;
 
                     setChats([{ id: Date.now(), sender: 'fin', text: greeting, type: 'text' }]);
                 }
@@ -528,62 +530,10 @@
             };
 
             const generateLocalSystemReport = (text) => {
+                // Keep local report as fallback, but AI context will be much richer now
                 const lowerText = text.toLowerCase();
                 const todayStr = getLocalDateStr();
                 const currentMonthStr = todayStr.substring(0, 7);
-                const prevMonthStr = new Date(new Date().getFullYear(), new Date().getMonth()-1, 1).toISOString().substring(0,7);
-
-                if (lowerText.includes("analisa kas") || lowerText.includes("analisa bisnis") || lowerText.includes("evaluasi") || lowerText.includes("laporan bulanan") || lowerText.includes("profit atau boncos")) {
-                    const monthlyInc = incomes.filter(i => i.date.startsWith(currentMonthStr)).reduce((s,i) => s + i.amount, 0);
-                    const monthlyHPP = history.filter(h => h.date.startsWith(currentMonthStr)).reduce((s,h) => s + h.total, 0);
-                    const monthlyOpr = agendas.filter(a => a.date.startsWith(currentMonthStr) && a.type === 'keluar' && a.isPaid).reduce((s,a) => s + a.amount, 0);
-                    const pendingAgendas = agendas.filter(a => !a.isPaid && a.type === 'keluar');
-                    
-                    const totalExp = monthlyHPP + monthlyOpr;
-                    const profit = monthlyInc - totalExp;
-                    const grossProfit = monthlyInc - monthlyHPP;
-                    const status = profit >= 0 ? "✅ PROFIT" : "🚨 BONCOS/RUGI";
-
-                    let belanjaHarian = {};
-                    history.filter(h => h.date.startsWith(currentMonthStr)).forEach(h => {
-                        belanjaHarian[h.date] = (belanjaHarian[h.date] || 0) + h.total;
-                    });
-                    const maxBelanjaDate = Object.keys(belanjaHarian).length > 0 ? Object.keys(belanjaHarian).reduce((a, b) => belanjaHarian[a] > belanjaHarian[b] ? a : b) : "Belum Ada";
-                    const maxBelanjaVal = maxBelanjaDate !== "Belum Ada" ? belanjaHarian[maxBelanjaDate] : 0;
-
-                    let yesterdayObj = new Date(); yesterdayObj.setDate(yesterdayObj.getDate() - 1);
-                    const yesterdayStr = getLocalDateStr(yesterdayObj);
-                    let baseOmzet = incomes.filter(i => i.date === todayStr).reduce((s,i) => s + i.amount, 0);
-                    if(baseOmzet === 0) baseOmzet = incomes.filter(i => i.date === yesterdayStr).reduce((s,i) => s + i.amount, 0);
-                    const sisaBudgetBesok = baseOmzet > 0 ? (baseOmzet * 0.5) : settings.maxBelanja;
-
-                    let report = `📊 **DATA ANALITIK SISTEM BULAN INI (${currentMonthStr})**\n`;
-                    report += `- Total Pemasukan: Rp ${formatNumber(monthlyInc)}\n`;
-                    report += `- Belanja Bahan Baku (HPP): Rp ${formatNumber(monthlyHPP)}\n`;
-                    report += `- Biaya Operasional (Lunas): Rp ${formatNumber(monthlyOpr)}\n`;
-                    report += `- Total Pengeluaran: Rp ${formatNumber(totalExp)}\n`;
-                    report += `- Laba Kotor (Inc - HPP): Rp ${formatNumber(grossProfit)}\n`;
-                    report += `- LABA BERSIH: ${status} Rp ${formatNumber(Math.abs(profit))}\n\n`;
-                    report += `🔍 **DETEKSI KEBOCORAN & BUDGET:**\n`;
-                    report += `- Rekor belanja bahan termahal bulan ini: Rp ${formatNumber(maxBelanjaVal)} pada tanggal ${maxBelanjaDate}.\n`;
-                    report += `- Estimasi / Budget aman belanja besok: Maksimal Rp ${formatNumber(sisaBudgetBesok)}.\n\n`;
-                    
-                    if(pendingAgendas.length > 0) {
-                        report += `⚠️ **TAGIHAN BELUM LUNAS:**\n`;
-                        pendingAgendas.forEach(a => report += `- ${a.title}: Rp ${formatNumber(a.amount)} (Tgl: ${a.date})\n`);
-                    }
-
-                    return report;
-                }
-
-                if (lowerText.includes("tagihan") || lowerText.includes("agenda yang belum dibayar")) {
-                    const unpaid = agendas.filter(a => !a.isPaid && a.type === 'keluar');
-                    if(unpaid.length === 0) return `✅ **DATA SISTEM: Tagihan Aman!**\nTidak ada tagihan operasional yang belum dibayar bulan ini.`;
-
-                    let report = `⚠️ **DATA SISTEM: Daftar Tagihan Belum Lunas**\n`;
-                    unpaid.forEach(a => report += `- ${a.title}: **Rp ${formatNumber(a.amount)}** (Tgl: ${a.date})\n`);
-                    return report;
-                }
 
                 if (lowerText.includes("rekap harian") || lowerText.includes("rekap laporan total masuk dan keluar")) {
                     const todayInc = incomes.filter(i => i.date === todayStr).reduce((s,i) => s + i.amount, 0);
@@ -593,7 +543,6 @@
                            `- **Pemasukan Hari Ini:** Rp ${formatNumber(todayInc)}\n` +
                            `- **Pengeluaran Hari Ini:** Rp ${formatNumber(todayExp)}`;
                 }
-
                 return null;
             };
 
@@ -610,24 +559,61 @@
 
                 var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
                 
+                // Kumpulkan Data Konteks Bulanan yang Jauh Lebih Lengkap untuk Fin AI
                 const todayStr = getLocalDateStr();
                 const currentMonthStr = todayStr.substring(0, 7);
                 
-                const todayIncTotal = incomes.filter(i => i.date === todayStr).reduce((s,i) => s + i.amount, 0);
-                const todayExpTotal = history.filter(h => h.date === todayStr).reduce((s,h) => s + h.total, 0);
+                const mInc = incomes.filter(i => i.date.startsWith(currentMonthStr));
+                const mHpp = history.filter(h => h.date.startsWith(currentMonthStr));
+                const mOpr = agendas.filter(a => a.date.startsWith(currentMonthStr) && a.type === 'keluar');
                 
-                const sysPrompt = `Anda adalah "Fin", Asisten & Manajer Keuangan internal untuk web app "Warung Mbah Marto".
-Gaya bicara: Profesional, cerdas, tajam, santai, memanggil pengguna "Bos".
+                const mOprPaid = mOpr.filter(a => a.isPaid).reduce((s,a)=>s+a.amount, 0);
+                const mOprUnpaid = mOpr.filter(a => !a.isPaid).reduce((s,a)=>s+a.amount, 0);
+                const mIncTotal = mInc.reduce((s,i)=>s+i.amount, 0);
+                const mHppTotal = mHpp.reduce((s,h)=>s+h.total, 0);
 
-Data Kas Saat Ini:
-- Kas Tersedia: Rp ${formatNumber(currentBalance)}
-- Rekap Hari Ini (${todayStr}) -> Masuk: Rp ${formatNumber(todayIncTotal)} | Keluar: Rp ${formatNumber(todayExpTotal)}
+                let channelText = "";
+                const incChannels = {};
+                mInc.forEach(i => incChannels[i.source] = (incChannels[i.source]||0) + i.amount);
+                for(let k in incChannels) channelText += `- ${k}: Rp ${formatNumber(incChannels[k])}\n`;
+
+                let hutangText = "";
+                mOpr.filter(a => !a.isPaid).forEach(a => hutangText += `- ${a.title} (Rp ${formatNumber(a.amount)} Tgl: ${a.date})\n`);
+
+                const sysPrompt = `Anda adalah "Fin", Asisten & Manajer Keuangan super cerdas untuk web app "Warung Mbah Marto".
+Gaya bicara: Profesional, tajam menganalisa, santai, dan memanggil pengguna "Bos".
+
+=== DATA KAS & BISNIS BULAN INI (${currentMonthStr}) ===
+Kas Tersedia Saat Ini: Rp ${formatNumber(currentBalance)}
+
+[Kinerja Bulanan]
+- Total Pemasukan: Rp ${formatNumber(mIncTotal)}
+Rincian Pemasukan per Channel:
+${channelText || '- Belum ada pemasukan'}
+
+- Belanja Bahan Baku (HPP): Rp ${formatNumber(mHppTotal)}
+- Biaya Operasional Lunas: Rp ${formatNumber(mOprPaid)}
+- Tagihan Operasional BELUM DIBAYAR (Hutang): Rp ${formatNumber(mOprUnpaid)}
+- Laba Bersih Sementara (Pemasukan - HPP - Opr Lunas): Rp ${formatNumber(mIncTotal - mHppTotal - mOprPaid)}
+
+[Jadwal Hutang / Tagihan Belum Lunas]
+${hutangText || '- Aman, tidak ada tunggakan tagihan bulanan.'}
+
+[Target & Limit (Acuan Harian)]
+- Target Omzet Harian: Rp ${formatNumber(settings.targetOmzet)}
+- Batas Maksimal Belanja Harian: Rp ${formatNumber(settings.maxBelanja)}
+
+TUGAS ANALISIS (Jika pengguna meminta evaluasi/analisis/saran):
+1. Cek kesehatan margin Laba Bersih.
+2. Cek rasio HPP (Belanja Bahan Baku) terhadap Pemasukan. Jika HPP > 50% dari Pemasukan, peringatkan bahwa itu "boncos/kebocoran".
+3. Cek tagihan belum lunas, berikan prioritas mana yang harus dibayar dengan melihat "Kas Tersedia".
+4. Beri rekomendasi budget belanja untuk besok.
 
 ATURAN KHUSUS UNTUK GAMBAR (FOTO STRUK/SCREENSHOT):
 1. JANGAN langsung menghasilkan 'actions' saat baru menerima gambar. Analisa dan tanyakan konfirmasi dulu.
-2. ANALISA GAMBAR DENGAN TELITI: Pisahkan transaksi beda tanggal menjadi objek terpisah. 
+2. Pisahkan transaksi beda tanggal menjadi objek terpisah. 
 3. Tuliskan RINCIAN LENGKAP di 'reply' lalu TANYAKAN KONFIRMASI. Kosongkan array 'actions' [].
-4. KETIKA PENGGUNA MENGONFIRMASI ("Ya", "Simpan"): Ekstrak SEMUA rincian transaksi tersebut ke dalam array 'actions'.
+4. JIKA PENGGUNA MENGONFIRMASI ("Ya", "Simpan"): Ekstrak SEMUA rincian transaksi tersebut ke dalam array 'actions'.
 
 ANDA WAJIB MEMBALAS HANYA DENGAN JSON MURNI DENGAN STRUKTUR SEPERTI INI:
 {
@@ -719,7 +705,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 let aiPromptText = text;
 
                 if (localSystemReport) {
-                    aiPromptText = `Saya meminta analisa/evaluasi bisnis. Ini adalah data valid dari sistem:\n\n${localSystemReport}\n\nTugasmu: Bertindaklah sebagai penasihat keuangan (CFO). Berikan analisis mendalam berdasarkan data di atas. \n1. Tanggapi kondisi Laba Bersih/Kotor.\n2. Beri peringatan spesifik pada "Deteksi Kebocoran" (Komentari apakah belanja maksimal itu wajar dan ingatkan soal budget besok).\n3. Beri rekomendasi konkrit mana dari "Tagihan Belum Lunas" yang harus dibayar duluan atau ditunda.\nGunakan format Markdown (bold, bullet points) agar cantik dibaca. Jangan mengubah data!`;
+                    aiPromptText = `Saya meminta rekapitulasi data. Ini adalah laporan yang sudah di-generate sistem lokal:\n\n${localSystemReport}\n\nTolong tanggapi dengan gaya khas Fin, gunakan data tersebut!`;
                 }
 
                 const historyToPass = [...chats, newUserChat];
@@ -728,16 +714,8 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 setIsTyping(false);
                 let finalReply = "";
 
-                if (localSystemReport) {
-                    if (responseObj && responseObj.isError) {
-                        finalReply = localSystemReport + "\n\n*(💡 Insight AI sedang tidak tersedia karena masalah koneksi/limit, namun data di atas 100% akurat dari sistem).*";
-                    } else if (responseObj && responseObj.reply) {
-                        finalReply = responseObj.reply;
-                    }
-                } else {
-                    if (responseObj && responseObj.reply) {
-                        finalReply = responseObj.reply;
-                    }
+                if (responseObj && responseObj.reply) {
+                    finalReply = responseObj.reply;
                 }
 
                 if (finalReply) {
@@ -1967,6 +1945,64 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                             <div className="flex-1 overflow-y-auto no-scrollbar pb-32 space-y-4">
                                 {renderCalendar()}
                                 {renderAgendaSummary()}
+                                
+                                {/* Laporan Bulanan Operasional */}
+                                {(() => {
+                                    const monthStr = agendaDate.substring(0, 7);
+                                    const monthlyAgendasKeluar = agendas.filter(a => a.date.startsWith(monthStr) && a.type === 'keluar');
+                                    const totalOpr = monthlyAgendasKeluar.reduce((s,a) => s + a.amount, 0);
+                                    const totalDibayar = monthlyAgendasKeluar.filter(a => a.isPaid).reduce((s,a) => s + a.amount, 0);
+                                    const totalBelum = monthlyAgendasKeluar.filter(a => !a.isPaid).reduce((s,a) => s + a.amount, 0);
+
+                                    const grouping = monthlyAgendasKeluar.reduce((acc, curr) => {
+                                        acc[curr.title] = (acc[curr.title] || 0) + curr.amount;
+                                        return acc;
+                                    }, {});
+                                    const sortedGrup = Object.entries(grouping).sort((a,b) => b[1] - a[1]);
+
+                                    return (
+                                        <div className="bg-white dark:bg-slate-800 p-5 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 mb-4 transition-colors">
+                                            <div className="flex justify-between items-center mb-3">
+                                                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                                    <div className="w-4 h-4 text-orange-500"><Icons.Chart /></div> Rekap Bulan {new Date(agendaDate).toLocaleDateString('id-ID', {month:'long', year:'numeric'})}
+                                                </h3>
+                                                <button onClick={() => setShowMonthlyAgenda(!showMonthlyAgenda)} className="text-[9px] font-bold bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-lg text-slate-500 hover:text-indigo-500 transition-colors">
+                                                    {showMonthlyAgenda ? 'TUTUP DETAIL' : 'LIHAT DETAIL'}
+                                                </button>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-3 mb-2">
+                                                <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-2xl border border-orange-100 dark:border-orange-900/50">
+                                                    <p className="text-[9px] font-bold text-orange-500 uppercase">Belum Dibayar</p>
+                                                    <p className="font-black text-orange-600 dark:text-orange-400 text-sm">Rp {formatNumber(totalBelum)}</p>
+                                                </div>
+                                                <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-2xl border border-green-100 dark:border-green-900/50">
+                                                    <p className="text-[9px] font-bold text-green-500 uppercase">Sudah Dibayar</p>
+                                                    <p className="font-black text-green-600 dark:text-green-400 text-sm">Rp {formatNumber(totalDibayar)}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-900 p-3 rounded-2xl border border-slate-100 dark:border-slate-700">
+                                                <span className="text-[10px] font-bold uppercase text-slate-500">Total Operasional</span>
+                                                <span className="font-black text-slate-800 dark:text-white text-base">Rp {formatNumber(totalOpr)}</span>
+                                            </div>
+
+                                            {showMonthlyAgenda && (
+                                                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 animate-fadeIn space-y-2">
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Ranking Pengeluaran Terbesar</p>
+                                                    {sortedGrup.length === 0 ? <p className="text-xs text-center text-slate-400 font-bold">Belum ada data</p> :
+                                                        sortedGrup.map(([title, amount], idx) => (
+                                                            <div key={idx} className="flex justify-between items-center text-[11px] p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                                                                <span className="font-bold text-slate-600 dark:text-slate-300 uppercase truncate pr-2 max-w-[60%]">{idx+1}. {title}</span>
+                                                                <span className="font-black text-red-500 dark:text-red-400">Rp {formatNumber(amount)}</span>
+                                                            </div>
+                                                        ))
+                                                    }
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })()}
                                 
                                 <div className="p-6 rounded-[2.5rem] bg-slate-900 text-white shadow-xl">
                                     <h2 className="font-extrabold uppercase text-[10px] tracking-widest mb-4 flex items-center gap-2"><div className="w-4 h-4"><Icons.Calendar /></div> Tambah Operasional / Tagihan</h2>
