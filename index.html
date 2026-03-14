@@ -146,7 +146,8 @@
             Minus: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>,
             Sun: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>,
             Moon: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>,
-            Play: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            Play: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>,
+            Info: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
         };
 
         const initialItems = ["Ayam Gede (Mentah)", "Lele Segar", "Telur Ayam", "Beras", "Minyak Goreng", "Gula Pasir", "Gas LPG 3Kg", "Sabun Cuci", "Lunch Box Size M", "Cup Minum", "Kangkung", "Tahu Putih (Mentah)"];
@@ -567,8 +568,8 @@
                 const mHpp = history.filter(h => h.date.startsWith(currentMonthStr));
                 const mOpr = agendas.filter(a => a.date.startsWith(currentMonthStr) && a.type === 'keluar');
                 
-                const mOprPaid = mOpr.filter(a => a.isPaid).reduce((s,a)=>s+a.amount, 0);
-                const mOprUnpaid = mOpr.filter(a => !a.isPaid).reduce((s,a)=>s+a.amount, 0);
+                const mOprPaid = mOpr.filter(a => a.isPaid || a.date < todayStr).reduce((s,a)=>s+a.amount, 0);
+                const mOprUnpaid = mOpr.filter(a => !a.isPaid && a.date >= todayStr).reduce((s,a)=>s+a.amount, 0);
                 const mIncTotal = mInc.reduce((s,i)=>s+i.amount, 0);
                 const mHppTotal = mHpp.reduce((s,h)=>s+h.total, 0);
 
@@ -578,7 +579,7 @@
                 for(let k in incChannels) channelText += `- ${k}: Rp ${formatNumber(incChannels[k])}\n`;
 
                 let hutangText = "";
-                mOpr.filter(a => !a.isPaid).forEach(a => hutangText += `- ${a.title} (Rp ${formatNumber(a.amount)} Tgl: ${a.date})\n`);
+                mOpr.filter(a => !a.isPaid && a.date >= todayStr).forEach(a => hutangText += `- ${a.title} (Rp ${formatNumber(a.amount)} Tgl: ${a.date})\n`);
 
                 const sysPrompt = `Anda adalah "Fin", Asisten & Manajer Keuangan super cerdas untuk web app "Warung Mbah Marto".
 Gaya bicara: Profesional, tajam menganalisa, santai, dan memanggil pengguna "Bos".
@@ -1269,6 +1270,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
 
                 const tagihanKeluar = monthlyAgendas.filter(a => a.type === 'keluar');
                 const totalTagihan = tagihanKeluar.reduce((s, a) => s + a.amount, 0);
+                // Tagihan yang terbayar termasuk yang isPaid true atau sudah lewat tanggal hari ini (Auto-solved)
                 const tagihanTerbayar = tagihanKeluar.filter(a => a.isPaid || a.date < todayStr).reduce((s, a) => s + a.amount, 0);
                 
                 const idealSisaKas = settings.saldoAwal + ((settings.targetOmzet - settings.maxBelanja) * daysInMonth);
@@ -1292,8 +1294,8 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 const marginKotorPct = omzetBulanIni > 0 ? (profitKotor / omzetBulanIni) * 100 : 0;
                 const marginBersihPct = omzetBulanIni > 0 ? (profitBulanIni / omzetBulanIni) * 100 : 0;
 
-                let statusKotor = marginKotorPct >= 50 ? '✨ IDEAL (Standar RM)' : '⚠️ HPP KEMAHALAN';
-                let statusBersih = marginBersihPct > 20 ? '🔥 SANGAT SEHAT' : (marginBersihPct > 0 ? '✅ PROFIT TIPIS' : '🚨 BONCOS');
+                let statusKotor = marginKotorPct >= 50 ? '✨ IDEAL' : '⚠️ MAHAL';
+                let statusBersih = marginBersihPct > 20 ? '🔥 SEHAT' : (marginBersihPct > 0 ? '✅ TIPIS' : '🚨 BONCOS');
 
                 return (
                     <div className="flex-1 overflow-y-auto no-scrollbar pb-32 space-y-4">
@@ -1397,6 +1399,15 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                             <div className="h-full bg-red-500 rounded-r-full" style={{ width: `${pctExpBersih}%` }}></div>
                                         </div>
                                     </div>
+                                </div>
+
+                                {/* Break Even Point Info Box */}
+                                <div className="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-xl mt-4 border border-indigo-100 dark:border-indigo-800/50 flex gap-2 items-start">
+                                    <div className="w-4 h-4 text-indigo-500 mt-0.5 shrink-0"><Icons.Info /></div>
+                                    <p className="text-[10px] text-indigo-700 dark:text-indigo-300 font-medium leading-relaxed">
+                                        <strong className="font-black">💡 Titik Impas (Break Even): Rp {formatNumber(pengeluaranBulanIni)}</strong><br/>
+                                        Ini adalah target minimal omzet yang harus dicapai bulan ini agar warung balik modal (tidak rugi).
+                                    </p>
                                 </div>
                             </div>
 
@@ -1948,17 +1959,29 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                 
                                 {/* Laporan Bulanan Operasional */}
                                 {(() => {
+                                    const todayStr = getLocalDateStr();
                                     const monthStr = agendaDate.substring(0, 7);
                                     const monthlyAgendasKeluar = agendas.filter(a => a.date.startsWith(monthStr) && a.type === 'keluar');
+                                    
                                     const totalOpr = monthlyAgendasKeluar.reduce((s,a) => s + a.amount, 0);
-                                    const totalDibayar = monthlyAgendasKeluar.filter(a => a.isPaid).reduce((s,a) => s + a.amount, 0);
-                                    const totalBelum = monthlyAgendasKeluar.filter(a => !a.isPaid).reduce((s,a) => s + a.amount, 0);
+                                    
+                                    // Sudah dibayar = IsPaid TRUE atau sudah lewat dari tanggal hari ini (Auto Solved)
+                                    const totalDibayar = monthlyAgendasKeluar.filter(a => a.isPaid || a.date < todayStr).reduce((s,a) => s + a.amount, 0);
+                                    
+                                    // Belum dibayar = IsPaid FALSE DAN tanggal masih sama atau lebih besar dari hari ini
+                                    const totalBelum = monthlyAgendasKeluar.filter(a => !a.isPaid && a.date >= todayStr).reduce((s,a) => s + a.amount, 0);
 
-                                    const grouping = monthlyAgendasKeluar.reduce((acc, curr) => {
-                                        acc[curr.title] = (acc[curr.title] || 0) + curr.amount;
-                                        return acc;
-                                    }, {});
-                                    const sortedGrup = Object.entries(grouping).sort((a,b) => b[1] - a[1]);
+                                    // Fungsi helper untuk mengelompokkan berdasarkan title dan menjumlahkan
+                                    const groupAndSort = (arr) => {
+                                        const grouped = arr.reduce((acc, curr) => {
+                                            acc[curr.title] = (acc[curr.title] || 0) + curr.amount;
+                                            return acc;
+                                        }, {});
+                                        return Object.entries(grouped).sort((a,b) => b[1] - a[1]);
+                                    };
+
+                                    const listBelumDibayar = groupAndSort(monthlyAgendasKeluar.filter(a => !a.isPaid && a.date >= todayStr));
+                                    const listSudahDibayar = groupAndSort(monthlyAgendasKeluar.filter(a => a.isPaid || a.date < todayStr));
 
                                     return (
                                         <div className="bg-white dark:bg-slate-800 p-5 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 mb-4 transition-colors">
@@ -1988,16 +2011,34 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                             </div>
 
                                             {showMonthlyAgenda && (
-                                                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 animate-fadeIn space-y-2">
-                                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Ranking Pengeluaran Terbesar</p>
-                                                    {sortedGrup.length === 0 ? <p className="text-xs text-center text-slate-400 font-bold">Belum ada data</p> :
-                                                        sortedGrup.map(([title, amount], idx) => (
-                                                            <div key={idx} className="flex justify-between items-center text-[11px] p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                                                                <span className="font-bold text-slate-600 dark:text-slate-300 uppercase truncate pr-2 max-w-[60%]">{idx+1}. {title}</span>
-                                                                <span className="font-black text-red-500 dark:text-red-400">Rp {formatNumber(amount)}</span>
-                                                            </div>
-                                                        ))
-                                                    }
+                                                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 animate-fadeIn space-y-4">
+                                                    
+                                                    {/* Blok Belum Dibayar */}
+                                                    <div className="space-y-2">
+                                                        <p className="text-[9px] font-black uppercase tracking-widest text-orange-500 mb-2">⏳ Belum Dibayar</p>
+                                                        {listBelumDibayar.length === 0 ? <p className="text-xs text-slate-400 font-bold italic">Aman, tidak ada tagihan.</p> :
+                                                            listBelumDibayar.map(([title, amount], idx) => (
+                                                                <div key={'belum-'+idx} className="flex justify-between items-center text-[11px] p-2.5 bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/30 rounded-xl">
+                                                                    <span className="font-bold text-slate-600 dark:text-slate-300 uppercase truncate pr-2 max-w-[60%]">{idx+1}. {title}</span>
+                                                                    <span className="font-black text-orange-600 dark:text-orange-400">Rp {formatNumber(amount)}</span>
+                                                                </div>
+                                                            ))
+                                                        }
+                                                    </div>
+
+                                                    {/* Blok Sudah Dibayar */}
+                                                    <div className="space-y-2">
+                                                        <p className="text-[9px] font-black uppercase tracking-widest text-green-500 mb-2">✅ Sudah Dibayar (Lunas / Auto-solved)</p>
+                                                        {listSudahDibayar.length === 0 ? <p className="text-xs text-slate-400 font-bold italic">Belum ada data pembayaran.</p> :
+                                                            listSudahDibayar.map(([title, amount], idx) => (
+                                                                <div key={'sudah-'+idx} className="flex justify-between items-center text-[11px] p-2.5 bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30 rounded-xl">
+                                                                    <span className="font-bold text-slate-600 dark:text-slate-300 uppercase truncate pr-2 max-w-[60%]">{idx+1}. {title}</span>
+                                                                    <span className="font-black text-green-600 dark:text-green-400">Rp {formatNumber(amount)}</span>
+                                                                </div>
+                                                            ))
+                                                        }
+                                                    </div>
+
                                                 </div>
                                             )}
                                         </div>
