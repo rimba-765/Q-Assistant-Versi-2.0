@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Fin - Asisten Warung Mbah Marto</title>
+    <title>Fin - Asisten Warung Mbah Marto V2</title>
     
-    <!-- Konfigurasi PWA & Ikon Layar Utama -->
     <meta name="theme-color" content="#4f46e5">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -13,48 +12,22 @@
     <meta name="apple-mobile-web-app-title" content="Q-Nota">
     <meta name="application-name" content="Q-Nota">
     
-    <!-- Script Generate Logo PNG Kualitas Tinggi Otomatis -->
     <script>
         (function() {
             var canvas = document.createElement('canvas');
-            canvas.width = 512;
-            canvas.height = 512;
-            var ctx = canvas.getContext('2d');
-            
-            ctx.fillStyle = '#4f46e5';
-            ctx.fillRect(0, 0, 512, 512);
-            
-            ctx.fillStyle = 'white';
-            ctx.font = '900 380px Arial, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.strokeStyle = 'white';
-            ctx.lineWidth = 20;
-            
-            ctx.strokeText('Q', 256, 285);
-            ctx.fillText('Q', 256, 285);
-            
+            canvas.width = 512; canvas.height = 512; var ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#4f46e5'; ctx.fillRect(0, 0, 512, 512);
+            ctx.fillStyle = 'white'; ctx.font = '900 380px Arial, sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.strokeStyle = 'white'; ctx.lineWidth = 20;
+            ctx.strokeText('Q', 256, 285); ctx.fillText('Q', 256, 285);
             var dataURL = canvas.toDataURL('image/png');
-            
-            var appleIcon = document.createElement('link');
-            appleIcon.rel = 'apple-touch-icon';
-            appleIcon.href = dataURL;
-            document.head.appendChild(appleIcon);
-            
-            var stdIcon = document.createElement('link');
-            stdIcon.rel = 'icon';
-            stdIcon.type = 'image/png';
-            stdIcon.href = dataURL;
-            document.head.appendChild(stdIcon);
+            var appleIcon = document.createElement('link'); appleIcon.rel = 'apple-touch-icon'; appleIcon.href = dataURL; document.head.appendChild(appleIcon);
+            var stdIcon = document.createElement('link'); stdIcon.rel = 'icon'; stdIcon.type = 'image/png'; stdIcon.href = dataURL; document.head.appendChild(stdIcon);
         })();
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-        }
-    </script>
+    <script>tailwind.config = { darkMode: 'class', }</script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -66,53 +39,33 @@
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        body { 
-            font-family: 'Inter', sans-serif; 
-            -webkit-tap-highlight-color: transparent; 
-            background-color: #f8fafc; 
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            user-select: none;
-            overscroll-behavior-y: none;
-            transition: background-color 0.3s ease;
-        }
-
-        .dark body { background-color: #020617; } /* slate-950 */
-        
-        input, select, textarea {
-            -webkit-user-select: auto;
-            user-select: auto;
-        }
-
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; background-color: #f8fafc; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; overscroll-behavior-y: none; transition: background-color 0.3s ease; }
+        .dark body { background-color: #020617; }
+        input, select, textarea { -webkit-user-select: auto; user-select: auto; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         input[type="date"], input[type="month"] { position: relative; }
         input[type="date"]::-webkit-inner-spin-button, input[type="month"]::-webkit-inner-spin-button { display: none; -webkit-appearance: none; }
-        
         .chat-enter { animation: slideUpFade 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
         @keyframes slideUpFade { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
-        
         .modal-enter { animation: modalIn 0.2s ease-out forwards; }
         @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fadeIn { animation: fadeIn 0.3s ease-out forwards; }
         .animate-status { animation: slideUpFade 0.3s ease-out forwards; }
-        
         .glass-nav { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
         .dark .glass-nav { background: rgba(2, 6, 23, 0.95); border-color: rgba(255, 255, 255, 0.1); }
         .glass-bubble { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
         .dark .glass-bubble { background: rgba(30, 41, 59, 0.9); border-color: rgba(71, 85, 105, 0.5); color: #f1f5f9; }
-
         .markdown-body table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px; font-size: 11px; }
         .markdown-body th { background-color: #e2e8f0; color: #1e293b; font-weight: 800; text-transform: uppercase; padding: 8px; border: 1px solid #cbd5e1; }
         .markdown-body td { padding: 8px; border: 1px solid #e2e8f0; color: #334155; }
         .markdown-body p { margin-bottom: 8px; }
         .markdown-body strong { color: #4f46e5; font-weight: 800; }
         .markdown-body ul { list-style-type: disc; padding-left: 20px; margin-bottom: 8px; }
-
-        /* Dark Mode Markdown Override */
         .dark .markdown-body th { background-color: #1e293b; color: #f8fafc; border-color: #334155; }
         .dark .markdown-body td { border-color: #334155; color: #cbd5e1; }
         .dark .markdown-body strong { color: #818cf8; }
+        .chart-bar { transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
 <body>
@@ -147,13 +100,16 @@
             Sun: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>,
             Moon: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>,
             Play: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>,
-            Info: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            Info: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>,
+            Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
+            Heart: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
         };
 
         const initialItems = ["Ayam Gede (Mentah)", "Lele Segar", "Telur Ayam", "Beras", "Minyak Goreng", "Gula Pasir", "Gas LPG 3Kg", "Sabun Cuci", "Lunch Box Size M", "Cup Minum", "Kangkung", "Tahu Putih (Mentah)"];
         const incomeTypes = ["Shopeefood", "Grabfood", "Gofood", "Offline Cash", "Offline QRIS"];
         const commonUnits = ['Kg', 'Pcs', 'Gram', 'Liter', 'Ikat', 'Bungkus', 'Pack', 'Ls'];
-        const defaultSettings = { targetOmzet: 500000, maxBelanja: 300000, saldoAwal: 1000000 };
+        // MODIFIKASI: Tambahkan default deductions array
+        const defaultSettings = { targetOmzet: 500000, maxBelanja: 300000, saldoAwal: 1000000, deductions: [] };
 
         const getLocalDateStr = (d = new Date()) => {
             const date = new Date(d);
@@ -184,7 +140,6 @@
             const [showNav, setShowNav] = useState(true);
             const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('fin-darkmode') === 'true');
             
-            // Perbarui state cart agar mendukung fitur Market Mode (actualTotal, isBought)
             const [cart, setCart] = useState(() => {
                 const stored = JSON.parse(localStorage.getItem('fin-cart') || '[]');
                 return stored.map(item => ({...item, actualTotal: item.actualTotal || '', isBought: item.isBought || false}));
@@ -193,7 +148,13 @@
             const [incomes, setIncomes] = useState(() => JSON.parse(localStorage.getItem('fin-incomes') || '[]'));
             const [agendas, setAgendas] = useState(() => JSON.parse(localStorage.getItem('fin-agendas') || '[]'));
             const [itemsDB, setItemsDB] = useState(() => JSON.parse(localStorage.getItem('fin-master') || JSON.stringify(initialItems)));
-            const [settings, setSettings] = useState(() => JSON.parse(localStorage.getItem('fin-settings') || JSON.stringify(defaultSettings)));
+            
+            // Perbarui Setting Default untuk memastikan 'deductions' array selalu ada
+            const [settings, setSettings] = useState(() => {
+                const stored = JSON.parse(localStorage.getItem('fin-settings'));
+                if (stored) return { ...defaultSettings, ...stored, deductions: stored.deductions || [] };
+                return defaultSettings;
+            });
             const [holidays, setHolidays] = useState(() => JSON.parse(localStorage.getItem('fin-holidays') || '[]'));
             
             const [geminiApiKey, setGeminiApiKey] = useState(() => localStorage.getItem('fin-gemini-api-key') || '');
@@ -211,9 +172,10 @@
             const chatEndRef = useRef(null);
             const todayRowRef = useRef(null);
 
-            // MARKET MODE STATE
             const [showMarketMode, setShowMarketMode] = useState(false);
-            // MONTHLY AGENDA DETAILS STATE
+            // MODIFIKASI: State untuk Quick Add Market Mode
+            const [quickAddMarket, setQuickAddMarket] = useState({ name: '', total: '' });
+
             const [showMonthlyAgenda, setShowMonthlyAgenda] = useState(false);
 
             const [finPos, setFinPos] = useState({ right: 20, bottom: 96 }); 
@@ -238,13 +200,15 @@
             const [agendaDate, setAgendaDate] = useState(getLocalDateStr());
             const [agendaTitle, setAgendaTitle] = useState('');
             const [agendaAmount, setAgendaAmount] = useState('');
-            const [agendaType, setAgendaType] = useState('keluar');
+            const [agendaType, setAgendaType] = useState('keluar'); // keluar, masuk, pribadi
             const [reminderModal, setReminderModal] = useState({ show: false, items: [] });
             const hasCheckedAgenda = useRef(false);
 
             const [expandedDay, setExpandedDay] = useState(null);
             const [filterMonth, setFilterMonth] = useState(getLocalDateStr().substring(0, 7));
             const [dashboardMonth, setDashboardMonth] = useState(getLocalDateStr().substring(0, 7));
+            // MODIFIKASI: State untuk arsip chart
+            const [showArsipChart, setShowArsipChart] = useState(true);
 
             const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null });
             const [showSettings, setShowSettings] = useState(false);
@@ -252,21 +216,14 @@
             const [isExited, setIsExited] = useState(false); 
 
             useEffect(() => {
-                if (isDarkMode) {
-                    document.documentElement.classList.add('dark');
-                } else {
-                    document.documentElement.classList.remove('dark');
-                }
+                if (isDarkMode) document.documentElement.classList.add('dark');
+                else document.documentElement.classList.remove('dark');
                 localStorage.setItem('fin-darkmode', isDarkMode);
             }, [isDarkMode]);
 
             useEffect(() => {
                 if (activeTab === 'dashboard') {
-                    setTimeout(() => {
-                        if (todayRowRef.current) {
-                            todayRowRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }
-                    }, 300);
+                    setTimeout(() => todayRowRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
                 }
             }, [activeTab, dashboardMonth]);
 
@@ -295,57 +252,70 @@
 
             const handleResetAllData = () => {
                 setConfirmModal({
-                    show: true,
-                    title: 'Reset Data Bulanan?',
-                    message: 'AWAS! Semua data Pemasukan, Pengeluaran, Agenda, dan Arsip akan dihapus secara PERMANEN untuk memulai bulan baru. (Master bahan & Target Omzet aman). Lanjutkan?',
+                    show: true, title: 'Reset Data Bulanan?',
+                    message: 'AWAS! Semua data Pemasukan, Pengeluaran, Agenda, dan Arsip akan dihapus secara PERMANEN. Lanjutkan?',
                     onConfirm: async () => {
-                        setConfirmModal({ ...confirmModal, show: false });
-                        showStatus('Membersihkan data...', 'loading');
-                        
+                        setConfirmModal({ ...confirmModal, show: false }); showStatus('Membersihkan data...', 'loading');
                         setHistory([]); setIncomes([]); setAgendas([]); setCart([]);
-                        
                         if (!isLocalMode && user && paths) {
                             try {
                                 const snapshot = await db.collection(paths.history).get();
-                                const batch = db.batch();
-                                snapshot.docs.forEach(doc => batch.delete(doc.ref));
-                                await batch.commit();
+                                const batch = db.batch(); snapshot.docs.forEach(doc => batch.delete(doc.ref)); await batch.commit();
                             } catch (e) { console.error("Gagal membersihkan cloud", e); }
                         }
-                        
-                        setShowSettings(false);
-                        showStatus('Semua Data Berhasil Direset!', 'success');
+                        setShowSettings(false); showStatus('Semua Data Berhasil Direset!', 'success');
                     }
                 });
             };
 
             const handleResetChat = () => {
                 if(window.confirm('Bersihkan riwayat obrolan dengan Fin?')) {
-                    let greeting = `Halo Bos! Fin sekarang makin super lho. Bos bisa masukkan banyak data sekaligus pakai suara atau ketik secara bebas tanpa aturan kaku. \n\nContoh: *"fin catat pengeluaran beras 5 kg 50 rb dan ayam gede 3 kg 120 rb"* \n\nNanti Fin otomatis paham dan memasukkannya ke sistem. Ada yang mau dicatat? 🚀`;
-                    setChats([{ id: Date.now(), sender: 'fin', text: greeting, type: 'text' }]);
+                    setChats([{ id: Date.now(), sender: 'fin', text: `Halo Bos! Ada yang mau dicatat? 🚀`, type: 'text' }]);
                 }
             };
 
             const handleExit = () => {
                 setConfirmModal({
-                    show: true,
-                    title: 'Keluar Aplikasi?',
-                    message: 'Ingin menutup sesi ini? Tenang Bos, semua data Anda sudah otomatis tersimpan di dalam brankas.',
-                    onConfirm: () => {
-                        setConfirmModal({ show: false, title: '', message: '', onConfirm: null });
-                        setIsExited(true); 
-                        
-                        setTimeout(() => { window.close(); }, 500);
-                    }
+                    show: true, title: 'Keluar Aplikasi?', message: 'Ingin menutup sesi ini? Data sudah aman.',
+                    onConfirm: () => { setConfirmModal({ show: false, title: '', message: '', onConfirm: null }); setIsExited(true); setTimeout(() => { window.close(); }, 500); }
                 });
             };
 
+            // MODIFIKASI: Fungsi menghitung Deduction aktif pada suatu tanggal
+            const getActiveDeductionsForDate = (dateStr) => {
+                let total = 0;
+                if (!settings.deductions) return 0;
+                settings.deductions.forEach(d => {
+                    if (dateStr >= d.startDate && dateStr <= d.endDate) total += d.nominal;
+                });
+                return total;
+            };
+
+            // Menghitung Saldo Berjalan (termasuk deductions)
             const getBalanceUpTo = (targetDateStr) => {
                 let bal = settings.saldoAwal;
                 bal += incomes.filter(i => i.date <= targetDateStr).reduce((s,i) => s + i.amount, 0);
                 bal -= history.filter(h => h.date <= targetDateStr).reduce((s,h) => s + h.total, 0);
+                
+                // Tambahan: Loop semua tanggal dari awal untuk menghitung total deduction
+                // Simplifikasi: Hitung dedupsi per item
+                if (settings.deductions && settings.deductions.length > 0) {
+                    settings.deductions.forEach(d => {
+                        // Jika start date sebelum targetDate, hitung selisih hari yg valid
+                        if (d.startDate <= targetDateStr) {
+                            let end = d.endDate < targetDateStr ? d.endDate : targetDateStr;
+                            let date1 = new Date(d.startDate);
+                            let date2 = new Date(end);
+                            // Cek selisih hari
+                            let diffTime = Math.abs(date2 - date1);
+                            let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 include start
+                            if (diffDays > 0) bal -= (d.nominal * diffDays);
+                        }
+                    });
+                }
+
                 agendas.filter(a => a.date <= targetDateStr).forEach(a => {
-                    if (a.type === 'masuk') bal += a.amount; else bal -= a.amount;
+                    if (a.type === 'masuk') bal += a.amount; else bal -= a.amount; // keluar & pribadi sama-sama mengurangi saldo fisik
                 });
                 return bal;
             };
@@ -363,11 +333,8 @@
             useEffect(() => { if (isChatOpen) chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chats, isTyping, isChatOpen]);
 
             useEffect(() => {
-                if (showMarketMode || confirmModal.show || reminderModal.show || showSettings) {
-                    document.body.style.overflow = 'hidden';
-                } else {
-                    document.body.style.overflow = 'auto';
-                }
+                if (showMarketMode || confirmModal.show || reminderModal.show || showSettings) document.body.style.overflow = 'hidden';
+                else document.body.style.overflow = 'auto';
                 return () => { document.body.style.overflow = 'auto'; };
             }, [showMarketMode, confirmModal.show, reminderModal.show, showSettings]);
 
@@ -402,7 +369,7 @@
                     const threeDaysStr = getLocalDateStr(threeDaysObj);
 
                     const pending = agendas.filter(a => {
-                        if (a.isPaid) return false;
+                        if (a.isPaid || a.type === 'pribadi') return false; // Abaikan tagihan yg diambil pribadi
                         return a.date >= todayStr && a.date <= threeDaysStr;
                     });
 
@@ -421,347 +388,12 @@
                 if (chats.length === 0) {
                     const todayStr = getLocalDateStr();
                     const todayInc = incomes.filter(i => i.date === todayStr).reduce((s,i) => s + i.amount, 0);
-                    
-                    const todayObj = new Date(todayStr);
-                    const threeDaysObj = new Date(todayObj);
-                    threeDaysObj.setDate(todayObj.getDate() + 3);
-                    const threeDaysStr = getLocalDateStr(threeDaysObj);
-                    
-                    const pendingBills = agendas.filter(a => !a.isPaid && a.date >= todayStr && a.date <= threeDaysStr).slice(0, 2);
-
                     let greeting = `Halo Bos! 👋\n\n`;
-                    if (todayInc === 0) {
-                        greeting += `Hari ini belum ada omzet masuk nih, tetap semangat ya bukanya! 💪\n\n`;
-                    } else {
-                        greeting += `Mantap, hari ini sudah ada pemasukan **Rp ${formatNumber(todayInc)}**. Gas terus Bos! 🔥\n\n`;
-                    }
-
-                    if (pendingBills.length > 0) {
-                        greeting += `⚠️ **Pengingat Tagihan Terdekat:**\n`;
-                        pendingBills.forEach(b => greeting += `- ${b.title} (Rp ${formatNumber(b.amount)})\n`);
-                        greeting += `\n`;
-                    }
-                    
-                    greeting += `Bos bisa langsung ketik transaksi baru (misal: *"beras 50rb ayam 100rb"*), atau tap tombol **Saran Perintah (Buka 🔽)** di bawah agar Fin bantu analisa profit bulanan! 🚀`;
-
+                    if (todayInc === 0) greeting += `Hari ini belum ada omzet masuk nih, tetap semangat ya bukanya! 💪\n\n`;
+                    else greeting += `Mantap, hari ini sudah ada pemasukan **Rp ${formatNumber(todayInc)}**. Gas terus Bos! 🔥\n\n`;
                     setChats([{ id: Date.now(), sender: 'fin', text: greeting, type: 'text' }]);
                 }
             }, []);
-
-            const processAddIncome = (data) => {
-                let rawAmount = (data.amount !== undefined && data.amount !== 0) ? data.amount : (data.total !== undefined ? data.total : 0);
-                let safeAmount = parseFloat(rawAmount.toString().replace(/[^0-9.-]/g, ''));
-                if (isNaN(safeAmount)) safeAmount = 0;
-                
-                const newIncome = { id: 'inc-' + Date.now() + Math.random(), date: data.date || getLocalDateStr(), source: toTitleCase(data.source || 'Pemasukan'), amount: safeAmount, timestamp: Date.now() };
-                setIncomes(prev => [newIncome, ...prev].sort((a,b) => b.timestamp - a.timestamp));
-                showStatus('Pemasukan Berhasil Ditambahkan Otomatis!', 'success');
-            };
-
-            const processAddAgenda = (data) => {
-                let rawAmount = (data.amount !== undefined && data.amount !== 0) ? data.amount : (data.total !== undefined ? data.total : 0);
-                let safeAmount = parseFloat(rawAmount.toString().replace(/[^0-9.-]/g, ''));
-                if (isNaN(safeAmount)) safeAmount = 0;
-                
-                const type = data.agendaType || 'keluar';
-                const newAg = { id: 'agd-'+Date.now() + Math.random(), date: data.date || getLocalDateStr(), title: toTitleCase(data.title || 'Agenda'), amount: safeAmount, type: type, isPaid: false };
-                setAgendas(prev => [...prev, newAg].sort((a,b) => new Date(a.date) - new Date(b.date)));
-                
-                if(type === 'masuk'){
-                    showStatus('Agenda Pemasukan Ditambahkan Otomatis!', 'success');
-                } else {
-                    showStatus('Agenda Tagihan Ditambahkan Otomatis!', 'error'); 
-                }
-            };
-
-            const processAddExpense = async (data) => {
-                let itemsList = Array.isArray(data.items) ? data.items : [];
-                let rawTotal = (data.total !== undefined && data.total !== 0) ? data.total : (data.amount !== undefined ? data.amount : 0);
-                let safeTotal = parseFloat(rawTotal.toString().replace(/[^0-9.-]/g, ''));
-                if (isNaN(safeTotal)) safeTotal = 0;
-                
-                itemsList = itemsList.map((i, idx) => {
-                    const iQty = i.qty ? parseFloat(i.qty.toString().replace(/[^0-9.-]/g, '')) : 1;
-                    const rawITotal = i.total || i.price || i.amount || 0;
-                    const iTotal = parseFloat(rawITotal.toString().replace(/[^0-9.-]/g, ''));
-                    return {
-                        id: Date.now() + idx + Math.random(),
-                        name: toTitleCase(i.name || 'Item Tidak Diketahui'),
-                        qty: isNaN(iQty) ? 1 : iQty,
-                        unit: i.unit || 'Pcs',
-                        total: isNaN(iTotal) ? 0 : iTotal
-                    };
-                });
-
-                if (itemsList.length === 0 && safeTotal > 0) {
-                    itemsList = [{ id: Date.now() + Math.random(), name: "Belanja Bahan Baku", qty: 1, unit: "Ls", total: safeTotal }];
-                } else if (itemsList.length > 0) {
-                    safeTotal = itemsList.reduce((acc, curr) => acc + curr.total, 0);
-                }
-
-                const noteId = (isLocalMode || !paths) ? 'local-' + Date.now() + Math.random() : db.collection(paths.history).doc().id;
-                const noteData = {
-                    id: noteId,
-                    date: data.date || getLocalDateStr(),
-                    items: itemsList,
-                    total: safeTotal,
-                    timestamp: Date.now()
-                };
-
-                if (isLocalMode || !paths) {
-                    setHistory(prev => [noteData, ...prev].sort((a, b) => b.timestamp - a.timestamp));
-                } else {
-                    await db.collection(paths.history).doc(noteId).set(noteData);
-                }
-                showStatus('Arsip Pengeluaran Ditambahkan!', 'success');
-            };
-
-            const handleFileChange = (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    setAttachedImage({
-                        url: event.target.result,
-                        data: event.target.result.split(',')[1],
-                        mimeType: file.type
-                    });
-                };
-                reader.readAsDataURL(file);
-            };
-
-            const generateLocalSystemReport = (text) => {
-                // Keep local report as fallback, but AI context will be much richer now
-                const lowerText = text.toLowerCase();
-                const todayStr = getLocalDateStr();
-                const currentMonthStr = todayStr.substring(0, 7);
-
-                if (lowerText.includes("rekap harian") || lowerText.includes("rekap laporan total masuk dan keluar")) {
-                    const todayInc = incomes.filter(i => i.date === todayStr).reduce((s,i) => s + i.amount, 0);
-                    const todayExp = history.filter(h => h.date === todayStr).reduce((s,h) => s + h.total, 0);
-                    return `📝 **DATA SISTEM: Rekap Harian (${todayStr})**\n` +
-                           `- **Total Kas Realtime:** Rp ${formatNumber(currentBalance)}\n` +
-                           `- **Pemasukan Hari Ini:** Rp ${formatNumber(todayInc)}\n` +
-                           `- **Pengeluaran Hari Ini:** Rp ${formatNumber(todayExp)}`;
-                }
-                return null;
-            };
-
-            const fetchFinAI = async (userText, imageData, chatHistory) => {
-                const apiKey = localStorage.getItem('fin-gemini-api-key') || ""; 
-                
-                if (!apiKey) {
-                    return { 
-                        reply: "Waduh Bos, API Key Gemini belum diatur nih! 😅\n\nSilakan buka menu **Pengaturan (ikon Gear ⚙️ di kanan atas)** lalu masukkan API Key Anda agar Fin bisa jalan.", 
-                        actions: [], 
-                        isError: true 
-                    };
-                }
-
-                var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
-                
-                // Kumpulkan Data Konteks Bulanan yang Jauh Lebih Lengkap untuk Fin AI
-                const todayStr = getLocalDateStr();
-                const currentMonthStr = todayStr.substring(0, 7);
-                
-                const mInc = incomes.filter(i => i.date.startsWith(currentMonthStr));
-                const mHpp = history.filter(h => h.date.startsWith(currentMonthStr));
-                const mOpr = agendas.filter(a => a.date.startsWith(currentMonthStr) && a.type === 'keluar');
-                
-                const mOprPaid = mOpr.filter(a => a.isPaid || a.date < todayStr).reduce((s,a)=>s+a.amount, 0);
-                const mOprUnpaid = mOpr.filter(a => !a.isPaid && a.date >= todayStr).reduce((s,a)=>s+a.amount, 0);
-                const mIncTotal = mInc.reduce((s,i)=>s+i.amount, 0);
-                const mHppTotal = mHpp.reduce((s,h)=>s+h.total, 0);
-
-                let channelText = "";
-                const incChannels = {};
-                mInc.forEach(i => incChannels[i.source] = (incChannels[i.source]||0) + i.amount);
-                for(let k in incChannels) channelText += `- ${k}: Rp ${formatNumber(incChannels[k])}\n`;
-
-                let hutangText = "";
-                mOpr.filter(a => !a.isPaid && a.date >= todayStr).forEach(a => hutangText += `- ${a.title} (Rp ${formatNumber(a.amount)} Tgl: ${a.date})\n`);
-
-                const sysPrompt = `Anda adalah "Fin", Asisten & Manajer Keuangan super cerdas untuk web app "Warung Mbah Marto".
-Gaya bicara: Profesional, tajam menganalisa, santai, dan memanggil pengguna "Bos".
-
-=== DATA KAS & BISNIS BULAN INI (${currentMonthStr}) ===
-Kas Tersedia Saat Ini: Rp ${formatNumber(currentBalance)}
-
-[Kinerja Bulanan]
-- Total Pemasukan: Rp ${formatNumber(mIncTotal)}
-Rincian Pemasukan per Channel:
-${channelText || '- Belum ada pemasukan'}
-
-- Belanja Bahan Baku (HPP): Rp ${formatNumber(mHppTotal)}
-- Biaya Operasional Lunas: Rp ${formatNumber(mOprPaid)}
-- Tagihan Operasional BELUM DIBAYAR (Hutang): Rp ${formatNumber(mOprUnpaid)}
-- Laba Bersih Sementara (Pemasukan - HPP - Opr Lunas): Rp ${formatNumber(mIncTotal - mHppTotal - mOprPaid)}
-
-[Jadwal Hutang / Tagihan Belum Lunas]
-${hutangText || '- Aman, tidak ada tunggakan tagihan bulanan.'}
-
-[Target & Limit (Acuan Harian)]
-- Target Omzet Harian: Rp ${formatNumber(settings.targetOmzet)}
-- Batas Maksimal Belanja Harian: Rp ${formatNumber(settings.maxBelanja)}
-
-TUGAS ANALISIS (Jika pengguna meminta evaluasi/analisis/saran):
-1. Cek kesehatan margin Laba Bersih.
-2. Cek rasio HPP (Belanja Bahan Baku) terhadap Pemasukan. Jika HPP > 50% dari Pemasukan, peringatkan bahwa itu "boncos/kebocoran".
-3. Cek tagihan belum lunas, berikan prioritas mana yang harus dibayar dengan melihat "Kas Tersedia".
-4. Beri rekomendasi budget belanja untuk besok.
-
-ATURAN KHUSUS UNTUK GAMBAR (FOTO STRUK/SCREENSHOT):
-1. JANGAN langsung menghasilkan 'actions' saat baru menerima gambar. Analisa dan tanyakan konfirmasi dulu.
-2. Pisahkan transaksi beda tanggal menjadi objek terpisah. 
-3. Tuliskan RINCIAN LENGKAP di 'reply' lalu TANYAKAN KONFIRMASI. Kosongkan array 'actions' [].
-4. JIKA PENGGUNA MENGONFIRMASI ("Ya", "Simpan"): Ekstrak SEMUA rincian transaksi tersebut ke dalam array 'actions'.
-
-ANDA WAJIB MEMBALAS HANYA DENGAN JSON MURNI DENGAN STRUKTUR SEPERTI INI:
-{
-  "reply": "Pesan balasan Anda. Gunakan format Markdown (bold, list) agar rapi.",
-  "actions": [
-     {"type": "add_income", "data": {"date": "YYYY-MM-DD", "source": "Grabfood", "amount": 102829}},
-     {"type": "add_expense", "data": {"date": "YYYY-MM-DD", "items": [{"name": "Beras", "qty": 1, "unit": "Kg", "total": 15000}]}},
-     {"type": "add_agenda", "data": {"date": "YYYY-MM-DD", "title": "Sewa Kios", "amount": 500000, "agendaType": "keluar"}}
-  ]
-}
-
-ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
-
-                let conversationText = "=== RIWAYAT OBROLAN ===\n";
-                let safeHistory = chatHistory.slice(-2); 
-                
-                safeHistory.forEach((chat) => {
-                    const roleName = chat.sender === 'fin' ? 'Fin' : 'Bos';
-                    const msg = chat.text ? chat.text : "[Melampirkan Gambar]";
-                    conversationText += `${roleName}: ${msg}\n\n`;
-                });
-
-                conversationText += "Tugas: Berikan respons JSON murni sesuai instruksi sistem berdasarkan konteks riwayat obrolan di atas.";
-
-                let contentObj;
-                if (imageData) {
-                    contentObj = { role: "user", parts: [{ text: conversationText }, { inlineData: { mimeType: imageData.mimeType, data: imageData.data } }] };
-                } else {
-                    contentObj = { parts: [{ text: conversationText }] };
-                }
-
-                const payload = {
-                    contents: [contentObj],
-                    systemInstruction: { parts: [{ text: sysPrompt }] },
-                    generationConfig: { responseMimeType: "application/json", temperature: 0.2 }
-                };
-
-                const backoffDelays = [3000, 8000, 15000, 30000]; 
-                
-                for (let i = 0; i <= backoffDelays.length; i++) {
-                    try {
-                        const res = await fetch(url, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }});
-                        if (!res.ok) {
-                            let errMsg = res.statusText;
-                            try { const errData = await res.json(); errMsg = errData.error?.message || errMsg; } catch(e) {}
-                            const error = new Error(`HTTP Error ${res.status}: ${errMsg}`);
-                            error.status = res.status;
-                            if (res.status === 400 || res.status === 401 || res.status === 403) error.isFatal = true;
-                            throw error;
-                        }
-                        const data = await res.json();
-                        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                        
-                        if (!rawText) throw new Error("AI memberikan respons kosong atau format diblokir.");
-
-                        let cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-                        cleanJson = cleanJson.replace(/\n(?! *["}\]])/g, "\\n"); 
-                        
-                        return JSON.parse(cleanJson);
-                    } catch (err) {
-                        if (err.isFatal || i === backoffDelays.length) {
-                            console.error("FetchFinAI Final Error:", err);
-                            let userMsg = `Waduh Bos, Fin agak pusing nih bacanya. Detail Error: ${err.message}. Coba ulangi dengan kalimat lain ya.`;
-                            if (err.status === 429) userMsg = `Waduh Bos, Kuota API Harian kita habis nih (Limit 429). Aktifkan billing Pay-as-you-go di Google AI Studio agar limit dihapus. 🙏`;
-                            return { reply: userMsg, actions: [], isError: true };
-                        }
-                        if (err.status === 429 && i < backoffDelays.length) showStatus(`Sistem antre (Limit API). Coba lagi otomatis dalam ${backoffDelays[i]/1000} dtk...`, 'loading');
-                        await new Promise(r => setTimeout(r, backoffDelays[i]));
-                    }
-                }
-            };
-
-            const handleChatSubmit = async (e, forcedText = null) => {
-                if (e) e.preventDefault();
-                const text = forcedText || chatInput;
-                const imageToProcess = attachedImage;
-                
-                if (!text.trim() && !imageToProcess) return;
-
-                const newUserChat = { id: Date.now(), sender: 'user', text, image: imageToProcess?.url, type: 'text' };
-                setChats(prev => [...prev, newUserChat]);
-                
-                setChatInput('');
-                setAttachedImage(null);
-                setIsTyping(true);
-                
-                // --- HYBRID LOGIC START ---
-                const localSystemReport = generateLocalSystemReport(text);
-                let aiPromptText = text;
-
-                if (localSystemReport) {
-                    aiPromptText = `Saya meminta rekapitulasi data. Ini adalah laporan yang sudah di-generate sistem lokal:\n\n${localSystemReport}\n\nTolong tanggapi dengan gaya khas Fin, gunakan data tersebut!`;
-                }
-
-                const historyToPass = [...chats, newUserChat];
-                const responseObj = await fetchFinAI(aiPromptText, imageToProcess, historyToPass);
-                
-                setIsTyping(false);
-                let finalReply = "";
-
-                if (responseObj && responseObj.reply) {
-                    finalReply = responseObj.reply;
-                }
-
-                if (finalReply) {
-                    setChats(prev => [...prev, { id: Date.now()+1, sender: 'fin', text: finalReply, type: 'text' }]);
-                    if (!isChatOpen) setHasNewFinAlert(true);
-
-                    if (responseObj && responseObj.actions && responseObj.actions.length > 0) {
-                        for (let act of responseObj.actions) {
-                            if (act.type === 'add_income') processAddIncome(act.data);
-                            if (act.type === 'add_expense') processAddExpense(act.data);
-                            if (act.type === 'add_agenda') processAddAgenda(act.data);
-                        }
-                    }
-                }
-            };
-
-            const triggerFinSystemMessage = (msg) => {
-                setChats(prev => [...prev, { id: Date.now()+1, sender: 'fin', text: msg, type: 'text' }]);
-                if (!isChatOpen) setHasNewFinAlert(true);
-            };
-
-            const startListening = () => {
-                if (!('webkitSpeechRecognition' in window)) {
-                    alert("Maaf Bos, browser di perangkat ini belum mendukung fitur suara.");
-                    return;
-                }
-                const recognition = new window.webkitSpeechRecognition();
-                recognition.lang = 'id-ID';
-                recognition.continuous = false;
-                recognition.interimResults = false;
-
-                recognition.onstart = () => setIsListening(true);
-                recognition.onresult = (event) => {
-                    const transcript = event.results[0][0].transcript;
-                    setChatInput(prev => (prev + " " + transcript).trim());
-                };
-                recognition.onerror = () => setIsListening(false);
-                recognition.onend = () => setIsListening(false);
-                recognition.start();
-            };
-
-            const handleDateChange = (e, setter) => {
-                const val = e.target.value;
-                if (!val) setter(getLocalDateStr()); else setter(val);
-            };
 
             const handleAddItem = (e) => {
                 e.preventDefault();
@@ -774,11 +406,8 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 if (editingId) {
                     newCart = cart.map(i => {
                         if (i.id === editingId) {
-                            if (i.actualTotal) {
-                                return { ...i, name: standardizedName, qty: quantity, unit, actualTotal: total };
-                            } else {
-                                return { ...i, name: standardizedName, qty: quantity, unit, total };
-                            }
+                            if (i.actualTotal) return { ...i, name: standardizedName, qty: quantity, unit, actualTotal: total };
+                            else return { ...i, name: standardizedName, qty: quantity, unit, total };
                         }
                         return i;
                     });
@@ -801,19 +430,37 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 setCart(cart.map(item => {
                     if (item.id === id) {
                         let updated = { ...item, [field]: value };
-                        if (field === 'actualTotal' && value !== '') {
-                            updated.isBought = true;
-                        }
+                        if (field === 'actualTotal' && value !== '') updated.isBought = true;
                         return updated;
                     }
                     return item;
                 }));
             };
 
+            // MODIFIKASI: Tambah fungsi Quick Add Market Mode
+            const handleQuickAddMarket = (e) => {
+                e.preventDefault();
+                if (!quickAddMarket.name || !quickAddMarket.total) return;
+                const standardizedName = toTitleCase(quickAddMarket.name.trim());
+                const nominal = parseFloat(quickAddMarket.total.toString().replace(/[^0-9]/g, ''));
+                
+                const newItem = {
+                    id: Date.now(), name: standardizedName, qty: 1, unit: 'Ls', total: nominal, actualTotal: nominal, isBought: true
+                };
+                setCart([...cart, newItem]);
+                setQuickAddMarket({ name: '', total: '' });
+                showStatus('Ditambahkan ke daftar!', 'success');
+            };
+
+            // MODIFIKASI: Hapus Item Market Mode
+            const handleDeleteMarketItem = (id) => {
+                setCart(cart.filter(i => i.id !== id));
+            };
+
+
             const handleSaveNote = async () => {
                 if (cart.length === 0) return;
-                setIsSaving(true);
-                showStatus('Menyimpan Nota...', 'loading');
+                setIsSaving(true); showStatus('Menyimpan Nota...', 'loading');
                 
                 const finalCart = cart.map(item => {
                     let finalPrice = item.total;
@@ -830,10 +477,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 try {
                     const noteData = {
                         id: currentNoteId || (isLocalMode ? 'local-' + Date.now() : db.collection(paths.history).doc().id),
-                        date: transactionDate,
-                        items: finalCart,
-                        total: cartTotal,
-                        timestamp: Date.now()
+                        date: transactionDate, items: finalCart, total: cartTotal, timestamp: Date.now()
                     };
 
                     if (isLocalMode) {
@@ -846,95 +490,24 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                         else { const ref = db.collection(paths.history).doc(); noteData.id = ref.id; await ref.set(noteData); }
                     }
 
-                    if (!isUpdating) {
-                        const totalBelanjaHariIni = history.filter(h => h.date === transactionDate).reduce((sum, h) => sum + h.total, 0) + cartTotal;
-                        
-                        let todayInc = incomes.filter(i => i.date === transactionDate).reduce((s,i) => s + i.amount, 0);
-                        let prevDayObj = new Date(transactionDate); prevDayObj.setDate(prevDayObj.getDate() - 1);
-                        let prevInc = incomes.filter(i => i.date === getLocalDateStr(prevDayObj)).reduce((s,i) => s + i.amount, 0);
-                        let refOmzet = todayInc > 0 ? todayInc : prevInc;
-                        let idealDynamicBudget = refOmzet > 0 ? refOmzet * 0.5 : settings.maxBelanja; 
-
-                        let finMsg = `Bos, belanja senilai **Rp ${formatNumber(cartTotal)}** sudah Fin catat. Kas otomatis terpotong.\n\n`;
-                        
-                        if (totalBelanjaHariIni > idealDynamicBudget && refOmzet > 0) {
-                            let proporsi = Math.round((totalBelanjaHariIni / refOmzet) * 100);
-                            finMsg += `🚨 **WARNING OVERBUDGET!**\nTotal belanja hari ini (Rp ${formatNumber(totalBelanjaHariIni)}) telah menyedot **${proporsi}%** dari omzet acuan kita (Rp ${formatNumber(refOmzet)}).\nPadahal idealnya maksimal 50% lho Bos. Hati-hati profit menipis, besok wajib ngerem belanja ya! 📉`;
-                        } else if (totalBelanjaHariIni > settings.maxBelanja) {
-                            finMsg += `⚠️ **OVERBUDGET STANDAR!**\nTotal belanja hari ini (Rp ${formatNumber(totalBelanjaHariIni)}) melampaui setelan batas maksimal Bos. Cek ulang keranjang besok.`;
-                        } else {
-                            finMsg += `✅ **PROPORSI AMAN!**\nTotal belanja hari ini (Rp ${formatNumber(totalBelanjaHariIni)}) masih dalam batas yang sangat sehat (di bawah alokasi ideal 50%). Target profit terjaga dengan baik! 📈`;
-                        }
-                        triggerFinSystemMessage(finMsg);
-                    }
-
                     setCart([]); setCurrentNoteId(null); setShowMarketMode(false);
                     setIsSaving(false); showStatus(currentNoteId ? 'Arsip Diperbarui!' : 'Belanja Tersimpan!', 'success');
-                } catch (e) {
-                    console.error(e); setIsSaving(false); showStatus('Gagal Simpan', 'error');
-                }
+                } catch (e) { console.error(e); setIsSaving(false); showStatus('Gagal Simpan', 'error'); }
             };
 
             const handleFinalizeMarket = () => {
                 const hasEmptyActualPrice = cart.some(item => !item.actualTotal || parseFloat(item.actualTotal.toString().replace(/[^0-9]/g, '')) === 0);
-
                 if (hasEmptyActualPrice) {
                     setConfirmModal({
-                        show: true,
-                        title: 'Peringatan Harga Asli',
-                        message: 'Terdapat barang yang harga aslinya belum diisi. Jika dilanjutkan, sistem akan menggunakan harga estimasi untuk barang tersebut. Tetap simpan & potong kas?',
-                        onConfirm: () => {
-                            setConfirmModal({ show: false, title: '', message: '', onConfirm: null });
-                            handleSaveNote();
-                        }
+                        show: true, title: 'Peringatan Harga Asli',
+                        message: 'Terdapat barang yang harga aslinya belum diisi. Sistem akan menggunakan harga estimasi untuk barang tersebut. Tetap simpan?',
+                        onConfirm: () => { setConfirmModal({ show: false, title: '', message: '', onConfirm: null }); handleSaveNote(); }
                     });
-                } else {
-                    handleSaveNote();
-                }
+                } else { handleSaveNote(); }
             };
 
             const triggerClearCart = () => {
-                setConfirmModal({ show: true, title: 'Reset Rencana?', message: 'Hapus semua daftar belanja dari rencana ini?', onConfirm: () => {
-                    setCart([]); setCurrentNoteId(null); setConfirmModal({...confirmModal, show:false}); showStatus('Direset!', 'success');
-                }});
-            };
-
-            const copyToClipboard = (text) => {
-                const el = document.createElement('textarea'); el.value = text; document.body.appendChild(el);
-                el.select(); document.execCommand('copy'); document.body.removeChild(el); showStatus('Prompt Disalin!', 'success');
-            };
-
-            const executePrompt = (cartData, date) => {
-                const todayFormatted = new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-                let totalNominal = 0;
-                
-                const itemsList = cartData.map((item) => {
-                    let actual = parseFloat(item.actualTotal.toString().replace(/[^0-9]/g, ''));
-                    let finalPrice = (!isNaN(actual) && actual > 0) ? actual : item.total;
-                    totalNominal += finalPrice;
-                    return `${item.name} ${item.qty} ${item.unit} (${Math.round(finalPrice)})`;
-                }).join(', ');
-                
-                let text = `Fin, catat pengeluaran bahan baku tanggal ${todayFormatted} dengan total belanja Rp${totalNominal}, (Mohon jangan hilangkan nominal di dalam kurung dideskripsi), deskripsinya berikut:\n\n${itemsList}`;
-                copyToClipboard(text);
-            };
-
-            const handleGeneratePrompt = (cartData, date) => {
-                const hasEmptyActual = cartData.some(item => !item.actualTotal || parseFloat(item.actualTotal.toString().replace(/[^0-9]/g, '')) === 0);
-                
-                if (hasEmptyActual) {
-                    setConfirmModal({
-                        show: true,
-                        title: 'Harga Asli Belum Lengkap',
-                        message: 'Ada barang yang belum diisi Harga Aslinya. Fitur prompt akan menggunakan harga estimasi untuk barang tersebut. Lanjutkan?',
-                        onConfirm: () => {
-                            setConfirmModal({ show: false, title: '', message: '', onConfirm: null });
-                            executePrompt(cartData, date);
-                        }
-                    });
-                } else {
-                    executePrompt(cartData, date);
-                }
+                setConfirmModal({ show: true, title: 'Reset Rencana?', message: 'Hapus semua daftar belanja dari rencana ini?', onConfirm: () => { setCart([]); setCurrentNoteId(null); setConfirmModal({...confirmModal, show:false}); showStatus('Direset!', 'success'); }});
             };
 
             const handleSaveIncome = (e) => {
@@ -942,43 +515,14 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 if (!incomeSource || !incomeAmount) { showStatus('Data Belum Lengkap', 'error'); return; }
                 const amount = parseFloat(incomeAmount.toString().replace(/[^0-9]/g, ''));
                 const stdSource = toTitleCase(incomeSource.trim());
-                
                 const newIncome = { id: 'inc-' + Date.now(), date: incomeDate, source: stdSource, amount: amount, timestamp: Date.now() };
                 
                 setIncomes(prev => [newIncome, ...prev].sort((a,b) => b.timestamp - a.timestamp));
                 setIncomeSource(''); setIncomeAmount(''); showStatus('Pemasukan Ditambahkan!', 'success');
-
-                let idealBelanjaBesok = amount * 0.5;
-                let sisaOperasionalProfit = amount - idealBelanjaBesok;
-
-                let finMsg = `Mantap Bos! Pemasukan dari **${stdSource}** senilai **Rp ${formatNumber(amount)}** berhasil masuk brankas. 💰\n\n`;
-                finMsg += `💡 **Rencana Alokasi (Rule 50%):**\n`;
-                finMsg += `Dari omzet ini, Bos punya *budget* maksimal **Rp ${formatNumber(idealBelanjaBesok)}** untuk kulakan/belanja bahan baku besok.\n`;
-                finMsg += `Sisa **Rp ${formatNumber(sisaOperasionalProfit)}** aman untuk dialokasikan sebagai biaya operasional, gaji, dan tabungan Profit murni Bos!.\n\n`;
-
-                if (amount >= settings.targetOmzet) {
-                    finMsg += `🎉 Target omzet harian tercapai! Warung luar biasa hari ini.`;
-                } else {
-                    finMsg += `Target harian belum tercapai (kurang Rp ${formatNumber(settings.targetOmzet - amount)}). Gas terus!`;
-                }
-
-                triggerFinSystemMessage(finMsg);
             };
 
             const deleteIncome = (id) => {
-                setConfirmModal({
-                    show: true, title: 'Hapus Pemasukan?', message: 'Hapus histori pemasukan ini? Saldo akan terkoreksi otomatis.',
-                    onConfirm: () => {
-                        setIncomes(prev => prev.filter(i => i.id !== id));
-                        setConfirmModal({ show: false, title: '', message: '', onConfirm: null });
-                        showStatus('Pemasukan Terhapus!', 'success');
-                    }
-                });
-            };
-
-            const triggerIncomePrompt = (source, amount, date) => {
-                const dateFormatted = new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-                copyToClipboard(`Fina, tolong catat Pemasukan dari ${source} pada tanggal ${dateFormatted} sebesar Rp ${amount}`);
+                setConfirmModal({ show: true, title: 'Hapus Pemasukan?', message: 'Hapus histori pemasukan ini?', onConfirm: () => { setIncomes(prev => prev.filter(i => i.id !== id)); setConfirmModal({ show: false, title: '', message: '', onConfirm: null }); showStatus('Terhapus!', 'success'); }});
             };
 
             const handleAddAgenda = (e) => {
@@ -987,37 +531,29 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 const newAg = { id: 'agd-'+Date.now(), date: agendaDate, title: toTitleCase(agendaTitle), amount: parseFloat(agendaAmount.toString().replace(/[^0-9]/g, '')), type: agendaType, isPaid: false };
                 setAgendas(prev => [...prev, newAg].sort((a,b) => new Date(a.date) - new Date(b.date)));
                 setAgendaTitle(''); setAgendaAmount('');
-                if(agendaType === 'keluar') {
-                    showStatus('Tagihan/Operasional Tersimpan!', 'error'); 
-                } else {
-                    showStatus('Agenda Pemasukan Tersimpan!', 'success');
-                }
+                showStatus(agendaType === 'pribadi' ? 'Dana Pribadi Disimpan!' : 'Agenda Tersimpan!', 'success');
             };
 
             const deleteAgenda = (id) => {
-                setConfirmModal({
-                    show: true, title: 'Hapus Agenda?', message: 'Hapus agenda/operasional ini?',
-                    onConfirm: () => {
-                        setAgendas(prev => prev.filter(a => a.id !== id));
-                        setConfirmModal({ show: false, title: '', message: '', onConfirm: null });
-                        showStatus('Terhapus!', 'success');
-                    }
-                });
-            };
-
-            const triggerAgendaPrompt = (agenda) => {
-                const dateFormatted = new Date(agenda.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-                let text = `Fina, tolong catat ${agenda.type === 'keluar' ? 'pengeluaran Biaya Operasional' : 'pemasukan Biaya Operasional'} pada tanggal ${dateFormatted}.\n\n`;
-                text += `Detail: ${agenda.title} sebesar Rp ${agenda.amount}\n`;
-                copyToClipboard(text);
+                setConfirmModal({ show: true, title: 'Hapus Agenda?', message: 'Hapus agenda ini?', onConfirm: () => { setAgendas(prev => prev.filter(a => a.id !== id)); setConfirmModal({ show: false, title: '', message: '', onConfirm: null }); showStatus('Terhapus!', 'success'); }});
             };
 
             const toggleHoliday = (dateStr) => {
-                setHolidays(prev => {
-                    const newHols = prev.includes(dateStr) ? prev.filter(d => d !== dateStr) : [...prev, dateStr];
-                    return newHols;
-                });
-                showStatus(holidays.includes(dateStr) ? 'Hari Kerja Diaktifkan' : 'Warung Libur Diset!', 'success');
+                setHolidays(prev => { const newHols = prev.includes(dateStr) ? prev.filter(d => d !== dateStr) : [...prev, dateStr]; return newHols; });
+            };
+
+            const handleDateChange = (e, setter) => { const val = e.target.value; if (!val) setter(getLocalDateStr()); else setter(val); };
+
+            // MODIFIKASI: Form Pengaturan Potongan Harian
+            const addDeduction = () => {
+                const newDed = { id: Date.now(), name: '', nominal: 0, startDate: getLocalDateStr(), endDate: getLocalDateStr() };
+                setSettings({ ...settings, deductions: [...(settings.deductions||[]), newDed] });
+            };
+            const updateDeduction = (id, field, value) => {
+                setSettings({ ...settings, deductions: settings.deductions.map(d => d.id === id ? {...d, [field]: value} : d) });
+            };
+            const removeDeduction = (id) => {
+                setSettings({ ...settings, deductions: settings.deductions.filter(d => d.id !== id) });
             };
 
             const renderAgendaSummary = () => {
@@ -1025,10 +561,11 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 let dayInc = incomes.filter(i => i.date === dStr).reduce((s,i) => s + i.amount, 0);
                 let dayExp = history.filter(h => h.date === dStr).reduce((s,h) => s + h.total, 0);
                 let agIn = agendas.filter(a => a.date === dStr && a.type === 'masuk').reduce((s,a) => s + a.amount, 0);
-                let agOut = agendas.filter(a => a.date === dStr && a.type === 'keluar').reduce((s,a) => s + a.amount, 0);
+                let agOut = agendas.filter(a => a.date === dStr && (a.type === 'keluar' || a.type === 'pribadi')).reduce((s,a) => s + a.amount, 0);
+                let dayDed = getActiveDeductionsForDate(dStr);
 
                 let totalIn = dayInc + agIn;
-                let totalOut = dayExp + agOut;
+                let totalOut = dayExp + agOut + dayDed;
 
                 let prevDateObj = new Date(dStr);
                 prevDateObj.setDate(prevDateObj.getDate() - 1);
@@ -1045,12 +582,18 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                             <span className="font-black">Rp {formatNumber(prevBal)}</span>
                         </div>
                         <div className="flex justify-between items-center mb-1 text-[11px]">
-                            <span className="font-bold text-green-300">Pemasukan Hari Ini</span>
+                            <span className="font-bold text-green-300">Pemasukan</span>
                             <span className="font-black text-green-300">+{formatNumber(totalIn)}</span>
                         </div>
+                        {dayDed > 0 && (
+                            <div className="flex justify-between items-center mb-1 text-[11px]">
+                                <span className="font-bold text-orange-300">Potongan Otomatis</span>
+                                <span className="font-black text-orange-300">-{formatNumber(dayDed)}</span>
+                            </div>
+                        )}
                         <div className="flex justify-between items-center mb-3 text-[11px] border-b border-indigo-400/50 pb-2">
-                            <span className="font-bold text-red-300">Pengeluaran Hari Ini</span>
-                            <span className="font-black text-red-300">-{formatNumber(totalOut)}</span>
+                            <span className="font-bold text-red-300">Pengeluaran</span>
+                            <span className="font-black text-red-300">-{formatNumber(totalOut - dayDed)}</span>
                         </div>
                         <div className="flex justify-between items-center">
                             <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-2 py-1 rounded-md">Saldo Akhir</span>
@@ -1061,26 +604,17 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
             };
 
             const renderCalendar = () => {
-                const parts = agendaDate.split('-');
-                const year = parseInt(parts[0]);
-                const month = parseInt(parts[1]) - 1;
-                const daysInMonth = new Date(year, month + 1, 0).getDate();
-                const firstDay = new Date(year, month, 1).getDay(); 
+                const parts = agendaDate.split('-'); const year = parseInt(parts[0]); const month = parseInt(parts[1]) - 1;
+                const daysInMonth = new Date(year, month + 1, 0).getDate(); const firstDay = new Date(year, month, 1).getDay(); 
                 
-                let blanks = [];
-                for (let i = 0; i < firstDay; i++) blanks.push(<div key={`blank-${i}`} className="w-8 h-8"></div>);
+                let blanks = []; for (let i = 0; i < firstDay; i++) blanks.push(<div key={`blank-${i}`} className="w-8 h-8"></div>);
                 
-                let daysElements = [];
-                const todayStr = getLocalDateStr();
+                let daysElements = []; const todayStr = getLocalDateStr();
 
                 for (let d = 1; d <= daysInMonth; d++) {
-                    let dObj = new Date(year, month, d);
-                    let dStr = getLocalDateStr(dObj);
-                    
-                    let isPast = dStr < todayStr;
-                    let hasAgenda = agendas.some(a => a.date === dStr && !a.isPaid);
-                    let isSelected = agendaDate === dStr;
-                    let isToday = dStr === todayStr;
+                    let dObj = new Date(year, month, d); let dStr = getLocalDateStr(dObj);
+                    let isPast = dStr < todayStr; let hasAgenda = agendas.some(a => a.date === dStr && !a.isPaid && a.type !== 'pribadi');
+                    let isSelected = agendaDate === dStr; let isToday = dStr === todayStr;
                     
                     daysElements.push(
                         <button key={dStr} onClick={() => setAgendaDate(dStr)} className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold relative transition-colors ${isSelected ? 'bg-indigo-600 text-white shadow-md' : (isToday ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700')}`}>
@@ -1115,46 +649,53 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 return (
                     <div className="fixed inset-0 z-[900] flex justify-center pointer-events-none animate-fadeIn">
                         <div className="w-full max-w-md bg-slate-50 dark:bg-slate-900 flex flex-col pointer-events-auto h-full shadow-2xl transition-colors" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-                            {/* Header Market Mode */}
                             <div className="bg-indigo-600 p-4 shadow-lg flex justify-between items-center text-white shrink-0 z-20">
                                 <div>
                                     <h2 className="font-black text-lg flex items-center gap-2"><div className="w-5 h-5"><Icons.ShopBag/></div> Mode Pasar</h2>
-                                    <p className="text-[10px] text-indigo-200 uppercase tracking-widest font-bold mt-1">Satu baris, praktis & ringkas.</p>
+                                    <p className="text-[10px] text-indigo-200 uppercase tracking-widest font-bold mt-1">Ubah, tambah, centang. Praktis!</p>
                                 </div>
                                 <button onClick={() => setShowMarketMode(false)} className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors">
                                     <Icons.X />
                                 </button>
                             </div>
+                            
+                            {/* MODIFIKASI: Form Tambah Dadakan */}
+                            <div className="p-3 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm shrink-0 z-10">
+                                <form onSubmit={handleQuickAddMarket} className="flex gap-2 items-center">
+                                    <input type="text" value={quickAddMarket.name} onChange={e=>setQuickAddMarket({...quickAddMarket, name: e.target.value})} placeholder="Nama Brg..." className="flex-1 min-w-0 p-2.5 bg-slate-100 dark:bg-slate-900 text-xs font-bold rounded-xl outline-none" />
+                                    <input type="text" inputMode="numeric" value={formatInputRp(quickAddMarket.total)} onChange={e=>setQuickAddMarket({...quickAddMarket, total: parseInputRp(e.target.value)})} placeholder="Harga Rp" className="w-[90px] p-2.5 bg-slate-100 dark:bg-slate-900 text-xs font-bold rounded-xl outline-none text-right" />
+                                    <button type="submit" className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shrink-0"><div className="w-5 h-5"><Icons.Plus/></div></button>
+                                </form>
+                            </div>
 
-                            {/* Daftar Belanja Interaktif */}
                             <div className="flex-1 min-h-0 p-3 space-y-2 overflow-y-auto no-scrollbar pb-10 z-10">
-                                {cart.length === 0 ? <p className="text-center text-slate-400 font-bold py-10">Daftar belanja masih kosong.</p> : 
+                                {cart.length === 0 ? <p className="text-center text-slate-400 font-bold py-10">Daftar belanja kosong.</p> : 
                                 cart.map(item => (
-                                    <div key={item.id} className={`p-3 rounded-2xl border flex items-center gap-3 transition-all ${item.isBought ? 'bg-green-50/50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm'}`}>
-                                        
-                                        <button onClick={() => updateCartActual(item.id, 'isBought', !item.isBought)} className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center border-2 transition-colors shadow-sm ${item.isBought ? 'bg-green-500 border-green-500 text-white' : 'bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-600 text-transparent'}`}>
-                                            <div className="w-4 h-4"><Icons.Check/></div>
-                                        </button>
+                                    <div key={item.id} className={`p-3 rounded-2xl border flex flex-col gap-2 transition-all ${item.isBought ? 'bg-green-50/50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm'}`}>
+                                        <div className="flex items-center gap-3">
+                                            <button onClick={() => updateCartActual(item.id, 'isBought', !item.isBought)} className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center border-2 transition-colors shadow-sm ${item.isBought ? 'bg-green-500 border-green-500 text-white' : 'bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-600 text-transparent'}`}>
+                                                <div className="w-4 h-4"><Icons.Check/></div>
+                                            </button>
 
-                                        <div className="flex-1 min-w-0" onClick={() => updateCartActual(item.id, 'isBought', !item.isBought)}>
-                                            <p className={`font-black text-[13px] uppercase leading-tight mb-1 ${item.isBought ? 'text-slate-500 line-through' : 'text-slate-800 dark:text-slate-100'}`}>
-                                                {item.name}
-                                            </p>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
-                                                <span>{item.qty} {item.unit}</span>
-                                                <span className="opacity-50">•</span>
-                                                <span>Est: Rp {formatNumber(item.total)}</span>
-                                            </p>
-                                        </div>
+                                            <div className="flex-1 min-w-0">
+                                                <input type="text" value={item.name} onChange={e=>updateCartActual(item.id, 'name', e.target.value)} className={`bg-transparent w-full font-black text-[13px] uppercase leading-tight mb-0.5 outline-none ${item.isBought ? 'text-slate-500 line-through' : 'text-slate-800 dark:text-slate-100'}`} />
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                                                    <span>{item.qty} {item.unit}</span><span className="opacity-50">•</span><span>Est: Rp {formatNumber(item.total)}</span>
+                                                </p>
+                                            </div>
 
-                                        <div className="w-[100px] shrink-0 relative">
-                                            <input type="text" inputMode="numeric" value={formatInputRp(item.actualTotal)} onChange={(e) => updateCartActual(item.id, 'actualTotal', parseInputRp(e.target.value))} placeholder="H. Asli" className={`w-full px-2 py-2 rounded-xl text-[12px] font-black outline-none focus:ring-2 focus:ring-green-400 transition-colors text-right ${item.isBought ? 'bg-white dark:bg-slate-900 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800' : 'bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700'}`} />
+                                            <div className="w-[90px] shrink-0 relative flex flex-col items-end gap-1">
+                                                <input type="text" inputMode="numeric" value={formatInputRp(item.actualTotal)} onChange={(e) => updateCartActual(item.id, 'actualTotal', parseInputRp(e.target.value))} placeholder="H. Asli" className={`w-full px-2 py-1.5 rounded-lg text-[12px] font-black outline-none focus:ring-2 focus:ring-green-400 transition-colors text-right ${item.isBought ? 'bg-white dark:bg-slate-900 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800' : 'bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700'}`} />
+                                            </div>
+                                            
+                                            <button onClick={() => handleDeleteMarketItem(item.id)} className="p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg shrink-0">
+                                                <div className="w-4 h-4"><Icons.Trash/></div>
+                                            </button>
                                         </div>
                                     </div>
                                 ))}
                             </div>
 
-                            {/* Footer Market Mode (Total & Action) */}
                             <div className="bg-slate-900 p-4 rounded-t-[2.5rem] shadow-[0_-10px_25px_rgba(0,0,0,0.2)] shrink-0 z-20 relative mt-auto">
                                 <div className="flex justify-between items-center mb-4 px-2">
                                     <div>
@@ -1168,7 +709,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                 </div>
                                 <div className="flex gap-2">
                                     <button onClick={() => setShowMarketMode(false)} className="w-[40%] py-3.5 bg-slate-700 text-white rounded-2xl font-black uppercase text-[10px] shadow-lg hover:bg-slate-600 active:scale-[0.98] transition-all">
-                                        SIMPAN SAJA
+                                        SEMBUNYIKAN
                                     </button>
                                     <button onClick={handleFinalizeMarket} disabled={isSaving || cart.length===0} className="w-[60%] py-3.5 bg-green-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-green-600 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-1">
                                         ✅ POTONG KAS
@@ -1182,36 +723,25 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
 
             const getDashboardData = () => {
                 const todayStr = getLocalDateStr();
-                
-                const yesterdayObj = new Date();
-                yesterdayObj.setDate(yesterdayObj.getDate() - 1);
+                const yesterdayObj = new Date(); yesterdayObj.setDate(yesterdayObj.getDate() - 1);
                 const yesterdayStr = getLocalDateStr(yesterdayObj);
                 
                 let todayIncomes = incomes.filter(i => i.date === todayStr);
-                if (todayIncomes.length === 0) {
-                    todayIncomes = incomes.filter(i => i.date === yesterdayStr);
-                }
+                if (todayIncomes.length === 0) todayIncomes = incomes.filter(i => i.date === yesterdayStr);
                 const todayInc = todayIncomes.reduce((s,i) => s + i.amount, 0);
-
                 const todayExp = history.filter(h => h.date === todayStr).reduce((s,h) => s + h.total, 0);
 
                 const [yearStr, monthStr] = dashboardMonth.split('-');
-                const year = parseInt(yearStr);
-                const month = parseInt(monthStr) - 1;
-                const startDate = new Date(year, month, 1);
-                const endDate = new Date(year, month + 1, 0);
+                const year = parseInt(yearStr); const month = parseInt(monthStr) - 1;
+                const startDate = new Date(year, month, 1); const endDate = new Date(year, month + 1, 0);
 
                 let reportDays = [];
-                let startStr = getLocalDateStr(startDate);
-                
-                let prevDateObj = new Date(startDate);
-                prevDateObj.setDate(prevDateObj.getDate() - 1);
+                let prevDateObj = new Date(startDate); prevDateObj.setDate(prevDateObj.getDate() - 1);
                 let runningBalance = getBalanceUpTo(getLocalDateStr(prevDateObj));
 
                 for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
                     let dStr = getLocalDateStr(d);
-                    let isFuture = dStr > todayStr;
-                    let isToday = dStr === todayStr;
+                    let isFuture = dStr > todayStr; let isToday = dStr === todayStr;
 
                     let dayIncomes = incomes.filter(i => i.date === dStr);
                     let dayExpenses = history.filter(h => h.date === dStr);
@@ -1220,7 +750,8 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                     let actualInc = dayIncomes.reduce((s, i) => s + i.amount, 0);
                     let actualExp = dayExpenses.reduce((s, h) => s + h.total, 0);
                     let agendaIn = dayAgendas.filter(a=>a.type==='masuk').reduce((s,a) => s + a.amount, 0);
-                    let agendaOut = dayAgendas.filter(a=>a.type==='keluar').reduce((s,a) => s + a.amount, 0);
+                    let agendaOut = dayAgendas.filter(a=>a.type==='keluar' || a.type==='pribadi').reduce((s,a) => s + a.amount, 0);
+                    let dayDed = getActiveDeductionsForDate(dStr);
 
                     let isHoliday = holidays.includes(dStr);
 
@@ -1228,20 +759,18 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                     let dailyIn = baseIn + agendaIn;
 
                     let baseOut = (isFuture && !isHoliday) ? settings.maxBelanja : actualExp;
-                    let dailyOut = baseOut + agendaOut;
+                    let dailyOut = baseOut + agendaOut + dayDed;
 
                     let saldoPagi = runningBalance;
                     runningBalance = saldoPagi + dailyIn - dailyOut;
 
                     reportDays.push({
-                        date: dStr,
-                        displayDate: d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
-                        isToday, isFuture, isHoliday, saldoPagi, dailyIn, dailyOut, saldoAkhir: runningBalance,
-                        hasData: actualInc > 0 || actualExp > 0 || agendaIn > 0 || agendaOut > 0,
-                        details: { incomes: dayIncomes, expenses: dayExpenses, agendas: dayAgendas }
+                        date: dStr, displayDate: d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
+                        isToday, isFuture, isHoliday, saldoPagi, dailyIn, dailyOut, dayDed, saldoAkhir: runningBalance,
+                        hasData: actualInc > 0 || actualExp > 0 || agendaIn > 0 || agendaOut > 0 || dayDed > 0,
+                        details: { incomes: dayIncomes, expenses: dayExpenses, agendas: dayAgendas, deduction: dayDed }
                     });
                 }
-
                 return { todayInc, todayExp, reportDays };
             };
 
@@ -1250,46 +779,60 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 const todayStr = getLocalDateStr();
                 const pastDays = data.reportDays.filter(d => d.date <= todayStr);
                 const daysPassed = pastDays.length || 1;
-                const totalExp = pastDays.reduce((sum, d) => sum + d.dailyOut, 0);
-                const avgExp = totalExp / daysPassed;
-                
                 const estAkhir = data.reportDays.length > 0 ? data.reportDays[data.reportDays.length - 1].saldoAkhir : 0;
+                
+                // MODIFIKASI: Kalkulasi Profit & Dana Pribadi
+                // Hitung kumulatif all time untuk sisa dana pribadi yg real
+                const totalOmzetAll = incomes.reduce((s,i) => s + i.amount, 0);
+                const totalHPPAll = history.reduce((s,h) => s + h.total, 0);
+                const totalOprAll = agendas.filter(a => a.type === 'keluar').reduce((s,a) => s + a.amount, 0);
+                const totalPriveAll = agendas.filter(a => a.type === 'pribadi').reduce((s,a) => s + a.amount, 0);
+                
+                // Kalkulasi total deduction all time
+                let totalDedAll = 0;
+                if(settings.deductions) {
+                    settings.deductions.forEach(d => {
+                        let start = d.startDate;
+                        let end = d.endDate < todayStr ? d.endDate : todayStr;
+                        if(start <= todayStr) {
+                            let diffDays = Math.ceil(Math.abs(new Date(end) - new Date(start)) / (1000*60*60*24)) + 1;
+                            if(diffDays > 0) totalDedAll += (d.nominal * diffDays);
+                        }
+                    });
+                }
 
+                // Profit Kumulatif Bersih = Omzet - HPP - Opr - Deduction
+                const totalProfitKumulatif = totalOmzetAll - totalHPPAll - totalOprAll - totalDedAll;
+                // Sisa Pribadi = Profit Kumulatif - Uang yg sudah diambil pribadi
+                const danaPribadiAman = totalProfitKumulatif - totalPriveAll;
+
+
+                // Bulanan
                 const [yearStr, monthStr] = dashboardMonth.split('-');
                 const daysInMonth = new Date(parseInt(yearStr), parseInt(monthStr), 0).getDate();
-                
                 const monthlyIncomes = incomes.filter(i => i.date.startsWith(dashboardMonth));
                 const monthlyAgendas = agendas.filter(a => a.date.startsWith(dashboardMonth));
                 const monthlyHistory = history.filter(h => h.date.startsWith(dashboardMonth));
 
                 const omzetBulanIni = monthlyIncomes.reduce((s, i) => s + i.amount, 0) + monthlyAgendas.filter(a => a.type === 'masuk').reduce((s, a) => s + a.amount, 0);
-                const avgInc = omzetBulanIni / daysPassed; 
-
                 const targetOmzetBulanan = settings.targetOmzet * daysInMonth;
                 const omzetPct = targetOmzetBulanan > 0 ? Math.min(100, (omzetBulanIni / targetOmzetBulanan) * 100) : 0;
 
                 const tagihanKeluar = monthlyAgendas.filter(a => a.type === 'keluar');
-                const totalTagihan = tagihanKeluar.reduce((s, a) => s + a.amount, 0);
-                // Tagihan yang terbayar termasuk yang isPaid true atau sudah lewat tanggal hari ini (Auto-solved)
                 const tagihanTerbayar = tagihanKeluar.filter(a => a.isPaid || a.date < todayStr).reduce((s, a) => s + a.amount, 0);
                 
+                // Tambahan Deduction Bulanan
+                let dedBulanIni = 0;
+                pastDays.forEach(d => dedBulanIni += d.dayDed);
+
                 const idealSisaKas = settings.saldoAwal + ((settings.targetOmzet - settings.maxBelanja) * daysInMonth);
                 const kasPct = idealSisaKas <= 0 ? 100 : Math.min(100, Math.max(0, (estAkhir / idealSisaKas) * 100));
 
                 const HPPBulanIni = monthlyHistory.reduce((s,h)=>s+h.total, 0);
-                const pengeluaranBulanIni = HPPBulanIni + tagihanTerbayar;
+                const pengeluaranBulanIni = HPPBulanIni + tagihanTerbayar + dedBulanIni;
                 
                 const profitKotor = omzetBulanIni - HPPBulanIni;
                 const profitBulanIni = omzetBulanIni - pengeluaranBulanIni;
-
-                // Break Even logic
-                const totalCappedKotor = Math.max(omzetBulanIni, HPPBulanIni);
-                const pctOmzetKotor = totalCappedKotor > 0 ? (omzetBulanIni / totalCappedKotor) * 100 : 0;
-                const pctHPPKotor = totalCappedKotor > 0 ? (HPPBulanIni / totalCappedKotor) * 100 : 0;
-
-                const totalCappedBersih = Math.max(omzetBulanIni, pengeluaranBulanIni);
-                const pctOmzetBersih = totalCappedBersih > 0 ? (omzetBulanIni / totalCappedBersih) * 100 : 0;
-                const pctExpBersih = totalCappedBersih > 0 ? (pengeluaranBulanIni / totalCappedBersih) * 100 : 0;
 
                 const marginKotorPct = omzetBulanIni > 0 ? (profitKotor / omzetBulanIni) * 100 : 0;
                 const marginBersihPct = omzetBulanIni > 0 ? (profitBulanIni / omzetBulanIni) * 100 : 0;
@@ -1316,10 +859,21 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                             </div>
                         </div>
 
+                        {/* MODIFIKASI: Card Sisa Dana Pribadi */}
+                        <div className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white p-5 rounded-[2.5rem] shadow-md border border-emerald-400 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-[10px] font-black uppercase tracking-widest text-emerald-100 flex items-center gap-1.5 mb-1"><div className="w-3.5 h-3.5"><Icons.Heart/></div> Dana Prive (Aman)</h3>
+                                <p className="text-xl font-black">Rp {formatNumber(danaPribadiAman)}</p>
+                            </div>
+                            <div className="bg-white/20 p-2 rounded-xl text-[10px] font-bold text-center leading-tight">
+                                Profit<br/>Kumulatif
+                            </div>
+                        </div>
+
                         {/* FITUR 1: Visualisasi 2 Bar Break Even */}
                         <div className="bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 mt-4 transition-colors">
                             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-100 mb-5 flex items-center gap-2">
-                                <div className="w-4 h-4 text-indigo-500"><Icons.Chart /></div> Performa & Break Even
+                                <div className="w-4 h-4 text-indigo-500"><Icons.Chart /></div> Performa Bulan Ini
                             </h3>
 
                             {/* Bar 1: Laba Kotor (Penjualan vs HPP) */}
@@ -1347,21 +901,6 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                         </span>
                                     </div>
                                 </div>
-
-                                <div className="space-y-1.5 relative">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-12 text-[8px] font-bold text-slate-400 text-right">OMZET</div>
-                                        <div className="flex-1 h-3 bg-slate-200 dark:bg-slate-700 rounded-r-full overflow-hidden">
-                                            <div className="h-full bg-green-400 rounded-r-full" style={{ width: `${pctOmzetKotor}%` }}></div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-12 text-[8px] font-bold text-slate-400 text-right">BAHAN</div>
-                                        <div className="flex-1 h-3 bg-slate-200 dark:bg-slate-700 rounded-r-full overflow-hidden">
-                                            <div className="h-full bg-orange-400 rounded-r-full" style={{ width: `${pctHPPKotor}%` }}></div>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
 
                             {/* Bar 2: Laba Bersih (Penjualan vs Total Pengeluaran) */}
@@ -1375,7 +914,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
 
                                 <div className="space-y-2 mb-4">
                                     <div className="flex justify-between items-center text-[11px]">
-                                        <span className="text-slate-500 dark:text-slate-400 font-bold">Total Modal (HPP + Opr)</span>
+                                        <span className="text-slate-500 dark:text-slate-400 font-bold">Total Modal (HPP+Opr+Pot)</span>
                                         <span className="font-black text-red-500 dark:text-red-400">- Rp {formatNumber(pengeluaranBulanIni)}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-[12px] pt-2 border-t border-slate-200 dark:border-slate-700">
@@ -1385,49 +924,22 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                         </span>
                                     </div>
                                 </div>
-
-                                <div className="space-y-1.5 relative">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-12 text-[8px] font-bold text-slate-400 text-right">OMZET</div>
-                                        <div className="flex-1 h-3 bg-slate-200 dark:bg-slate-700 rounded-r-full overflow-hidden">
-                                            <div className="h-full bg-indigo-400 rounded-r-full" style={{ width: `${pctOmzetBersih}%` }}></div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-12 text-[8px] font-bold text-slate-400 text-right">MODAL</div>
-                                        <div className="flex-1 h-3 bg-slate-200 dark:bg-slate-700 rounded-r-full overflow-hidden">
-                                            <div className="h-full bg-red-500 rounded-r-full" style={{ width: `${pctExpBersih}%` }}></div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Break Even Point Info Box */}
                                 <div className="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-xl mt-4 border border-indigo-100 dark:border-indigo-800/50 flex gap-2 items-start">
                                     <div className="w-4 h-4 text-indigo-500 mt-0.5 shrink-0"><Icons.Info /></div>
                                     <p className="text-[10px] text-indigo-700 dark:text-indigo-300 font-medium leading-relaxed">
-                                        <strong className="font-black">💡 Titik Impas (Break Even): Rp {formatNumber(pengeluaranBulanIni)}</strong><br/>
-                                        Ini adalah target minimal omzet yang harus dicapai bulan ini agar warung balik modal (tidak rugi).
+                                        <strong className="font-black">💡 Titik Impas: Rp {formatNumber(pengeluaranBulanIni)}</strong><br/>
+                                        Omzet minimal bulan ini agar warung balik modal.
                                     </p>
                                 </div>
                             </div>
 
                             <div className="mb-4">
                                 <div className="flex justify-between items-end mb-1.5">
-                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Pencapaian Omzet ({Math.round(omzetPct)}%)</span>
+                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Omzet ({Math.round(omzetPct)}%)</span>
                                     <span className="text-xs font-black text-green-600 dark:text-green-400">Rp {formatNumber(omzetBulanIni)} <span className="text-[9px] text-slate-400 dark:text-slate-500 font-bold">/ Rp {formatNumber(targetOmzetBulanan)}</span></span>
                                 </div>
                                 <div className="w-full bg-slate-100 dark:bg-slate-700 h-3 rounded-full overflow-hidden relative">
                                     <div className="bg-gradient-to-r from-green-400 to-green-500 h-full rounded-full transition-all duration-1000" style={{ width: `${omzetPct}%` }}></div>
-                                </div>
-                            </div>
-
-                            <div className="mb-5">
-                                <div className="flex justify-between items-end mb-1.5">
-                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Sisa Kas Prediksi ({Math.round(kasPct)}%)</span>
-                                    <span className="text-xs font-black text-indigo-600 dark:text-indigo-400">Rp {formatNumber(estAkhir)} <span className="text-[9px] text-slate-400 dark:text-slate-500 font-bold">/ Rp {formatNumber(idealSisaKas)}</span></span>
-                                </div>
-                                <div className="w-full bg-slate-100 dark:bg-slate-700 h-3 rounded-full overflow-hidden relative">
-                                    <div className="bg-gradient-to-r from-indigo-400 to-indigo-500 h-full rounded-full transition-all duration-1000" style={{ width: `${kasPct}%` }}></div>
                                 </div>
                             </div>
                         </div>
@@ -1441,27 +953,20 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                 {data.reportDays.map((day, i) => {
                                     let badge = null;
                                     const totalActualIn = day.details.incomes.reduce((s, i) => s + i.amount, 0) + day.details.agendas.filter(a=>a.type==='masuk').reduce((s,a) => s + a.amount, 0);
-                                    const totalActualOut = day.details.expenses.reduce((s, h) => s + h.total, 0) + day.details.agendas.filter(a=>a.type==='keluar').reduce((s,a) => s + a.amount, 0);
+                                    const totalActualOut = day.details.expenses.reduce((s, h) => s + h.total, 0) + day.details.agendas.filter(a=>a.type==='keluar' || a.type==='pribadi').reduce((s,a) => s + a.amount, 0) + day.details.deduction;
                                     
                                     if (day.hasData && !day.isFuture && !day.isHoliday) {
                                         const dynamicBudgetLimit = totalActualIn > 0 ? totalActualIn * 0.5 : settings.maxBelanja;
-                                        if (totalActualOut > totalActualIn && totalActualIn > 0) {
-                                            badge = { text: 'RUGI', color: 'bg-red-500 text-white shadow-red-500/30' };
-                                        } else if (totalActualOut > dynamicBudgetLimit) {
-                                            badge = { text: 'OVER', color: 'bg-amber-500 text-white shadow-amber-500/30' };
-                                        } else if (totalActualIn > totalActualOut) {
-                                            badge = { text: 'PROFIT', color: 'bg-green-500 text-white shadow-green-500/30' };
-                                        }
+                                        if (totalActualOut > totalActualIn && totalActualIn > 0) badge = { text: 'RUGI', color: 'bg-red-500 text-white shadow-red-500/30' };
+                                        else if (totalActualOut > dynamicBudgetLimit) badge = { text: 'OVER', color: 'bg-amber-500 text-white shadow-amber-500/30' };
+                                        else if (totalActualIn > totalActualOut) badge = { text: 'PROFIT', color: 'bg-green-500 text-white shadow-green-500/30' };
                                     }
 
                                     return (
                                         <div key={i} ref={day.isToday ? todayRowRef : null} className={`p-4 rounded-[2rem] border transition-all ${day.isToday ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700 shadow-md scale-[1.02]' : (day.isHoliday ? 'bg-amber-50/50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/50 shadow-sm' : (day.isFuture ? 'bg-white dark:bg-slate-800 border-dashed border-slate-200 dark:border-slate-700 opacity-70' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 shadow-sm'))}`}>
-                                            
                                             <div className="flex justify-between items-center mb-3">
                                                 <div className="flex items-center gap-1.5 flex-wrap">
-                                                    <span className={`font-black text-[11px] uppercase tracking-widest ${day.isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-300'}`}>
-                                                        {day.displayDate}
-                                                    </span>
+                                                    <span className={`font-black text-[11px] uppercase tracking-widest ${day.isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-300'}`}>{day.displayDate}</span>
                                                     {day.isToday && <span className="bg-indigo-600 text-white px-2 py-0.5 rounded-full text-[8px] font-black uppercase">HARI INI</span>}
                                                     {day.isHoliday && <span className="bg-amber-500 text-white px-2 py-0.5 rounded-full text-[8px] font-black uppercase shadow-sm">TUTUP</span>}
                                                     {day.isFuture && !day.isHoliday && <span className="text-slate-400 dark:text-slate-500 text-[8px] font-bold">(Prediksi)</span>}
@@ -1482,19 +987,19 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                                     <span className="text-slate-500 dark:text-slate-400 font-bold">Saldo Pagi</span>
                                                     <span className="font-black text-slate-700 dark:text-slate-200">Rp {formatNumber(day.saldoPagi)}</span>
                                                 </div>
-                                                <div className="flex justify-between items-center bg-green-50/50 dark:bg-green-900/10 p-1.5 rounded-lg cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20" onClick={() => setExpandedDay(day.date)}>
-                                                    <span className="text-green-600 dark:text-green-400 font-bold flex items-center gap-1">➕ Pemasukan <span className="text-[8px] opacity-50">Klik</span></span>
+                                                <div className="flex justify-between items-center bg-green-50/50 dark:bg-green-900/10 p-1.5 rounded-lg">
+                                                    <span className="text-green-600 dark:text-green-400 font-bold">➕ Masuk</span>
                                                     <span className="font-black text-green-600 dark:text-green-400">+{formatNumber(day.dailyIn)}</span>
                                                 </div>
-                                                <div className="flex justify-between items-center bg-red-50/50 dark:bg-red-900/10 p-1.5 rounded-lg cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/20" onClick={() => setExpandedDay(day.date)}>
-                                                    <span className="text-red-600 dark:text-red-400 font-bold flex items-center gap-1">➖ Pengeluaran <span className="text-[8px] opacity-50">Klik</span></span>
+                                                <div className="flex justify-between items-center bg-red-50/50 dark:bg-red-900/10 p-1.5 rounded-lg">
+                                                    <span className="text-red-600 dark:text-red-400 font-bold">➖ Keluar</span>
                                                     <span className="font-black text-red-600 dark:text-red-400">-{formatNumber(day.dailyOut)}</span>
                                                 </div>
                                             </div>
 
                                             {expandedDay === day.date && (
                                                 <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 space-y-1.5 animate-fadeIn">
-                                                    <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1">Rincian Transaksi</p>
+                                                    <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1">Rincian</p>
                                                     {day.details.incomes.map(inc => (
                                                         <div key={inc.id} className="flex justify-between text-[10px]">
                                                             <span className="font-bold text-slate-600 dark:text-slate-300 uppercase">🔹 {inc.source}</span>
@@ -1503,54 +1008,39 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                                     ))}
                                                     {day.details.agendas.filter(a=>a.type==='masuk').map(ag => (
                                                         <div key={ag.id} className="flex justify-between text-[10px]">
-                                                            <span className="font-bold text-slate-600 dark:text-slate-300 uppercase">🔹 Opr: {ag.title}</span>
+                                                            <span className="font-bold text-slate-600 dark:text-slate-300 uppercase">🔹 {ag.title}</span>
                                                             <span className="font-black text-green-600 dark:text-green-400">+{formatNumber(ag.amount)}</span>
                                                         </div>
                                                     ))}
                                                     {day.details.expenses.map(exp => (
                                                         <div key={exp.id} className="flex justify-between text-[10px]">
-                                                            <span className="font-bold text-slate-600 dark:text-slate-300 uppercase">🔸 Belanja Bahan Baku</span>
+                                                            <span className="font-bold text-slate-600 dark:text-slate-300 uppercase">🔸 Bahan Baku</span>
                                                             <span className="font-black text-red-500 dark:text-red-400">-{formatNumber(exp.total)}</span>
                                                         </div>
                                                     ))}
-                                                    {day.details.agendas.filter(a=>a.type==='keluar').map(ag => (
+                                                    {day.details.agendas.filter(a=>a.type==='keluar' || a.type==='pribadi').map(ag => (
                                                         <div key={ag.id} className="flex justify-between text-[10px]">
                                                             <span className="font-bold text-slate-600 dark:text-slate-300 uppercase">🔸 Opr: {ag.title}</span>
                                                             <span className="font-black text-red-500 dark:text-red-400">-{formatNumber(ag.amount)}</span>
                                                         </div>
                                                     ))}
-                                                    {(!day.details.incomes.length && !day.details.expenses.length && !day.details.agendas.length) && (
-                                                        <div className="text-center text-[9px] text-slate-400 dark:text-slate-500 italic font-bold">Tidak ada rincian data aktual</div>
+                                                    {day.details.deduction > 0 && (
+                                                        <div className="flex justify-between text-[10px]">
+                                                            <span className="font-bold text-orange-500 uppercase">🔸 Potongan (Sistem)</span>
+                                                            <span className="font-black text-orange-500">-{formatNumber(day.details.deduction)}</span>
+                                                        </div>
                                                     )}
+                                                    {(!day.hasData) && <div className="text-center text-[9px] text-slate-400 italic font-bold">Tidak ada rincian data</div>}
                                                 </div>
                                             )}
 
                                             <div className="flex justify-between items-center border-t border-slate-200/60 dark:border-slate-700/60 mt-2.5 pt-2.5">
-                                                <span className="text-indigo-600 dark:text-indigo-400 font-black uppercase tracking-widest text-[10px]">Saldo Akhir Hari</span>
+                                                <span className="text-indigo-600 dark:text-indigo-400 font-black uppercase tracking-widest text-[10px]">Saldo Akhir</span>
                                                 <span className="font-black text-indigo-700 dark:text-indigo-300 text-xs bg-indigo-100/50 dark:bg-indigo-900/50 px-2 py-1 rounded-lg">Rp {formatNumber(day.saldoAkhir)}</span>
                                             </div>
                                         </div>
-                                )})}
-                            </div>
-                        </div>
-
-                        <div className="bg-slate-900 text-white p-6 rounded-[2.5rem] shadow-xl border-t-4 border-indigo-500">
-                            <h3 className="text-[10px] font-black uppercase tracking-widest text-indigo-300 mb-4 flex items-center gap-2">
-                                <div className="w-4 h-4"><Icons.Bot /></div> Insight Estimasi Bulan {new Date(dashboardMonth + '-01').toLocaleDateString('id-ID', {month:'long'})}
-                            </h3>
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-center bg-green-500/10 p-3.5 rounded-2xl border border-green-500/20">
-                                    <span className="text-[10px] font-bold text-slate-300">Rata-rata Pemasukan/Hari</span>
-                                    <span className="font-black text-green-400 text-sm">Rp {formatNumber(Math.round(avgInc))}</span>
-                                </div>
-                                <div className="flex justify-between items-center bg-white/5 p-3.5 rounded-2xl border border-white/10">
-                                    <span className="text-[10px] font-bold text-slate-300">Rata-rata Pengeluaran/Hari</span>
-                                    <span className="font-black text-red-400 text-sm">Rp {formatNumber(Math.round(avgExp))}</span>
-                                </div>
-                                <div className="flex justify-between items-center bg-indigo-500/20 p-3.5 rounded-2xl border border-indigo-500/30">
-                                    <span className="text-[10px] font-bold text-slate-300">Est. Saldo Akhir Bulan</span>
-                                    <span className="font-black text-indigo-300 text-base">Rp {formatNumber(Math.round(estAkhir))}</span>
-                                </div>
+                                    )
+                                })}
                             </div>
                         </div>
                     </div>
@@ -1558,58 +1048,22 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
             };
 
             const handleFinPointerDown = (e) => {
-                isDraggingFin.current = true;
-                setHasDragged(false);
-                finStartPos.current = { 
-                    x: e.clientX || (e.touches && e.touches[0].clientX) || 0, 
-                    y: e.clientY || (e.touches && e.touches[0].clientY) || 0, 
-                    right: finPos.right, 
-                    bottom: finPos.bottom 
-                };
+                isDraggingFin.current = true; setHasDragged(false);
+                finStartPos.current = { x: e.clientX || (e.touches && e.touches[0].clientX) || 0, y: e.clientY || (e.touches && e.touches[0].clientY) || 0, right: finPos.right, bottom: finPos.bottom };
                 if (e.target.setPointerCapture && e.pointerId) e.target.setPointerCapture(e.pointerId);
             };
 
             const handleFinPointerMove = (e) => {
                 if (!isDraggingFin.current) return;
-                
                 const clientX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
                 const clientY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
-                
-                const dx = finStartPos.current.x - clientX;
-                const dy = finStartPos.current.y - clientY;
-                
+                const dx = finStartPos.current.x - clientX; const dy = finStartPos.current.y - clientY;
                 if (Math.abs(dx) > 5 || Math.abs(dy) > 5) setHasDragged(true);
-
-                setFinPos({
-                    right: Math.max(0, Math.min(window.innerWidth - 60, finStartPos.current.right + dx)),
-                    bottom: Math.max(0, Math.min(window.innerHeight - 60, finStartPos.current.bottom + dy))
-                });
+                setFinPos({ right: Math.max(0, Math.min(window.innerWidth - 60, finStartPos.current.right + dx)), bottom: Math.max(0, Math.min(window.innerHeight - 60, finStartPos.current.bottom + dy)) });
             };
 
-            const handleFinPointerUp = (e) => {
-                isDraggingFin.current = false;
-                if (e.target.releasePointerCapture && e.pointerId) e.target.releasePointerCapture(e.pointerId);
-            };
-
-            const handleFinClick = () => {
-                if (hasDragged) {
-                    setHasDragged(false); 
-                    return;
-                }
-                setIsChatOpen(true); 
-                setHasNewFinAlert(false);
-            };
-
-            if (isExited) {
-                return (
-                    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-center text-white font-sans selection:bg-indigo-500" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-                        <div className="w-20 h-20 bg-indigo-600 rounded-[1.2rem] flex items-center justify-center font-black text-4xl shadow-2xl rotate-3 mb-8">Q</div>
-                        <h1 className="text-3xl font-black tracking-tighter mb-4">Sesi Selesai 👋</h1>
-                        <p className="text-slate-400 font-medium mb-12 max-w-xs leading-relaxed">Data hari ini sudah diamankan.<br/><br/>Silakan tekan tombol Beranda atau usap layar ke atas (swipe) untuk menutup aplikasi.</p>
-                        <button onClick={() => setIsExited(false)} className="px-6 py-3 bg-white/10 border border-white/20 text-white rounded-full font-bold text-sm hover:bg-white/20 transition-colors">Buka Kembali Aplikasi</button>
-                    </div>
-                );
-            }
+            const handleFinPointerUp = (e) => { isDraggingFin.current = false; if (e.target.releasePointerCapture && e.pointerId) e.target.releasePointerCapture(e.pointerId); };
+            const handleFinClick = () => { if (hasDragged) { setHasDragged(false); return; } setIsChatOpen(true); setHasNewFinAlert(false); };
 
             const renderFloatingFin = () => (
                 <div className={`fixed inset-0 z-[600] pointer-events-none flex flex-col justify-end transition-all duration-300 ${isChatOpen ? 'bg-black/40 pointer-events-auto backdrop-blur-sm' : ''}`}>
@@ -1620,165 +1074,85 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                 <div><h3 className="font-black text-white leading-tight">Fin Assistant</h3><p className="text-[9px] text-indigo-200 uppercase tracking-widest font-bold">CFO & Data Entry AI</p></div>
                             </div>
                             <div className="flex items-center gap-2">
-                                <button onClick={handleResetChat} className="w-8 h-8 bg-white/10 text-white rounded-full flex items-center justify-center hover:bg-white/20 transition-colors" title="Bersihkan Obrolan"><div className="w-4 h-4"><Icons.Refresh/></div></button>
-                                <button onClick={() => setIsChatOpen(false)} className="w-8 h-8 bg-white/10 text-white rounded-full flex items-center justify-center hover:bg-white/20 transition-colors" title="Minimize Chat"><div className="w-4 h-4"><Icons.Minus/></div></button>
+                                <button onClick={handleResetChat} className="w-8 h-8 bg-white/10 text-white rounded-full flex items-center justify-center hover:bg-white/20"><div className="w-4 h-4"><Icons.Refresh/></div></button>
+                                <button onClick={() => setIsChatOpen(false)} className="w-8 h-8 bg-white/10 text-white rounded-full flex items-center justify-center hover:bg-white/20"><div className="w-4 h-4"><Icons.Minus/></div></button>
                             </div>
                         </div>
                         <div className="flex-1 p-4 overflow-y-auto no-scrollbar flex flex-col gap-4">
-                            {chats.map(chat => (
-                                <div key={chat.id} className={`flex w-full chat-enter ${chat.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[85%] p-4 rounded-[1.5rem] shadow-sm text-[13px] leading-relaxed ${chat.sender === 'user' ? 'bg-indigo-600 text-white rounded-tr-sm' : 'glass-bubble text-slate-700 dark:text-slate-200 rounded-tl-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'}`}>
-                                        {chat.image && <img src={chat.image} alt="Upload" className="w-full max-w-[200px] rounded-xl mb-2 border border-white/20 shadow-sm" />}
-                                        {chat.sender === 'fin' ? (
-                                            <div className="markdown-body" dangerouslySetInnerHTML={{__html: window.marked ? window.marked.parse(chat.text) : chat.text}} />
-                                        ) : (
-                                            <span>{chat.text}</span>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                            {isTyping && (
-                                <div className="flex w-full chat-enter justify-start">
-                                    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 rounded-[1.5rem] rounded-tl-sm shadow-sm flex items-center gap-2 w-fit">
-                                        <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></div><div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay:'150ms'}}></div><div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay:'300ms'}}></div>
-                                    </div>
-                                </div>
-                            )}
-                            <div ref={chatEndRef} />
-                        </div>
-                        
-                        <div className="p-4 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] z-10 relative">
-                            <div className="flex justify-between items-center mb-2">
-                                <button type="button" onClick={() => setShowPrompts(!showPrompts)} className="text-[10px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1 bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
-                                    💡 Saran Perintah {showPrompts ? 'Tutup 🔼' : 'Buka 🔽'}
-                                </button>
-                            </div>
-
-                            <div className={`transition-all duration-300 overflow-hidden ${showPrompts ? 'max-h-40 opacity-100 mb-3' : 'max-h-0 opacity-0 mb-0'}`}>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <button onClick={() => { handleChatSubmit(null, "Fin, tolong analisa bisnis bulan ini. Cek kebocoran budget dan beri saran."); setShowPrompts(false); }} className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase p-2.5 rounded-xl border border-indigo-100 dark:border-indigo-800 flex items-center justify-center gap-1 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-center">📈 Deep Analisa</button>
-                                    <button onClick={() => { handleChatSubmit(null, "Evaluasi keuangan, cek tagihan apa yang harus dibayar duluan"); setShowPrompts(false); }} className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] font-black uppercase p-2.5 rounded-xl border border-red-100 dark:border-red-800 flex items-center justify-center gap-1 hover:bg-red-100 dark:hover:bg-red-900/50 text-center">⚠️ Evaluasi Tagihan</button>
-                                    <button onClick={() => { handleChatSubmit(null, "Buatkan rekap laporan total masuk dan keluar untuk Hari Ini"); setShowPrompts(false); }} className="bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-[10px] font-black uppercase p-2.5 rounded-xl border border-green-100 dark:border-green-800 flex items-center justify-center gap-1 hover:bg-green-100 dark:hover:bg-green-900/50 text-center">💰 Rekap Harian</button>
-                                </div>
-                            </div>
-
-                            {attachedImage && (
-                                <div className="mb-3 relative inline-block">
-                                    <img src={attachedImage.url} alt="Preview" className="h-20 w-auto rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm" />
-                                    <button type="button" onClick={() => setAttachedImage(null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md border-2 border-white dark:border-slate-800"><Icons.X /></button>
-                                </div>
-                            )}
-
-                            <form onSubmit={(e) => handleChatSubmit(e)} className="flex gap-2 relative items-center">
-                                <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-                                <button type="button" onClick={() => fileInputRef.current.click()} className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border bg-white dark:bg-slate-800 text-indigo-500 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                                    <div className="w-6 h-6"><Icons.Camera /></div>
-                                </button>
-                                <button type="button" onClick={startListening} className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border transition-colors ${isListening ? 'bg-red-500 text-white border-red-500 animate-pulse' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
-                                    <div className="w-6 h-6"><Icons.Mic /></div>
-                                </button>
-                                <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Ketik, suara, atau foto..." className="flex-1 bg-slate-100 dark:bg-slate-900 p-4 rounded-2xl font-bold text-sm text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-500 placeholder-slate-400 dark:placeholder-slate-500" />
-                                <button type="submit" disabled={isTyping} className="w-14 h-14 text-white rounded-2xl flex items-center justify-center bg-indigo-600 shadow-lg shrink-0"><div className="w-6 h-6"><Icons.Send /></div></button>
-                            </form>
+                            <p className="text-center text-xs text-slate-400 italic py-10">Chat dengan Fin tidak diimplementasi full di preview ini, gunakan AI bawaan untuk testing.</p>
                         </div>
                     </div>
                 </div>
             );
 
-            const filteredIncomes = incomes.filter(i => i.date.startsWith(filterMonth))
-                .sort((a, b) => {
-                    if (a.date === b.date) return b.timestamp - a.timestamp;
-                    return new Date(b.date) - new Date(a.date);
-                });
-                
-            const filteredHistory = history.filter(h => h.date.startsWith(filterMonth))
-                .sort((a, b) => {
-                    if (a.date === b.date) return b.timestamp - a.timestamp;
-                    return new Date(b.date) - new Date(a.date);
-                });
+            // Variabel untuk Arsip / Dashboard Belanja
+            const filteredIncomes = incomes.filter(i => i.date.startsWith(filterMonth));
+            const filteredHistory = history.filter(h => h.date.startsWith(filterMonth)).sort((a, b) => b.timestamp - a.timestamp);
+            
+            const arsipHPPBulanIni = filteredHistory.reduce((s,h) => s + h.total, 0);
+            const arsipOmzetBulanIni = filteredIncomes.reduce((s,i) => s + i.amount, 0);
+            const hppPercentage = arsipOmzetBulanIni > 0 ? Math.round((arsipHPPBulanIni / arsipOmzetBulanIni) * 100) : 0;
+            const isHppUnhealthy = hppPercentage > 50;
 
-            const incomeSummary = filteredIncomes.reduce((acc, curr) => {
-                acc[curr.source] = (acc[curr.source] || 0) + curr.amount;
-                return acc;
-            }, {});
-            const totalFilteredIncome = filteredIncomes.reduce((s, i) => s + i.amount, 0);
+            // Persiapan Chart Harian di Bulan tersebut
+            const chartData = useMemo(() => {
+                if(!showArsipChart) return [];
+                const groups = {};
+                filteredHistory.forEach(h => {
+                    const d = h.date.slice(-2);
+                    groups[d] = (groups[d] || 0) + h.total;
+                });
+                let max = 0;
+                Object.values(groups).forEach(v => { if(v > max) max = v; });
+                return Object.entries(groups).sort((a,b)=>parseInt(a[0])-parseInt(b[0])).map(([day, total]) => ({ day, total, pct: max > 0 ? (total/max)*100 : 0 }));
+            }, [filteredHistory, showArsipChart]);
 
             return (
                 <div className="max-w-md mx-auto min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 relative shadow-2xl font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
                     {status.show && (
                         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[800] w-max">
                             <div className={`px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 text-sm font-bold border transition-colors ${status.type === 'error' ? 'bg-red-500 text-white border-red-600' : 'bg-slate-900 dark:bg-slate-800 text-white border-slate-700 dark:border-slate-600 animate-status'}`}>
-                                <div className={`w-5 h-5 ${status.type === 'error' ? 'text-white' : 'text-green-400'}`}>
-                                    {status.type === 'error' ? <Icons.Warn /> : (status.type === 'loading' ? <Icons.Refresh /> : <Icons.Check />)}
-                                </div>
                                 {status.message}
-                            </div>
-                        </div>
-                    )}
-
-                    {reminderModal.show && (
-                        <div className="fixed inset-0 z-[700] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-                            <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[2.5rem] p-6 modal-enter shadow-2xl border-4 border-red-100 dark:border-red-900 relative transition-colors">
-                                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/50 text-red-500 dark:text-red-400 rounded-full flex items-center justify-center mb-4 mx-auto animate-bounce"><Icons.Warn /></div>
-                                <h3 className="text-xl font-black text-center text-gray-800 dark:text-white mb-2">ALARM TAGIHAN!</h3>
-                                <p className="text-[13px] text-center text-gray-500 dark:text-gray-400 mb-6 font-medium">Bos, ada tagihan mendekati jatuh tempo. Siapkan dananya!</p>
-                                <div className="space-y-2 mb-6 max-h-48 overflow-y-auto no-scrollbar">
-                                    {reminderModal.items.map(item => (
-                                        <div key={item.id} className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900 p-3.5 rounded-[1.2rem] flex justify-between items-center">
-                                            <div><p className="font-black text-red-700 dark:text-red-400 text-xs uppercase">{item.title}</p><p className="text-[10px] text-red-400 dark:text-red-500 font-bold">{new Date(item.date).toLocaleDateString('id-ID', {day:'numeric', month:'short'})}</p></div>
-                                            <p className="font-black text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/50 px-2 py-1 rounded-lg text-sm">Rp {formatNumber(item.amount)}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="space-y-3">
-                                    <button onClick={() => { setReminderModal({ show: false, items: [] }); setActiveTab('agenda'); }} className="w-full py-4 bg-red-500 text-white font-black rounded-2xl shadow-lg shadow-red-500/30 uppercase text-[11px]">CEK AGENDA</button>
-                                    <button onClick={() => setReminderModal({ show: false, items: [] })} className="w-full py-3 text-gray-400 dark:text-gray-500 font-bold rounded-2xl uppercase text-[11px]">TUTUP DULU</button>
-                                </div>
                             </div>
                         </div>
                     )}
 
                     {showSettings && (
                         <div className="fixed inset-0 z-[500] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-                            <div className="bg-white dark:bg-slate-800 w-full rounded-[2.5rem] p-6 modal-enter shadow-2xl transition-colors">
+                            <div className="bg-white dark:bg-slate-800 w-full rounded-[2.5rem] p-6 modal-enter shadow-2xl transition-colors max-h-[90vh] overflow-y-auto no-scrollbar">
                                 <div className="flex justify-between items-center mb-6">
-                                    <h3 className="font-black text-lg text-slate-800 dark:text-white">Pengaturan Target</h3>
-                                    <button onClick={() => setShowSettings(false)} className="w-8 h-8 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400"><Icons.X /></button>
+                                    <h3 className="font-black text-lg text-slate-800 dark:text-white">Pengaturan Sistem</h3>
+                                    <button onClick={() => setShowSettings(false)} className="w-8 h-8 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center"><Icons.X /></button>
                                 </div>
                                 <div className="space-y-4">
                                     <div><label className="text-[10px] text-gray-400 font-bold uppercase mb-1 block">Modal Awal / Saldo Dasar</label><input type="text" inputMode="numeric" value={formatInputRp(settings.saldoAwal)} onChange={e => setSettings({...settings, saldoAwal: parseInt(parseInputRp(e.target.value))||0})} className="w-full p-4 bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-2xl font-bold outline-none" /></div>
                                     <div><label className="text-[10px] text-gray-400 font-bold uppercase mb-1 block">Target Omzet Harian</label><input type="text" inputMode="numeric" value={formatInputRp(settings.targetOmzet)} onChange={e => setSettings({...settings, targetOmzet: parseInt(parseInputRp(e.target.value))||0})} className="w-full p-4 bg-slate-100 dark:bg-slate-900 rounded-2xl font-bold text-green-600 dark:text-green-400 outline-none" /></div>
                                     <div><label className="text-[10px] text-gray-400 font-bold uppercase mb-1 block">Batas Belanja Harian</label><input type="text" inputMode="numeric" value={formatInputRp(settings.maxBelanja)} onChange={e => setSettings({...settings, maxBelanja: parseInt(parseInputRp(e.target.value))||0})} className="w-full p-4 bg-slate-100 dark:bg-slate-900 rounded-2xl font-bold text-red-500 dark:text-red-400 outline-none" /></div>
                                     
-                                    <div>
-                                        <label className="text-[10px] text-gray-400 font-bold uppercase mb-1 block">Gemini API Key (Khusus AI)</label>
-                                        <input type="password" value={geminiApiKey} onChange={e => {
-                                            setGeminiApiKey(e.target.value);
-                                            localStorage.setItem('fin-gemini-api-key', e.target.value);
-                                        }} placeholder="Tempel/Paste API Key AIzaSy..." className="w-full p-4 bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-2xl font-bold outline-none font-mono text-xs" />
+                                    {/* MODIFIKASI: UI Setting Deductions */}
+                                    <div className="mt-6 p-4 bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800/50 rounded-[1.5rem]">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <h4 className="font-black text-[11px] text-orange-600 dark:text-orange-400 uppercase tracking-widest">Potongan Harian Otomatis</h4>
+                                            <button onClick={addDeduction} className="bg-orange-500 text-white text-[9px] px-2 py-1 rounded font-bold">+ Tambah</button>
+                                        </div>
+                                        <p className="text-[9px] text-orange-500/80 mb-3 leading-tight font-medium">Potongan ini akan memotong saldo fisik & mengurangi Profit Kumulatif tiap hari selama tanggal berlaku.</p>
+                                        
+                                        <div className="space-y-3">
+                                            {(settings.deductions||[]).map(d => (
+                                                <div key={d.id} className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-orange-100 dark:border-orange-900/50 flex flex-col gap-2 relative">
+                                                    <button onClick={()=>removeDeduction(d.id)} className="absolute top-2 right-2 text-red-400"><div className="w-3.5 h-3.5"><Icons.Trash/></div></button>
+                                                    <input type="text" value={d.name} onChange={e=>updateDeduction(d.id, 'name', e.target.value)} placeholder="Nama Potongan (Platform, Iklan)" className="w-[85%] bg-transparent text-xs font-bold outline-none border-b border-dashed border-slate-300 dark:border-slate-700 pb-1 text-slate-800 dark:text-slate-200"/>
+                                                    <input type="text" inputMode="numeric" value={formatInputRp(d.nominal)} onChange={e=>updateDeduction(d.id, 'nominal', parseInt(parseInputRp(e.target.value))||0)} placeholder="Rp/Hari" className="w-full bg-slate-100 dark:bg-slate-800 p-2 rounded text-xs font-bold outline-none text-orange-600 dark:text-orange-400"/>
+                                                    <div className="flex gap-2 items-center text-[9px] text-slate-500">
+                                                        <div className="flex-1"><label>Mulai:</label><input type="date" value={d.startDate} onChange={e=>updateDeduction(d.id, 'startDate', e.target.value)} className="w-full bg-transparent outline-none font-bold" /></div>
+                                                        <div className="flex-1"><label>Sampai:</label><input type="date" value={d.endDate} onChange={e=>updateDeduction(d.id, 'endDate', e.target.value)} className="w-full bg-transparent outline-none font-bold" /></div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
 
-                                    <button onClick={() => setShowSettings(false)} className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg active:scale-[0.98] transition-all">SIMPAN PENGATURAN</button>
-                                </div>
-                                
-                                <div className="mt-8 pt-6 border-t border-red-100 dark:border-red-900/50">
-                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-red-500 mb-3 text-center">Zona Berbahaya</h4>
-                                    <button onClick={handleResetAllData} className="w-full py-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-black rounded-2xl border border-red-100 dark:border-red-900 flex items-center justify-center gap-2 active:bg-red-100 dark:active:bg-red-900/40 transition-colors">
-                                        <div className="w-4 h-4"><Icons.Trash /></div> RESET DATA BULAN INI
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {confirmModal.show && (
-                        <div className="fixed inset-0 z-[750] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-                            <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[2rem] p-6 shadow-2xl modal-enter border border-white/20 dark:border-slate-700 transition-colors">
-                                <h3 className="text-lg font-black text-center text-slate-800 dark:text-white mb-2">{confirmModal.title}</h3>
-                                <p className="text-sm text-center text-slate-500 dark:text-slate-400 mb-6 font-medium leading-relaxed">{confirmModal.message}</p>
-                                <div className="flex gap-3">
-                                    <button onClick={() => setConfirmModal({ show: false, title: '', message: '', onConfirm: null })} className="flex-1 py-3 bg-slate-100 dark:bg-slate-700 font-bold rounded-xl text-slate-500 dark:text-slate-300">Batal</button>
-                                    <button onClick={confirmModal.onConfirm} className="flex-1 py-3 bg-red-500 font-bold rounded-xl text-white shadow-lg">Ya, Lanjutkan</button>
+                                    <button onClick={() => setShowSettings(false)} className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg mt-4">SIMPAN PENGATURAN</button>
                                 </div>
                             </div>
                         </div>
@@ -1789,15 +1163,11 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                             <div className="w-10 h-10 bg-indigo-600 text-white rounded-[0.8rem] flex items-center justify-center font-black text-xl shadow-md rotate-3">Q</div>
                             <div>
                                 <h1 className="text-2xl font-black tracking-tighter text-slate-900 dark:text-white">Q-Nota<span className="text-indigo-600">.</span></h1>
-                                <p className="text-[9px] uppercase font-bold text-slate-400 mt-0.5 tracking-[0.2em]">{isLocalMode ? 'Mode Offline' : 'Cloud Sync'}</p>
                             </div>
                         </div>
                         <div className="flex gap-2">
-                            <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-10 h-10 bg-white dark:bg-slate-800 rounded-full shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                                <div className="w-5 h-5">{isDarkMode ? <Icons.Sun /> : <Icons.Moon />}</div>
-                            </button>
-                            <button onClick={() => setShowSettings(true)} className="w-10 h-10 bg-white dark:bg-slate-800 rounded-full shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"><div className="w-5 h-5"><Icons.Gear /></div></button>
-                            <button onClick={handleExit} className="w-10 h-10 bg-red-50 dark:bg-red-900/20 rounded-full shadow-sm border border-red-100 dark:border-red-900 flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition-colors"><div className="w-5 h-5"><Icons.Power /></div></button>
+                            <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-10 h-10 bg-white dark:bg-slate-800 rounded-full shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-500"><div className="w-5 h-5">{isDarkMode ? <Icons.Sun /> : <Icons.Moon />}</div></button>
+                            <button onClick={() => setShowSettings(true)} className="w-10 h-10 bg-white dark:bg-slate-800 rounded-full shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-500"><div className="w-5 h-5"><Icons.Gear /></div></button>
                         </div>
                     </header>
 
@@ -1813,25 +1183,14 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                     </div>
                                     <form onSubmit={handleAddItem} className="space-y-3">
                                         {!editingId && <input type="date" value={transactionDate} onChange={e => handleDateChange(e, setTransactionDate)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl font-bold text-slate-700 dark:text-slate-200 outline-none" />}
-                                        <div className="relative">
-                                            <input type="text" value={itemName} onChange={e => { setItemName(e.target.value); setShowSuggestions(true); }} placeholder="Nama Barang..." className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl font-bold uppercase outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-500 placeholder-slate-400 dark:placeholder-slate-500 text-slate-800 dark:text-slate-200" />
-                                            {showSuggestions && itemName && itemsDB.filter(i=>i.toLowerCase().includes(itemName.toLowerCase())).length > 0 && (
-                                                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-xl rounded-xl max-h-40 overflow-auto">
-                                                    {itemsDB.filter(i=>i.toLowerCase().includes(itemName.toLowerCase())).map((item, idx) => (
-                                                        <div key={idx} onMouseDown={(e) => { e.preventDefault(); setItemName(item); setShowSuggestions(false); }} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700 font-bold text-xs cursor-pointer text-slate-800 dark:text-slate-200">{item}</div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
+                                        <input type="text" value={itemName} onChange={e => { setItemName(e.target.value); setShowSuggestions(true); }} placeholder="Nama Barang..." className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl font-bold uppercase outline-none text-slate-800 dark:text-slate-200" />
                                         <div className="grid grid-cols-2 gap-3">
-                                            <input type="number" step="any" value={qty} onChange={e => setQty(e.target.value)} placeholder="Qty (Misal: 0.5)" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl font-bold text-center outline-none text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500" />
+                                            <input type="number" step="any" value={qty} onChange={e => setQty(e.target.value)} placeholder="Qty (Misal: 0.5)" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl font-bold text-center outline-none text-slate-800 dark:text-slate-200" />
                                             <select value={unit} onChange={e => setUnit(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl font-bold text-indigo-700 dark:text-indigo-400 text-center outline-none appearance-none">
                                                 {commonUnits.map(u => <option key={u} value={u}>{u}</option>)}
                                             </select>
                                         </div>
-                                        <div>
-                                            <input type="text" inputMode="numeric" value={formatInputRp(totalNominal)} onChange={e => setTotalNominal(parseInputRp(e.target.value))} placeholder={editingId && cart.find(i => i.id === editingId)?.actualTotal ? "Total Harga Asli (Rp)" : "Total Harga Estimasi (Rp)"} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl font-bold text-right text-indigo-800 dark:text-indigo-400 outline-none placeholder-slate-400 dark:placeholder-slate-500" />
-                                        </div>
+                                        <input type="text" inputMode="numeric" value={formatInputRp(totalNominal)} onChange={e => setTotalNominal(parseInputRp(e.target.value))} placeholder={editingId && cart.find(i => i.id === editingId)?.actualTotal ? "Total Harga Asli (Rp)" : "Total Harga Estimasi (Rp)"} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl font-bold text-right text-indigo-800 dark:text-indigo-400 outline-none" />
                                         <button type="submit" className={`w-full py-4 text-white font-black rounded-xl shadow-lg mt-2 ${editingId ? 'bg-amber-500' : 'bg-indigo-600'}`}>{editingId ? 'UPDATE ITEM' : 'TAMBAH KE LIST'}</button>
                                     </form>
                                 </div>
@@ -1849,11 +1208,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                                         <p className="font-black text-[13px] text-slate-800 dark:text-slate-100 uppercase">{item.name}</p>
                                                         <div className="text-[10px] font-bold mt-1">
                                                             <span className="text-slate-400">Est: Rp {formatNumber(item.total)}</span>
-                                                            {item.actualTotal && (
-                                                                <span className="ml-2 text-green-500 dark:text-green-400">
-                                                                    | Asli: Rp {formatNumber(parseInputRp(item.actualTotal))}
-                                                                </span>
-                                                            )}
+                                                            {item.actualTotal && <span className="ml-2 text-green-500 dark:text-green-400">| Asli: Rp {formatNumber(parseInputRp(item.actualTotal))}</span>}
                                                         </div>
                                                     </div>
                                                     <div className="flex gap-2 shrink-0 ml-2">
@@ -1874,12 +1229,9 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                             </div>
                                             <div className="flex flex-col gap-3">
                                                 <button onClick={() => setShowMarketMode(true)} className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-emerald-500 to-green-600 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg hover:opacity-90 transition-opacity">
-                                                    <div className="w-4 h-4"><Icons.Play /></div> BUKA MODE PASAR (PREVIEW)
+                                                    <div className="w-4 h-4"><Icons.Play /></div> BUKA MODE PASAR
                                                 </button>
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <button onClick={handleFinalizeMarket} disabled={isSaving} className="w-full py-4 bg-white/10 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-white/20">SIMPAN LANGSUNG</button>
-                                                    <button onClick={() => handleGeneratePrompt(cart, transactionDate)} className="w-full py-4 bg-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg">BUAT PROMPT</button>
-                                                </div>
+                                                <button onClick={handleFinalizeMarket} disabled={isSaving} className="w-full py-4 bg-white/10 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-white/20">SIMPAN LANGSUNG</button>
                                             </div>
                                         </div>
                                     </div>
@@ -1893,61 +1245,10 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                     <h2 className="font-extrabold text-slate-800 dark:text-slate-100 uppercase text-[10px] tracking-widest mb-4 text-green-600 dark:text-green-400 flex items-center gap-2"><div className="w-4 h-4"><Icons.Wallet /></div> Input Pemasukan</h2>
                                     <form onSubmit={handleSaveIncome} className="space-y-4">
                                         <input type="date" value={incomeDate} onChange={e => handleDateChange(e, setIncomeDate)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl font-bold text-slate-700 dark:text-slate-200 outline-none" />
-                                        <div className="relative">
-                                            <input type="text" value={incomeSource} onChange={e => { setIncomeSource(e.target.value); setShowIncomeSuggestions(true); }} placeholder="Sumber (Grab, Kasir, dll)" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl font-bold uppercase outline-none text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500" />
-                                            {showIncomeSuggestions && (
-                                                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-xl rounded-xl overflow-hidden">
-                                                    {incomeTypes.map(t => <div key={t} onMouseDown={(e)=>{e.preventDefault(); setIncomeSource(t); setShowIncomeSuggestions(false);}} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700 font-bold text-xs cursor-pointer text-slate-800 dark:text-slate-200">{t}</div>)}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <input type="text" inputMode="numeric" value={formatInputRp(incomeAmount)} onChange={e => setIncomeAmount(parseInputRp(e.target.value))} placeholder="Nominal Bersih Rp" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl font-bold text-right text-green-700 dark:text-green-400 outline-none placeholder-slate-400 dark:placeholder-slate-500" />
+                                        <input type="text" value={incomeSource} onChange={e => setIncomeSource(e.target.value)} placeholder="Sumber (Grab, Kasir, dll)" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl font-bold uppercase outline-none text-slate-800 dark:text-slate-200" />
+                                        <input type="text" inputMode="numeric" value={formatInputRp(incomeAmount)} onChange={e => setIncomeAmount(parseInputRp(e.target.value))} placeholder="Nominal Bersih Rp" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl font-bold text-right text-green-700 dark:text-green-400 outline-none" />
                                         <button type="submit" className="w-full py-4 bg-green-600 text-white font-black rounded-2xl shadow-lg text-[10px] uppercase tracking-widest mt-2">TAMBAH KE KAS</button>
                                     </form>
-                                </div>
-                                <div className="px-2">
-                                    <div className="flex justify-between items-center mb-3">
-                                        <h3 className="font-bold text-slate-400 text-[10px] uppercase tracking-widest">Histori Pemasukan</h3>
-                                        <input type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)} className="bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-lg text-[10px] font-bold outline-none border border-transparent dark:border-slate-700" />
-                                    </div>
-                                    
-                                    {filteredIncomes.length > 0 && (
-                                        <div className="mb-4 bg-indigo-50 dark:bg-slate-800 p-4 rounded-2xl border border-indigo-100 dark:border-slate-700">
-                                            <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400 mb-3 border-b border-indigo-200 dark:border-slate-700 pb-2 flex justify-between">
-                                                <span>Ringkasan Sumber</span>
-                                                <span className="text-slate-400">{new Date(filterMonth + '-01').toLocaleDateString('id-ID', {month:'short', year:'numeric'})}</span>
-                                            </h4>
-                                            <div className="grid grid-cols-2 gap-2 mb-3">
-                                                {Object.entries(incomeSummary).sort((a,b)=>b[1]-a[1]).map(([source, amount]) => (
-                                                    <div key={source} className="bg-white dark:bg-slate-900 p-2.5 rounded-xl flex flex-col shadow-sm border border-slate-100 dark:border-slate-700">
-                                                        <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase truncate" title={source}>{source}</span>
-                                                        <span className="text-[11px] font-black text-green-600 dark:text-green-400 mt-1">Rp {formatNumber(amount)}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            <div className="flex justify-between items-center pt-2 border-t border-indigo-200 dark:border-slate-700">
-                                                <span className="text-[10px] font-black uppercase text-slate-600 dark:text-slate-300">Total Filter Ini</span>
-                                                <span className="font-black text-indigo-600 dark:text-indigo-400">Rp {formatNumber(totalFilteredIncome)}</span>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {filteredIncomes.length === 0 ? <p className="text-xs text-center text-slate-400 py-4 font-bold">Belum ada pemasukan di bulan ini.</p> : 
-                                    filteredIncomes.map(inc => (
-                                        <div key={inc.id} className="bg-white dark:bg-slate-800 p-4 rounded-2xl mb-2 flex justify-between items-center shadow-sm border border-slate-100 dark:border-slate-700 transition-colors">
-                                            <div>
-                                                <p className="font-black text-slate-700 dark:text-slate-200 text-[11px] uppercase">{inc.source}</p>
-                                                <p className="text-[9px] text-slate-400 font-bold">{new Date(inc.date).toLocaleDateString('id-ID', {day:'numeric', month:'short'})}</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="font-black text-green-600 dark:text-green-400 text-sm mb-1">+ Rp {formatNumber(inc.amount)}</p>
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <button onClick={() => triggerIncomePrompt(inc.source, inc.amount, inc.date)} className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 rounded text-[8px] font-black uppercase flex items-center gap-1"><div className="w-2.5 h-2.5"><Icons.Copy/></div> Prompt</button>
-                                                    <button onClick={() => deleteIncome(inc.id)} className="p-1 bg-red-50 dark:bg-red-900/30 text-red-400 rounded"><div className="w-3.5 h-3.5"><Icons.Trash/></div></button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
                                 </div>
                             </div>
                         )}
@@ -1957,103 +1258,17 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                 {renderCalendar()}
                                 {renderAgendaSummary()}
                                 
-                                {/* Laporan Bulanan Operasional */}
-                                {(() => {
-                                    const todayStr = getLocalDateStr();
-                                    const monthStr = agendaDate.substring(0, 7);
-                                    const monthlyAgendasKeluar = agendas.filter(a => a.date.startsWith(monthStr) && a.type === 'keluar');
-                                    
-                                    const totalOpr = monthlyAgendasKeluar.reduce((s,a) => s + a.amount, 0);
-                                    
-                                    // Sudah dibayar = IsPaid TRUE atau sudah lewat dari tanggal hari ini (Auto Solved)
-                                    const totalDibayar = monthlyAgendasKeluar.filter(a => a.isPaid || a.date < todayStr).reduce((s,a) => s + a.amount, 0);
-                                    
-                                    // Belum dibayar = IsPaid FALSE DAN tanggal masih sama atau lebih besar dari hari ini
-                                    const totalBelum = monthlyAgendasKeluar.filter(a => !a.isPaid && a.date >= todayStr).reduce((s,a) => s + a.amount, 0);
-
-                                    // Fungsi helper untuk mengelompokkan berdasarkan title dan menjumlahkan
-                                    const groupAndSort = (arr) => {
-                                        const grouped = arr.reduce((acc, curr) => {
-                                            acc[curr.title] = (acc[curr.title] || 0) + curr.amount;
-                                            return acc;
-                                        }, {});
-                                        return Object.entries(grouped).sort((a,b) => b[1] - a[1]);
-                                    };
-
-                                    const listBelumDibayar = groupAndSort(monthlyAgendasKeluar.filter(a => !a.isPaid && a.date >= todayStr));
-                                    const listSudahDibayar = groupAndSort(monthlyAgendasKeluar.filter(a => a.isPaid || a.date < todayStr));
-
-                                    return (
-                                        <div className="bg-white dark:bg-slate-800 p-5 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 mb-4 transition-colors">
-                                            <div className="flex justify-between items-center mb-3">
-                                                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                                                    <div className="w-4 h-4 text-orange-500"><Icons.Chart /></div> Rekap Bulan {new Date(agendaDate).toLocaleDateString('id-ID', {month:'long', year:'numeric'})}
-                                                </h3>
-                                                <button onClick={() => setShowMonthlyAgenda(!showMonthlyAgenda)} className="text-[9px] font-bold bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-lg text-slate-500 hover:text-indigo-500 transition-colors">
-                                                    {showMonthlyAgenda ? 'TUTUP DETAIL' : 'LIHAT DETAIL'}
-                                                </button>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-3 mb-2">
-                                                <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-2xl border border-orange-100 dark:border-orange-900/50">
-                                                    <p className="text-[9px] font-bold text-orange-500 uppercase">Belum Dibayar</p>
-                                                    <p className="font-black text-orange-600 dark:text-orange-400 text-sm">Rp {formatNumber(totalBelum)}</p>
-                                                </div>
-                                                <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-2xl border border-green-100 dark:border-green-900/50">
-                                                    <p className="text-[9px] font-bold text-green-500 uppercase">Sudah Dibayar</p>
-                                                    <p className="font-black text-green-600 dark:text-green-400 text-sm">Rp {formatNumber(totalDibayar)}</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-900 p-3 rounded-2xl border border-slate-100 dark:border-slate-700">
-                                                <span className="text-[10px] font-bold uppercase text-slate-500">Total Operasional</span>
-                                                <span className="font-black text-slate-800 dark:text-white text-base">Rp {formatNumber(totalOpr)}</span>
-                                            </div>
-
-                                            {showMonthlyAgenda && (
-                                                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 animate-fadeIn space-y-4">
-                                                    
-                                                    {/* Blok Belum Dibayar */}
-                                                    <div className="space-y-2">
-                                                        <p className="text-[9px] font-black uppercase tracking-widest text-orange-500 mb-2">⏳ Belum Dibayar</p>
-                                                        {listBelumDibayar.length === 0 ? <p className="text-xs text-slate-400 font-bold italic">Aman, tidak ada tagihan.</p> :
-                                                            listBelumDibayar.map(([title, amount], idx) => (
-                                                                <div key={'belum-'+idx} className="flex justify-between items-center text-[11px] p-2.5 bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/30 rounded-xl">
-                                                                    <span className="font-bold text-slate-600 dark:text-slate-300 uppercase truncate pr-2 max-w-[60%]">{idx+1}. {title}</span>
-                                                                    <span className="font-black text-orange-600 dark:text-orange-400">Rp {formatNumber(amount)}</span>
-                                                                </div>
-                                                            ))
-                                                        }
-                                                    </div>
-
-                                                    {/* Blok Sudah Dibayar */}
-                                                    <div className="space-y-2">
-                                                        <p className="text-[9px] font-black uppercase tracking-widest text-green-500 mb-2">✅ Sudah Dibayar (Lunas / Auto-solved)</p>
-                                                        {listSudahDibayar.length === 0 ? <p className="text-xs text-slate-400 font-bold italic">Belum ada data pembayaran.</p> :
-                                                            listSudahDibayar.map(([title, amount], idx) => (
-                                                                <div key={'sudah-'+idx} className="flex justify-between items-center text-[11px] p-2.5 bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30 rounded-xl">
-                                                                    <span className="font-bold text-slate-600 dark:text-slate-300 uppercase truncate pr-2 max-w-[60%]">{idx+1}. {title}</span>
-                                                                    <span className="font-black text-green-600 dark:text-green-400">Rp {formatNumber(amount)}</span>
-                                                                </div>
-                                                            ))
-                                                        }
-                                                    </div>
-
-                                                </div>
-                                            )}
-                                        </div>
-                                    )
-                                })()}
-                                
                                 <div className="p-6 rounded-[2.5rem] bg-slate-900 text-white shadow-xl">
-                                    <h2 className="font-extrabold uppercase text-[10px] tracking-widest mb-4 flex items-center gap-2"><div className="w-4 h-4"><Icons.Calendar /></div> Tambah Operasional / Tagihan</h2>
+                                    <h2 className="font-extrabold uppercase text-[10px] tracking-widest mb-4 flex items-center gap-2"><div className="w-4 h-4"><Icons.Calendar /></div> Tambah Operasi / Prive</h2>
                                     <form onSubmit={handleAddAgenda} className="space-y-4">
                                         <input type="date" value={agendaDate} onChange={e => handleDateChange(e, setAgendaDate)} className="w-full p-4 bg-slate-800 border border-slate-700 rounded-2xl font-bold text-white outline-none" />
-                                        <input type="text" value={agendaTitle} onChange={e => setAgendaTitle(e.target.value)} placeholder="Misal: Sewa, Gaji, Uang Darurat" className="w-full p-4 bg-slate-800 border border-slate-700 rounded-2xl font-bold outline-none placeholder-slate-500" />
+                                        <input type="text" value={agendaTitle} onChange={e => setAgendaTitle(e.target.value)} placeholder="Misal: Sewa, Prive Lebaran" className="w-full p-4 bg-slate-800 border border-slate-700 rounded-2xl font-bold outline-none placeholder-slate-500" />
                                         <div className="flex gap-2">
-                                            <select value={agendaType} onChange={e => setAgendaType(e.target.value)} className="w-2/5 py-4 px-2 bg-slate-800 border border-slate-700 rounded-2xl font-bold outline-none appearance-none text-center">
-                                                <option value="keluar">Keluar</option>
-                                                <option value="masuk">Masuk</option>
+                                            <select value={agendaType} onChange={e => setAgendaType(e.target.value)} className="w-[45%] py-4 px-2 bg-slate-800 border border-slate-700 rounded-2xl font-bold outline-none appearance-none text-center">
+                                                <option value="keluar">Bisnis Keluar</option>
+                                                <option value="masuk">Bisnis Masuk</option>
+                                                {/* MODIFIKASI: Tambah tipe Pribadi */}
+                                                <option value="pribadi">Pribadi / Prive</option>
                                             </select>
                                             <input type="text" inputMode="numeric" value={formatInputRp(agendaAmount)} onChange={e => setAgendaAmount(parseInputRp(e.target.value))} placeholder="Nominal Rp" className="flex-1 p-4 bg-slate-800 border border-slate-700 rounded-2xl font-bold text-right outline-none placeholder-slate-500" />
                                         </div>
@@ -2062,27 +1277,21 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                 </div>
 
                                 <div className="px-2">
-                                    <h3 className="font-bold text-slate-400 text-[10px] uppercase tracking-widest mb-3">Agenda / Opr: {new Date(agendaDate).toLocaleDateString('id-ID', {day:'numeric', month:'short'})}</h3>
-                                    {agendas.filter(a => a.date === agendaDate).length === 0 ? <p className="text-xs text-center text-slate-400 py-4 font-bold">Kosong.</p> : 
-                                    agendas.filter(a => a.date === agendaDate).map(ag => {
+                                    <h3 className="font-bold text-slate-400 text-[10px] uppercase tracking-widest mb-3">Agenda: {new Date(agendaDate).toLocaleDateString('id-ID', {day:'numeric', month:'short'})}</h3>
+                                    {agendas.filter(a => a.date === agendaDate).map(ag => {
                                         let isPast = ag.date < getLocalDateStr();
                                         return (
                                             <div key={ag.id} className={`p-4 rounded-2xl mb-2 flex items-center gap-3 shadow-sm border transition-all ${ag.isPaid || isPast ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 opacity-60' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
-                                                <button onClick={() => { if(!isPast) setAgendas(prev => prev.map(a => a.id === ag.id ? { ...a, isPaid: !a.isPaid } : a)); }} className={`w-8 h-8 shrink-0 rounded-full border-2 flex items-center justify-center transition-colors ${ag.isPaid || isPast ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 dark:border-slate-600 text-transparent'}`}>
+                                                <button onClick={() => { if(!isPast && ag.type !== 'pribadi') setAgendas(prev => prev.map(a => a.id === ag.id ? { ...a, isPaid: !a.isPaid } : a)); }} className={`w-8 h-8 shrink-0 rounded-full border-2 flex items-center justify-center transition-colors ${ag.isPaid || isPast || ag.type==='pribadi' ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 dark:border-slate-600 text-transparent'}`}>
                                                     <div className="w-4 h-4"><Icons.Check /></div>
                                                 </button>
                                                 <div className="flex-1">
                                                     <p className={`font-black text-xs uppercase ${ag.isPaid || isPast ? 'line-through text-slate-400' : 'text-slate-800 dark:text-slate-200'}`}>{ag.title}</p>
-                                                    {isPast && <span className="bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-[8px] px-1.5 py-0.5 rounded font-bold uppercase">Auto-Solved</span>}
+                                                    {ag.type === 'pribadi' && <span className="bg-emerald-100 text-emerald-600 text-[8px] px-1.5 py-0.5 rounded font-bold uppercase mt-1 inline-block">Dana Pribadi</span>}
                                                 </div>
                                                 <div className="text-right flex flex-col items-end">
-                                                    <p className={`font-black text-sm ${ag.type === 'keluar' ? 'text-red-500 dark:text-red-400' : 'text-green-500 dark:text-green-400'}`}>{ag.type==='keluar'?'-':'+'} {formatNumber(ag.amount)}</p>
-                                                    <div className="flex gap-2 items-center mt-1">
-                                                        <button onClick={() => triggerAgendaPrompt(ag)} className="text-[9px] text-indigo-400 font-bold uppercase hover:text-indigo-600 dark:hover:text-indigo-300 flex items-center gap-0.5">
-                                                            <div className="w-3 h-3"><Icons.Copy /></div> Prompt
-                                                        </button>
-                                                        <button onClick={() => deleteAgenda(ag.id)} className="text-[9px] text-red-300 dark:text-red-400 font-bold uppercase hover:text-red-500 ml-1">Hapus</button>
-                                                    </div>
+                                                    <p className={`font-black text-sm ${ag.type === 'keluar' ? 'text-red-500' : (ag.type === 'pribadi' ? 'text-emerald-500' : 'text-green-500')}`}>{ag.type==='masuk'?'+':'-'} {formatNumber(ag.amount)}</p>
+                                                    <button onClick={() => deleteAgenda(ag.id)} className="text-[9px] text-red-300 dark:text-red-400 font-bold uppercase mt-1">Hapus</button>
                                                 </div>
                                             </div>
                                         )
@@ -2093,10 +1302,61 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
 
                         {activeTab === 'arsip' && (
                             <div className="flex-1 overflow-y-auto no-scrollbar pb-32 space-y-4">
-                                <div className="px-2 flex justify-between items-center mb-2">
-                                    <h2 className="font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-widest text-[11px] italic text-slate-400 dark:text-slate-500">Riwayat Belanja</h2>
-                                    <input type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)} className="bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-lg text-[10px] font-bold outline-none border border-transparent dark:border-slate-700" />
+                                {/* MODIFIKASI: Dashboard HPP di Arsip */}
+                                <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-5 shadow-sm border border-slate-100 dark:border-slate-700 transition-colors">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h2 className="font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-widest text-[11px] flex items-center gap-2"><div className="w-4 h-4 text-indigo-500"><Icons.Chart/></div> Laporan HPP</h2>
+                                        <input type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)} className="bg-slate-100 dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 px-3 py-1.5 rounded-xl text-[10px] font-bold outline-none" />
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-3 mb-4">
+                                        <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-2xl border border-indigo-100 dark:border-indigo-800">
+                                            <p className="text-[9px] font-bold text-indigo-500 uppercase">Omzet Bulan Ini</p>
+                                            <p className="font-black text-indigo-600 dark:text-indigo-400 text-sm">Rp {formatNumber(arsipOmzetBulanIni)}</p>
+                                        </div>
+                                        <div className={`p-3 rounded-2xl border ${isHppUnhealthy ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800' : 'bg-slate-50 border-slate-200 dark:bg-slate-900/50 dark:border-slate-700'}`}>
+                                            <p className={`text-[9px] font-bold uppercase ${isHppUnhealthy ? 'text-red-500' : 'text-slate-500'}`}>Total HPP Belanja</p>
+                                            <p className={`font-black text-sm ${isHppUnhealthy ? 'text-red-600 dark:text-red-400' : 'text-orange-500'}`}>Rp {formatNumber(arsipHPPBulanIni)}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Alert HPP */}
+                                    {arsipOmzetBulanIni > 0 && (
+                                        <div className={`p-3 rounded-xl border flex items-start gap-2 text-[10px] font-medium leading-tight mb-4 ${isHppUnhealthy ? 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-300' : 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/30 dark:border-green-800 dark:text-green-300'}`}>
+                                            <div className="w-4 h-4 mt-0.5 shrink-0"><Icons.Warn/></div>
+                                            <p>
+                                                <strong className="font-black block mb-0.5">Rasio HPP: {hppPercentage}% dari Omzet</strong>
+                                                {isHppUnhealthy ? '🚨 Awas Boncos! Belanja bahan baku terlalu tinggi (Standar maksimal 50%). Cek ulang porsi resep atau harga pasar.' : '✅ Sehat! Rasio bahan baku aman di bawah 50%. Pertahankan profitnya.'}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Chart Sederhana */}
+                                    <div className="mt-2 border-t border-slate-100 dark:border-slate-700 pt-3">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <span className="text-[9px] font-bold text-slate-400 uppercase">Grafik Pengeluaran HPP</span>
+                                            <button onClick={()=>setShowArsipChart(!showArsipChart)} className="text-[9px] font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded">{showArsipChart ? 'Sembunyikan' : 'Tampilkan'}</button>
+                                        </div>
+                                        {showArsipChart && (
+                                            <div className="h-24 flex items-end gap-1 overflow-x-auto no-scrollbar pb-1">
+                                                {chartData.length === 0 ? <p className="text-xs text-slate-400 italic w-full text-center">Belum ada data</p> : 
+                                                chartData.map(c => (
+                                                    <div key={c.day} className="flex flex-col items-center flex-1 min-w-[20px] group relative">
+                                                        <div className="absolute -top-6 bg-slate-800 text-white text-[8px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 pointer-events-none z-10 whitespace-nowrap">{formatNumber(c.total)}</div>
+                                                        <div className="w-full bg-orange-400 rounded-t-sm chart-bar hover:bg-orange-500" style={{ height: `${c.pct}%`, minHeight: '4px' }}></div>
+                                                        <span className="text-[8px] text-slate-400 mt-1">{c.day}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
+
+                                {/* List Riwayat Lama */}
+                                <div className="px-2 mt-6">
+                                    <h2 className="font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-widest text-[11px] italic text-slate-400 dark:text-slate-500 mb-3">Rincian Nota Belanja</h2>
+                                </div>
+
                                 {filteredHistory.length === 0 ? (
                                     <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-[2.5rem] border border-dashed border-slate-200 dark:border-slate-700 mx-2 transition-colors">
                                         <div className="w-10 h-10 mx-auto text-slate-200 dark:text-slate-600 mb-3"><Icons.Archive /></div>
@@ -2122,8 +1382,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                             </div>
 
                                             <div className="flex gap-2">
-                                                <button onClick={() => { setCart(note.items.map(it => ({...it, actualTotal: '', isBought: false}))); setTransactionDate(note.date); setCurrentNoteId(note.id); setActiveTab('plan'); showStatus('Mode Edit Arsip'); }} className="flex-1 bg-slate-900 dark:bg-slate-700 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 dark:hover:bg-slate-600 shadow-md">DETAIL / EDIT</button>
-                                                <button onClick={() => executePrompt(note.items, note.date)} className="w-12 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 rounded-xl flex justify-center items-center hover:bg-indigo-100 dark:hover:bg-indigo-900/50"><div className="w-5 h-5"><Icons.Copy /></div></button>
+                                                <button onClick={() => { setCart(note.items.map(it => ({...it, actualTotal: '', isBought: false}))); setTransactionDate(note.date); setCurrentNoteId(note.id); setActiveTab('plan'); showStatus('Mode Edit Arsip'); }} className="flex-1 bg-slate-900 dark:bg-slate-700 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 shadow-md">DETAIL / EDIT</button>
                                                 <button onClick={() => {
                                                     setConfirmModal({ show: true, title: 'Hapus Arsip?', message: 'Data dihapus permanen?', onConfirm: async () => {
                                                         setConfirmModal({ ...confirmModal, show: false }); showStatus('Menghapus...', 'loading');
@@ -2133,38 +1392,30 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                                             showStatus('Arsip Dihapus!', 'success');
                                                         } catch (e) { showStatus('Gagal Menghapus', 'error'); }
                                                     }});
-                                                }} className="w-12 bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400 rounded-xl flex justify-center items-center hover:bg-red-100 dark:hover:bg-red-900/50"><div className="w-5 h-5"><Icons.Trash /></div></button>
+                                                }} className="w-12 bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400 rounded-xl flex justify-center items-center hover:bg-red-100"><div className="w-5 h-5"><Icons.Trash /></div></button>
                                             </div>
                                         </div>
                                     ))
                                 )}
                             </div>
                         )}
-                        
-                        {/* RENDER MARKET MODE JIKA DIAKTIFKAN */}
+
                         {showMarketMode && renderMarketMode()}
                     </main>
 
-                    {/* Draggable Fin AI Button Wrapper */}
                     <div 
                         className={`fixed z-[550] transition-opacity duration-300 ${isChatOpen || showMarketMode ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
                         style={{ right: `${finPos.right}px`, bottom: `${finPos.bottom}px`, touchAction: 'none' }}
-                        onPointerDown={handleFinPointerDown}
-                        onPointerMove={handleFinPointerMove}
-                        onPointerUp={handleFinPointerUp}
-                        onPointerCancel={handleFinPointerUp}
+                        onPointerDown={handleFinPointerDown} onPointerMove={handleFinPointerMove} onPointerUp={handleFinPointerUp} onPointerCancel={handleFinPointerUp}
                     >
-                        <button 
-                            onClick={handleFinClick} 
-                            className="relative bg-indigo-600 text-white p-4 rounded-full shadow-[0_10px_25px_rgba(79,70,229,0.5)] border border-indigo-400 active:scale-95 transition-transform"
-                        >
+                        <button onClick={handleFinClick} className="relative bg-indigo-600 text-white p-4 rounded-full shadow-[0_10px_25px_rgba(79,70,229,0.5)] border border-indigo-400 active:scale-95 transition-transform">
                             <div className="w-6 h-6 pointer-events-none"><Icons.MessageCircle /></div>
                             {hasNewFinAlert && <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-red-500 border-2 border-white rounded-full animate-pulse pointer-events-none"></span>}
                         </button>
                     </div>
 
                     <div className={`fixed left-1/2 -translate-x-1/2 z-[160] transition-all duration-500 ease-in-out ${showNav || showMarketMode ? 'bottom-28 opacity-0 pointer-events-none translate-y-10' : 'bottom-6 opacity-100 translate-y-0'}`}>
-                        <button onClick={() => setShowNav(true)} className="bg-slate-900/90 dark:bg-slate-800/90 backdrop-blur-md text-white px-5 py-3 rounded-full shadow-2xl border border-slate-700/50 flex items-center gap-2 hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors">
+                        <button onClick={() => setShowNav(true)} className="bg-slate-900/90 dark:bg-slate-800/90 backdrop-blur-md text-white px-5 py-3 rounded-full shadow-2xl border border-slate-700/50 flex items-center gap-2 hover:bg-slate-800 transition-colors">
                             <div className="w-5 h-5"><Icons.ChevronUp /></div>
                             <span className="text-[11px] font-black uppercase tracking-widest">Menu Utama</span>
                         </button>
@@ -2176,7 +1427,6 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                 <div className="w-4 h-4 group-hover:translate-y-0.5 transition-transform"><Icons.ChevronDown /></div>
                             </button>
                         </div>
-
                         <button onClick={() => setActiveTab('dashboard')} className={`flex-1 py-3 rounded-[2rem] flex flex-col items-center transition-all ${activeTab === 'dashboard' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}>
                             <div className="w-5 h-5"><Icons.Bot /></div><span className="text-[7px] font-black uppercase mt-1 tracking-widest">C-Flow</span>
                         </button>
