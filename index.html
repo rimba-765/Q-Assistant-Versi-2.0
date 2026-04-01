@@ -60,6 +60,10 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
+    <!-- Pustaka Tambahan untuk Ekspor PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
     <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore-compat.js"></script>
@@ -148,7 +152,8 @@
             Moon: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>,
             Play: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>,
             Info: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>,
-            Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>,
+            FileText: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>
         };
 
         const initialItems = ["Ayam Gede (Mentah)", "Lele Segar", "Telur Ayam", "Beras", "Minyak Goreng", "Gula Pasir", "Gas LPG 3Kg", "Sabun Cuci", "Lunch Box Size M", "Cup Minum", "Kangkung", "Tahu Putih (Mentah)"];
@@ -200,6 +205,14 @@
             const [deductions, setDeductions] = useState(() => JSON.parse(localStorage.getItem('fin-deductions') || '[]'));
             const [newDeduction, setNewDeduction] = useState({ name: '', amount: '', startDate: getLocalDateStr(), endDate: getLocalDateStr() });
             
+            // FITUR LAPORAN & ARSIP
+            const [reportArchives, setReportArchives] = useState(() => JSON.parse(localStorage.getItem('fin-reports') || '[]'));
+            const [reportMonth, setReportMonth] = useState(getLocalDateStr().substring(0, 7));
+            const [showReportFullscreen, setShowReportFullscreen] = useState(false);
+            const [reportDataState, setReportDataState] = useState(null);
+            const [reportAIInsight, setReportAIInsight] = useState('');
+            const [isAnalyzingReport, setIsAnalyzingReport] = useState(false);
+
             const [geminiApiKey, setGeminiApiKey] = useState(() => localStorage.getItem('fin-gemini-api-key') || '');
             const [user, setUser] = useState(null);
 
@@ -218,11 +231,17 @@
             const [showMarketMode, setShowMarketMode] = useState(false);
             // FITUR BARU 2: State untuk form mini Mode Pasar
             const [marketNewItem, setMarketNewItem] = useState({ name: '', qty: 1, unit: 'Kg', total: '', actualTotal: '' });
+            const [marketCash, setMarketCash] = useState(''); // FITUR KALKULATOR: Saldo Dibawa ke Pasar
             
             // FITUR BARU 4: State untuk Hide/Show Chart Belanja
             const [showBelanjaChart, setShowBelanjaChart] = useState(true);
+            const [chartEndDate, setChartEndDate] = useState(getLocalDateStr());
 
             const [showMonthlyAgenda, setShowMonthlyAgenda] = useState(false);
+
+            // FITUR BARU: Analisa Belanja per Item State
+            const [showItemRecap, setShowItemRecap] = useState(false);
+            const [recapBelanjaMonth, setRecapBelanjaMonth] = useState(() => getLocalDateStr().substring(0, 7));
 
             const [finPos, setFinPos] = useState({ right: 20, bottom: 96 }); 
             const isDraggingFin = useRef(false);
@@ -241,6 +260,7 @@
             const [incomeDate, setIncomeDate] = useState(getLocalDateStr());
             const [incomeSource, setIncomeSource] = useState('');
             const [incomeAmount, setIncomeAmount] = useState('');
+            const [incomeCategory, setIncomeCategory] = useState('Penjualan');
             const [showIncomeSuggestions, setShowIncomeSuggestions] = useState(false);
 
             const [agendaDate, setAgendaDate] = useState(getLocalDateStr());
@@ -253,6 +273,7 @@
 
             const [expandedDay, setExpandedDay] = useState(null);
             const [filterMonth, setFilterMonth] = useState(getLocalDateStr().substring(0, 7));
+            const [belanjaMonth, setBelanjaMonth] = useState(getLocalDateStr().substring(0, 7));
             const [dashboardMonth, setDashboardMonth] = useState(getLocalDateStr().substring(0, 7));
 
             const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null });
@@ -385,6 +406,31 @@
 
             const currentBalance = useMemo(() => getBalanceUpTo(getLocalDateStr()), [incomes, history, agendas, settings, deductions]);
 
+            // Kalkulasi Rekap Belanja per Item Bulanan
+            const monthlyItemRecap = useMemo(() => {
+                const monthlyH = history.filter(h => h.date.startsWith(recapBelanjaMonth));
+                const map = {};
+                monthlyH.forEach(h => {
+                    h.items.forEach(item => {
+                        if (!item.name) return;
+                        const name = item.name.trim().toUpperCase();
+                        if (!map[name]) map[name] = { qty: 0, total: 0, rawName: item.name, unit: item.unit || 'Kg' };
+                        map[name].qty += parseFloat(item.qty || 0);
+                        map[name].total += parseFloat(item.total || 0);
+                    });
+                });
+                return Object.values(map).sort((a, b) => b.total - a.total);
+            }, [history, recapBelanjaMonth]);
+
+            // Autocomplete Bahan Baku Cerdas (Gabungan Master + Histori)
+            const autocompleteItems = useMemo(() => {
+                const names = new Set(itemsDB.map(i => i.toLowerCase()));
+                history.forEach(h => h.items.forEach(i => {
+                    if (i.name) names.add(i.name.trim().toLowerCase());
+                }));
+                return Array.from(names).map(n => toTitleCase(n)).sort();
+            }, [history, itemsDB]);
+
             // Helper Jatah Pribadi (Safe Profit)
             const getJatahPribadi = () => {
                 const totalOmzet = incomes.reduce((s, i) => s + i.amount, 0) + agendas.filter(a => a.type === 'masuk').reduce((s, a) => s + a.amount, 0);
@@ -412,8 +458,18 @@
             useEffect(() => { localStorage.setItem('fin-settings', JSON.stringify(settings)); }, [settings]);
             useEffect(() => { localStorage.setItem('fin-holidays', JSON.stringify(holidays)); }, [holidays]);
             useEffect(() => { localStorage.setItem('fin-deductions', JSON.stringify(deductions)); }, [deductions]); // FITUR 1 Save
+            useEffect(() => { localStorage.setItem('fin-reports', JSON.stringify(reportArchives)); }, [reportArchives]);
 
             useEffect(() => { if (isChatOpen) chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chats, isTyping, isChatOpen]);
+
+            useEffect(() => {
+                if (showMarketMode || confirmModal.show || reminderModal.show || showSettings || showReportFullscreen) {
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    document.body.style.overflow = 'auto';
+                }
+                return () => { document.body.style.overflow = 'auto'; };
+            }, [showMarketMode, confirmModal.show, reminderModal.show, showSettings, showReportFullscreen]);
 
             useEffect(() => {
                 if (showMarketMode || confirmModal.show || reminderModal.show || showSettings) {
@@ -952,6 +1008,28 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 }});
             };
 
+            const editNote = (note) => {
+                if (cart.length > 0 && !currentNoteId) {
+                    if (!window.confirm("Ada daftar belanja yang belum disimpan di keranjang. Timpa dengan nota ini?")) return;
+                }
+                setCart(note.items);
+                setCurrentNoteId(note.id);
+                setTransactionDate(note.date);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                showStatus('Nota berhasil dimuat. Silakan cek keranjang.', 'success');
+            };
+
+            const deleteNote = (id) => {
+                setConfirmModal({
+                    show: true, title: 'Hapus Nota Belanja?', message: 'Histori nota belanja ini akan dihapus permanen dan saldo kas akan otomatis bertambah (koreksi). Lanjutkan?',
+                    onConfirm: () => {
+                        setHistory(prev => prev.filter(h => h.id !== id));
+                        setConfirmModal({ show: false, title: '', message: '', onConfirm: null });
+                        showStatus('Nota Belanja Terhapus!', 'success');
+                    }
+                });
+            };
+
             const copyToClipboard = (text) => {
                 const el = document.createElement('textarea'); el.value = text; document.body.appendChild(el);
                 el.select(); document.execCommand('copy'); document.body.removeChild(el); showStatus('Prompt Disalin!', 'success');
@@ -996,7 +1074,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 const amount = parseFloat(incomeAmount.toString().replace(/[^0-9]/g, ''));
                 const stdSource = toTitleCase(incomeSource.trim());
                 
-                const newIncome = { id: 'inc-' + Date.now(), date: incomeDate, source: stdSource, amount: amount, timestamp: Date.now() };
+                const newIncome = { id: 'inc-' + Date.now(), date: incomeDate, source: stdSource, amount: amount, category: incomeCategory, timestamp: Date.now() };
                 
                 setIncomes(prev => [newIncome, ...prev].sort((a,b) => b.timestamp - a.timestamp));
                 setIncomeSource(''); setIncomeAmount(''); showStatus('Pemasukan Ditambahkan!', 'success');
@@ -1004,15 +1082,11 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 let idealBelanjaBesok = amount * 0.5;
                 let sisaOperasionalProfit = amount - idealBelanjaBesok;
 
-                let finMsg = `Mantap Bos! Pemasukan dari **${stdSource}** senilai **Rp ${formatNumber(amount)}** berhasil masuk brankas. 💰\n\n`;
-                finMsg += `💡 **Rencana Alokasi (Rule 50%):**\n`;
-                finMsg += `Dari omzet ini, Bos punya *budget* maksimal **Rp ${formatNumber(idealBelanjaBesok)}** untuk kulakan/belanja bahan baku besok.\n`;
-                finMsg += `Sisa **Rp ${formatNumber(sisaOperasionalProfit)}** aman untuk dialokasikan sebagai biaya operasional, gaji, dan tabungan Profit murni Bos!.\n\n`;
-
-                if (amount >= settings.targetOmzet) {
-                    finMsg += `🎉 Target omzet harian tercapai! Warung luar biasa hari ini.`;
-                } else {
-                    finMsg += `Target harian belum tercapai (kurang Rp ${formatNumber(settings.targetOmzet - amount)}). Gas terus!`;
+                let finMsg = `Mantap Bos! Pemasukan dari **${stdSource}** (${incomeCategory}) senilai **Rp ${formatNumber(amount)}** berhasil masuk brankas. 💰\n\n`;
+                if(incomeCategory === 'Penjualan') {
+                    finMsg += `💡 **Rencana Alokasi (Rule 50%):**\n`;
+                    finMsg += `Dari omzet ini, Bos punya *budget* maksimal **Rp ${formatNumber(idealBelanjaBesok)}** untuk kulakan/belanja bahan baku besok.\n`;
+                    finMsg += `Sisa **Rp ${formatNumber(sisaOperasionalProfit)}** aman untuk dialokasikan sebagai biaya operasional, gaji, dan tabungan Profit murni Bos!.\n\n`;
                 }
 
                 triggerFinSystemMessage(finMsg);
@@ -1203,12 +1277,17 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                     let parsed = parseFloat(curr.actualTotal.toString().replace(/[^0-9]/g, ''));
                     return acc + (isNaN(parsed) ? 0 : parsed);
                 }, 0);
+                
+                // Kalkulasi Sisa Saldo
+                const cashNum = parseFloat(marketCash) || 0;
+                const sisaCash = cashNum > 0 ? cashNum - totalRealita : 0;
+                const isSisaMinus = cashNum > 0 && sisaCash < 0;
 
                 return (
                     <div className="fixed inset-0 z-[900] flex justify-center pointer-events-none animate-fadeIn">
                         <div className="w-full max-w-md bg-slate-50 dark:bg-slate-900 flex flex-col pointer-events-auto h-full shadow-2xl transition-colors" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
                             {/* Header Market Mode */}
-                            <div className="bg-indigo-600 p-4 shadow-lg flex justify-between items-center text-white shrink-0 z-20">
+                            <div className="bg-indigo-600 p-4 shadow-md flex justify-between items-center text-white shrink-0 z-20">
                                 <div>
                                     <h2 className="font-black text-lg flex items-center gap-2"><div className="w-5 h-5"><Icons.ShopBag/></div> Mode Pasar</h2>
                                     <p className="text-[10px] text-indigo-200 uppercase tracking-widest font-bold mt-1">Satu baris, praktis & ringkas.</p>
@@ -1218,61 +1297,89 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                 </button>
                             </div>
 
-                            {/* Daftar Belanja Interaktif */}
-                            <div className="flex-1 min-h-0 p-3 space-y-2 overflow-y-auto no-scrollbar pb-2 z-10">
+                            {/* FITUR BARU: Input Saldo Bawaan */}
+                            <div className="bg-indigo-700/90 px-4 py-2.5 flex items-center justify-between shadow-inner shrink-0 z-10 border-b border-indigo-800/50">
+                                <span className="text-indigo-100 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5"><div className="w-3.5 h-3.5"><Icons.Wallet/></div> Saldo Tersedia</span>
+                                <input type="text" inputMode="numeric" value={formatInputRp(marketCash)} onChange={e => setMarketCash(parseInputRp(e.target.value))} placeholder="Isi Saldo (Rp)" className="w-32 bg-indigo-900/50 text-white placeholder-indigo-300 text-right font-black text-[11px] outline-none px-2.5 py-1.5 rounded-lg border border-indigo-500/50 focus:border-indigo-300 transition-colors" />
+                            </div>
+
+                            {/* Daftar Belanja Interaktif (Sebaris) */}
+                            <div className="flex-1 min-h-0 p-2 space-y-1.5 overflow-y-auto no-scrollbar pb-2 z-10">
                                 {cart.length === 0 ? <p className="text-center text-slate-400 font-bold py-10">Daftar belanja masih kosong.</p> : 
                                 cart.map(item => (
-                                    <div key={item.id} className={`p-2 rounded-2xl border flex items-center gap-2 transition-all ${item.isBought ? 'bg-green-50/50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm'}`}>
+                                    <div key={item.id} className={`p-2 rounded-xl border flex items-center gap-1.5 transition-all ${item.isBought ? 'bg-green-50/50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm'}`}>
                                         
-                                        <button onClick={() => updateCartActual(item.id, 'isBought', !item.isBought)} className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center border-2 transition-colors shadow-sm ${item.isBought ? 'bg-green-500 border-green-500 text-white' : 'bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-600 text-transparent'}`}>
-                                            <div className="w-4 h-4"><Icons.Check/></div>
+                                        <button onClick={() => updateCartActual(item.id, 'isBought', !item.isBought)} className={`w-6 h-6 rounded-full shrink-0 flex items-center justify-center border transition-colors shadow-sm ${item.isBought ? 'bg-green-500 border-green-500 text-white' : 'bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-600 text-transparent'}`}>
+                                            <div className="w-3.5 h-3.5"><Icons.Check/></div>
                                         </button>
 
-                                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                        <div className="flex-1 min-w-[50px] flex flex-col justify-center">
                                             <input 
                                                 type="text" 
                                                 value={item.name} 
                                                 onChange={(e) => updateCartActual(item.id, 'name', e.target.value)}
-                                                className={`font-black text-[13px] uppercase leading-tight bg-transparent outline-none w-full ${item.isBought ? 'text-slate-500 line-through' : 'text-slate-800 dark:text-slate-100'}`}
+                                                className={`font-black text-[11px] uppercase leading-tight bg-transparent outline-none w-full truncate ${item.isBought ? 'text-slate-500 line-through' : 'text-slate-800 dark:text-slate-100'}`}
                                             />
-                                            <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase mt-0.5">
-                                                <input 
-                                                    type="number" step="any" value={item.qty} 
-                                                    onChange={(e) => updateCartActual(item.id, 'qty', e.target.value)}
-                                                    className="w-10 bg-transparent outline-none border-b border-slate-300 dark:border-slate-600"
-                                                />
-                                                <span>{item.unit}</span>
-                                                <span className="opacity-50">•</span>
-                                                <span>Est: Rp {formatNumber(item.total)}</span>
-                                            </div>
+                                            <span className="text-[8px] font-bold text-slate-400 uppercase mt-0.5">Est: Rp {formatNumber(item.total)}</span>
                                         </div>
 
-                                        <div className="w-[90px] shrink-0 relative flex flex-col items-end gap-1">
-                                            <input type="text" inputMode="numeric" value={formatInputRp(item.actualTotal)} onChange={(e) => updateCartActual(item.id, 'actualTotal', parseInputRp(e.target.value))} placeholder="H. Asli" className={`w-full px-2 py-1.5 rounded-lg text-[11px] font-black outline-none focus:ring-2 focus:ring-green-400 transition-colors text-right ${item.isBought ? 'bg-white dark:bg-slate-900 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800' : 'bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700'}`} />
-                                            <button onClick={() => setCart(cart.filter(i => i.id !== item.id))} className="text-[10px] text-red-400 hover:text-red-500 font-bold uppercase mr-1">Hapus</button>
+                                        <div className="flex items-center bg-slate-100 dark:bg-slate-900 rounded-lg overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700">
+                                            <input 
+                                                type="number" step="any" value={item.qty} 
+                                                onChange={(e) => updateCartActual(item.id, 'qty', e.target.value)}
+                                                className={`w-8 bg-transparent outline-none text-center text-[11px] font-black py-1 ${item.isBought ? 'text-slate-500' : 'text-slate-800 dark:text-slate-100'}`}
+                                            />
+                                            <select 
+                                                value={item.unit} 
+                                                onChange={(e) => updateCartActual(item.id, 'unit', e.target.value)}
+                                                className={`w-[42px] bg-slate-200 dark:bg-slate-800 outline-none text-[9px] font-black uppercase py-1.5 appearance-none text-center ${item.isBought ? 'text-slate-500' : 'text-slate-700 dark:text-slate-300'}`}
+                                            >
+                                                {commonUnits.map(u => <option key={u} value={u}>{u}</option>)}
+                                            </select>
                                         </div>
+
+                                        <input type="text" inputMode="numeric" value={formatInputRp(item.actualTotal)} onChange={(e) => updateCartActual(item.id, 'actualTotal', parseInputRp(e.target.value))} placeholder="H. Asli" className={`w-[65px] px-1.5 py-1.5 rounded-lg text-[10px] font-black outline-none focus:ring-2 focus:ring-green-400 transition-colors text-right shrink-0 ${item.isBought ? 'bg-white dark:bg-slate-900 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800' : 'bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700'}`} />
+                                        
+                                        <button onClick={() => setCart(cart.filter(i => i.id !== item.id))} className="w-5 h-5 shrink-0 flex items-center justify-center text-red-400 hover:text-red-500 transition-colors">
+                                            <Icons.Trash/>
+                                        </button>
                                     </div>
                                 ))}
                             </div>
 
-                            {/* FITUR BARU: Tambah Item Mini Form di Mode Pasar */}
-                            <form onSubmit={handleMarketModeAdd} className="p-3 bg-slate-100 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 shrink-0 z-10 flex gap-2">
-                                <input type="text" value={marketNewItem.name} onChange={e => setMarketNewItem({...marketNewItem, name: e.target.value})} placeholder="Tambah barang baru..." className="flex-1 p-2 rounded-lg text-[11px] font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 outline-none uppercase" />
-                                <input type="number" step="any" value={marketNewItem.qty} onChange={e => setMarketNewItem({...marketNewItem, qty: e.target.value})} placeholder="Qty" className="w-12 p-2 rounded-lg text-[11px] font-bold text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 outline-none" />
-                                <input type="text" inputMode="numeric" value={formatInputRp(marketNewItem.actualTotal)} onChange={e => setMarketNewItem({...marketNewItem, actualTotal: parseInputRp(e.target.value)})} placeholder="H.Asli" className="w-20 p-2 rounded-lg text-[11px] font-bold text-right bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 outline-none" />
-                                <button type="submit" className="bg-indigo-600 text-white p-2 rounded-lg shadow-sm hover:bg-indigo-700"><div className="w-4 h-4"><Icons.Plus /></div></button>
+                            {/* FITUR BARU: Tambah Item Mini Form di Mode Pasar (+Dropdown Satuan) */}
+                            <form onSubmit={handleMarketModeAdd} className="p-2.5 bg-slate-100 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 shrink-0 z-10 flex gap-1.5 items-center">
+                                <input type="text" value={marketNewItem.name} onChange={e => setMarketNewItem({...marketNewItem, name: e.target.value})} placeholder="Tambah brg..." className="flex-1 min-w-[50px] p-2 rounded-lg text-[10px] font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 outline-none uppercase" />
+                                
+                                <div className="flex bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden shrink-0">
+                                    <input type="number" step="any" value={marketNewItem.qty} onChange={e => setMarketNewItem({...marketNewItem, qty: e.target.value})} placeholder="Qty" className="w-9 p-2 text-[10px] font-bold text-center bg-transparent outline-none" />
+                                    <select value={marketNewItem.unit} onChange={e => setMarketNewItem({...marketNewItem, unit: e.target.value})} className="w-10 bg-slate-100 dark:bg-slate-800 text-[9px] font-black uppercase text-center appearance-none outline-none border-l border-slate-200 dark:border-slate-700">
+                                        {commonUnits.map(u => <option key={u} value={u}>{u}</option>)}
+                                    </select>
+                                </div>
+
+                                <input type="text" inputMode="numeric" value={formatInputRp(marketNewItem.actualTotal)} onChange={e => setMarketNewItem({...marketNewItem, actualTotal: parseInputRp(e.target.value)})} placeholder="H.Asli" className="w-[60px] p-2 rounded-lg text-[10px] font-bold text-right bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 outline-none" />
+                                <button type="submit" className="bg-indigo-600 text-white p-2.5 rounded-lg shadow-sm hover:bg-indigo-700 shrink-0"><div className="w-3.5 h-3.5"><Icons.Plus /></div></button>
                             </form>
 
                             {/* Footer Market Mode (Total & Action) */}
                             <div className="bg-slate-900 p-4 rounded-t-[2.5rem] shadow-[0_-10px_25px_rgba(0,0,0,0.2)] shrink-0 z-20 relative mt-auto">
-                                <div className="flex justify-between items-center mb-4 px-2">
-                                    <div>
+                                <div className="flex justify-between items-start mb-4 px-2">
+                                    <div className="space-y-1">
                                         <p className="text-[10px] font-bold text-slate-400 uppercase">Total Estimasi</p>
                                         <p className="text-sm font-black text-slate-300">Rp {formatNumber(totalEstimasi)}</p>
                                     </div>
-                                    <div className="text-right">
+                                    <div className="text-right space-y-1">
                                         <p className="text-[10px] font-bold text-green-400 uppercase tracking-widest">Total Realita</p>
-                                        <p className="text-xl font-black text-green-500">Rp {formatNumber(totalRealita || 0)}</p>
+                                        <p className="text-lg font-black text-green-500 leading-none mt-0.5">Rp {formatNumber(totalRealita || 0)}</p>
+                                        
+                                        {/* Indikator Sisa Uang Kalkulator */}
+                                        {cashNum > 0 && (
+                                            <div className={`mt-1.5 pt-1.5 border-t ${isSisaMinus ? 'border-red-500/50' : 'border-slate-700'}`}>
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{isSisaMinus ? 'Kurang Uang' : 'Sisa Uang'}</p>
+                                                <p className={`text-[13px] font-black mt-0.5 ${isSisaMinus ? 'text-red-500' : 'text-indigo-400'}`}>Rp {formatNumber(Math.abs(sisaCash))}</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
@@ -1356,6 +1463,327 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 return { todayInc, todayExp, reportDays };
             };
 
+            // LOGIKA LAPORAN BULANAN
+            const getLaporanData = (month) => {
+                const hists = history.filter(h => h.date.startsWith(month));
+                const incs = incomes.filter(i => i.date.startsWith(month));
+                const ags = agendas.filter(a => a.date.startsWith(month));
+
+                const [yearStr, monthStr] = month.split('-');
+                const year = parseInt(yearStr);
+                const m = parseInt(monthStr) - 1;
+                const daysInMonth = new Date(year, m + 1, 0).getDate();
+                
+                let totalDeductions = 0;
+                let deductionDetails = {};
+                for (let d = 1; d <= daysInMonth; d++) {
+                    let dObj = new Date(year, m, d);
+                    let dStr = getLocalDateStr(dObj);
+                    deductions.forEach(ded => {
+                        if (dStr >= ded.startDate && dStr <= ded.endDate) {
+                            totalDeductions += ded.amount;
+                            deductionDetails[ded.name] = (deductionDetails[ded.name] || 0) + ded.amount;
+                        }
+                    });
+                }
+
+                // Pemisahan Penjualan dan Hutang/Lainnya
+                const pendapatanPenjualan = incs.filter(i => i.category !== 'Lainnya').reduce((s,i) => s + i.amount, 0);
+                const pendapatanLainnya = incs.filter(i => i.category === 'Lainnya').reduce((s,i) => s + i.amount, 0) + ags.filter(a => a.type === 'masuk').reduce((s,a) => s + a.amount, 0);
+                
+                const rincianPenjualan = {};
+                incs.filter(i => i.category !== 'Lainnya').forEach(i => {
+                    rincianPenjualan[i.source] = (rincianPenjualan[i.source] || 0) + i.amount;
+                });
+
+                const hppTotal = hists.reduce((s,h) => s + h.total, 0);
+                const oprTotal = ags.filter(a => a.type === 'keluar').reduce((s,a) => s + a.amount, 0);
+                const pribadiTotal = ags.filter(a => a.type === 'pribadi').reduce((s,a) => s + a.amount, 0);
+
+                let itemMap = {};
+                hists.forEach(h => h.items.forEach(it => { itemMap[it.name] = (itemMap[it.name] || 0) + it.total; }));
+                const topBelanja = Object.entries(itemMap).sort((a,b)=>b[1]-a[1]).slice(0,5).map(x=>({name:x[0], total:x[1]}));
+
+                let oprMap = {};
+                ags.filter(a => a.type === 'keluar').forEach(a => { oprMap[a.title] = (oprMap[a.title] || 0) + a.amount; });
+                const topOpr = Object.entries(oprMap).sort((a,b)=>b[1]-a[1]).slice(0,5).map(x=>({name:x[0], total:x[1]}));
+
+                const labaKotor = pendapatanPenjualan - hppTotal;
+                const labaBersih = (pendapatanPenjualan + pendapatanLainnya) - (hppTotal + oprTotal + totalDeductions);
+                
+                const targetOmzet = settings.targetOmzet * daysInMonth;
+                const omzetTercapai = pendapatanPenjualan;
+                const pctTarget = targetOmzet > 0 ? (omzetTercapai / targetOmzet) * 100 : 0;
+                const cogsRatio = omzetTercapai > 0 ? (hppTotal / omzetTercapai) * 100 : 0;
+                const bep = hppTotal + oprTotal + totalDeductions;
+
+                return { 
+                    month, timestamp: Date.now(),
+                    pendapatanPenjualan, pendapatanLainnya, rincianPenjualan,
+                    hppTotal, oprTotal, totalDeductions, deductionDetails, pribadiTotal,
+                    labaKotor, labaBersih, topBelanja, topOpr,
+                    targetOmzet, omzetTercapai, pctTarget, cogsRatio, bep
+                };
+            };
+
+            const downloadPDF = async () => {
+                const printArea = document.getElementById('report-print-area');
+                if(!printArea) return;
+                showStatus('Menyiapkan PDF...', 'loading');
+                
+                // Styling sementara untuk print
+                const originalStyle = printArea.style.cssText;
+                printArea.style.cssText = "background-color: white; padding: 20px; color: black; border: none; box-shadow: none;";
+                
+                try {
+                    const canvas = await html2canvas(printArea, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+                    const imgData = canvas.toDataURL('image/png');
+                    const pdf = new window.jspdf.jsPDF('p', 'mm', 'a4');
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                    pdf.save(`Laporan_Fin_${reportMonth}.pdf`);
+                    showStatus('PDF Berhasil Diunduh!', 'success');
+                } catch (error) {
+                    showStatus('Gagal membuat PDF. Coba screenshot manual.', 'error');
+                } finally {
+                    printArea.style.cssText = originalStyle;
+                }
+            };
+
+            const handleSimpanArsipLaporan = () => {
+                if(!reportDataState) return;
+                const existing = reportArchives.findIndex(r => r.month === reportDataState.month);
+                let newArchives = [...reportArchives];
+                if (existing >= 0) newArchives[existing] = reportDataState;
+                else newArchives.push(reportDataState);
+                
+                setReportArchives(newArchives);
+                showStatus('Laporan Resmi Diarsipkan!', 'success');
+            };
+
+            const hapusArsipLaporan = (month) => {
+                setConfirmModal({
+                    show: true, title: 'Hapus Arsip Laporan?', message: `Yakin ingin menghapus arsip bulan ${month}?`,
+                    onConfirm: () => {
+                        setReportArchives(reportArchives.filter(r => r.month !== month));
+                        setConfirmModal({ show: false, title: '', message: '', onConfirm: null });
+                        showStatus('Arsip Terhapus!', 'success');
+                    }
+                });
+            };
+
+            const requestAIReportInsight = async () => {
+                if(!reportDataState) return;
+                const apiKey = localStorage.getItem('fin-gemini-api-key') || ""; 
+                if (!apiKey) {
+                    showStatus("API Key Gemini belum diatur!", "error");
+                    return;
+                }
+
+                setIsAnalyzingReport(true);
+                const d = reportDataState;
+                const prompt = `Lakukan evaluasi profesional untuk Laporan Bisnis Warung Makan Mbah Marto periode ${d.month}:
+[DATA]
+Omzet Penjualan Murni: Rp${d.pendapatanPenjualan}
+HPP (Belanja Bahan): Rp${d.hppTotal}
+Biaya Operasional: Rp${d.oprTotal}
+Deductions (Biaya Lain): Rp${d.totalDeductions}
+Laba Kotor: Rp${d.labaKotor}
+Laba Bersih: Rp${d.labaBersih}
+COGS (Rasio HPP): ${d.cogsRatio.toFixed(1)}% (Batas sehat < 50%)
+BEP (Titik Impas): Rp${d.bep}
+Pencapaian Target Omzet: ${d.pctTarget.toFixed(1)}%
+Top 3 Pengeluaran Bahan: ${d.topBelanja.slice(0,3).map(x=>x.name).join(', ')}.
+
+Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tanpa basa-basi):
+1. **Evaluasi Profitabilitas**: Analisa COGS, Laba Bersih, dan Pencapaian Target. Apakah sehat atau bocor?
+2. **Sorotan Pengeluaran**: Evaluasi Top Pengeluaran dan Operasional. Apakah wajar?
+3. **Rekomendasi Action Plan Bulan Depan**: Berikan 3 poin konkrit strategi (misal: naikkan margin produk X, pangkas biaya Y, dsb).`;
+                
+                var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
+                const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3 } };
+                
+                try {
+                    const res = await fetch(url, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }});
+                    const data = await res.json();
+                    if(data.error) throw new Error(data.error.message);
+                    setReportAIInsight(data.candidates[0].content.parts[0].text);
+                } catch(e) {
+                    setReportAIInsight(`*Gagal memuat insight AI. Pastikan API Key benar dan ada koneksi internet. Error: ${e.message}*`);
+                } finally {
+                    setIsAnalyzingReport(false);
+                }
+            };
+
+            const renderReportFullscreen = () => {
+                const d = reportDataState;
+                if(!d) return null;
+                const monthName = new Date(d.month + '-01').toLocaleDateString('id-ID', {month: 'long', year: 'numeric'});
+
+                return (
+                    <div className="fixed inset-0 z-[1000] bg-slate-100 dark:bg-slate-900 overflow-y-auto w-full h-full flex flex-col transition-colors animate-fadeIn">
+                        <div className="bg-slate-900 dark:bg-black p-4 flex justify-between items-center shadow-md shrink-0 sticky top-0 z-50">
+                            <h3 className="font-black text-white uppercase tracking-widest text-[11px] flex items-center gap-2">
+                                <Icons.FileText /> PREVIEW LAPORAN
+                            </h3>
+                            <div className="flex gap-2">
+                                <button onClick={downloadPDF} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-black uppercase shadow-sm flex items-center gap-1 transition-colors"><div className="w-3 h-3"><Icons.Copy/></div> PDF / Print</button>
+                                <button onClick={() => setShowReportFullscreen(false)} className="w-8 h-8 bg-red-500 hover:bg-red-400 text-white rounded-full flex justify-center items-center transition-colors"><Icons.X /></button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 p-2 sm:p-4 w-full max-w-2xl mx-auto">
+                            {/* Area Print PDF */}
+                            <div id="report-print-area" className="bg-white p-6 sm:p-10 shadow-xl border border-slate-200">
+                                {/* KOP SURAT */}
+                                <div className="text-center mb-6 pb-6 border-b-4 border-slate-800">
+                                    <div className="flex justify-center items-center gap-3 mb-2">
+                                        <div className="w-12 h-12 bg-indigo-600 text-white rounded-xl flex items-center justify-center font-black text-2xl shadow-sm rotate-3">Q</div>
+                                        <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Warung Mbah Marto</h1>
+                                    </div>
+                                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-2">Laporan Kinerja Keuangan & Operasional</p>
+                                    <div className="flex justify-between items-end mt-4 text-[10px] font-bold text-slate-400">
+                                        <span>Periode: <span className="text-slate-800">{monthName}</span></span>
+                                        <span>Dicetak: <span className="text-slate-800">{new Date().toLocaleString('id-ID')}</span></span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-6 text-slate-800">
+                                    {/* 1. PEMASUKAN */}
+                                    <div>
+                                        <h3 className="font-black text-[13px] uppercase tracking-widest bg-slate-100 p-2 border-l-4 border-green-500 mb-3">1. Rincian Pemasukan</h3>
+                                        <div className="pl-2 space-y-1">
+                                            <p className="text-[11px] font-bold text-slate-500 uppercase mb-1">A. Omzet Penjualan Produk</p>
+                                            {Object.entries(d.rincianPenjualan).map(([src, amt]) => (
+                                                <div key={src} className="flex justify-between text-[11px] border-b border-slate-100 py-1 pl-4">
+                                                    <span>- {src}</span><span className="font-bold">Rp {formatNumber(amt)}</span>
+                                                </div>
+                                            ))}
+                                            <div className="flex justify-between text-[11px] border-b border-slate-100 py-1 pl-4 bg-slate-50 font-bold">
+                                                <span>Subtotal Omzet Penjualan</span><span className="text-green-600">Rp {formatNumber(d.pendapatanPenjualan)}</span>
+                                            </div>
+                                            
+                                            <p className="text-[11px] font-bold text-slate-500 uppercase mt-3 mb-1">B. Pemasukan Lainnya (Hutang/Modal)</p>
+                                            <div className="flex justify-between text-[11px] border-b border-slate-100 py-1 pl-4">
+                                                <span>- Pemasukan Lainnya</span><span className="font-bold">Rp {formatNumber(d.pendapatanLainnya)}</span>
+                                            </div>
+                                            
+                                            <div className="flex justify-between text-[12px] font-black mt-3 pt-2 border-t-2 border-slate-800">
+                                                <span>TOTAL PEMASUKAN KOTOR (A + B)</span><span>Rp {formatNumber(d.pendapatanPenjualan + d.pendapatanLainnya)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 2. PENGELUARAN */}
+                                    <div>
+                                        <h3 className="font-black text-[13px] uppercase tracking-widest bg-slate-100 p-2 border-l-4 border-red-500 mb-3">2. Rincian Pengeluaran & Modal</h3>
+                                        <div className="pl-2 space-y-1">
+                                            <div className="flex justify-between text-[11px] border-b border-slate-100 py-1">
+                                                <span className="font-bold">A. HPP (Total Belanja Bahan Baku)</span><span className="font-bold text-red-600">Rp {formatNumber(d.hppTotal)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-[11px] border-b border-slate-100 py-1 mt-2">
+                                                <span className="font-bold">B. Biaya Operasional & Gaji</span><span className="font-bold text-red-600">Rp {formatNumber(d.oprTotal)}</span>
+                                            </div>
+                                            <div className="mt-1 pl-4 space-y-1 opacity-80">
+                                                {d.topOpr.slice(0,3).map((op,i) => (
+                                                    <div key={i} className="flex justify-between text-[10px] border-b border-slate-50 py-0.5">
+                                                        <span>- {op.name}</span><span>Rp {formatNumber(op.total)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="flex justify-between text-[11px] border-b border-slate-100 py-1 mt-2">
+                                                <span className="font-bold">C. Potongan Sistem (Deductions/Pinjaman)</span><span className="font-bold text-red-600">Rp {formatNumber(d.totalDeductions)}</span>
+                                            </div>
+                                            <div className="mt-1 pl-4 space-y-1 opacity-80">
+                                                {Object.entries(d.deductionDetails).map(([name, amt],i) => (
+                                                    <div key={i} className="flex justify-between text-[10px] border-b border-slate-50 py-0.5">
+                                                        <span>- {name}</span><span>Rp {formatNumber(amt)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            
+                                            <div className="flex justify-between text-[12px] font-black mt-3 pt-2 border-t-2 border-slate-800">
+                                                <span>TOTAL PENGELUARAN (A + B + C)</span><span className="text-red-600">Rp {formatNumber(d.hppTotal + d.oprTotal + d.totalDeductions)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 3. PROFITABILITAS & ANALISIS */}
+                                    <div>
+                                        <h3 className="font-black text-[13px] uppercase tracking-widest bg-slate-100 p-2 border-l-4 border-indigo-500 mb-3">3. Profitabilitas & Kinerja</h3>
+                                        
+                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg text-center">
+                                                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Laba Kotor (Penjualan - HPP)</p>
+                                                <p className={`text-lg font-black mt-1 ${d.labaKotor >= 0 ? 'text-green-600' : 'text-red-600'}`}>Rp {formatNumber(d.labaKotor)}</p>
+                                            </div>
+                                            <div className="bg-indigo-50 border border-indigo-200 p-3 rounded-lg text-center">
+                                                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Laba Bersih Akhir</p>
+                                                <p className={`text-lg font-black mt-1 ${d.labaBersih >= 0 ? 'text-indigo-600' : 'text-red-600'}`}>Rp {formatNumber(d.labaBersih)}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-[11px] space-y-2">
+                                            <div className="flex justify-between border-b border-slate-200 pb-1">
+                                                <span className="font-bold">Break Even Point (Titik Impas/Modal)</span><span className="font-black text-slate-700">Rp {formatNumber(d.bep)}</span>
+                                            </div>
+                                            <div className="flex justify-between border-b border-slate-200 pb-1">
+                                                <span className="font-bold">Pencapaian Target Omzet Bulanan</span><span className={`font-black ${d.pctTarget >= 100 ? 'text-green-600' : 'text-orange-500'}`}>{d.pctTarget.toFixed(1)}%</span>
+                                            </div>
+                                            <div className="flex justify-between border-b border-slate-200 pb-1">
+                                                <span className="font-bold">Rasio COGS (HPP vs Penjualan)</span><span className={`font-black ${d.cogsRatio <= 50 ? 'text-green-600' : 'text-red-600'}`}>{d.cogsRatio.toFixed(1)}% {d.cogsRatio > 50 ? '(MAHAL)' : '(SEHAT)'}</span>
+                                            </div>
+                                            <div className="flex justify-between pb-1">
+                                                <span className="font-bold text-slate-500">Pengambilan Pribadi (Owner)</span><span className="font-black text-indigo-500">Rp {formatNumber(d.pribadiTotal)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* 4. TOP 5 PENGELUARAN BAHAN BAKU */}
+                                    <div>
+                                        <h3 className="font-black text-[13px] uppercase tracking-widest bg-slate-100 p-2 border-l-4 border-orange-500 mb-3">4. Top Pengeluaran Bahan Baku</h3>
+                                        <div className="pl-2">
+                                            {d.topBelanja.map((b,i) => (
+                                                <div key={i} className="flex justify-between text-[11px] border-b border-slate-100 py-1">
+                                                    <span>{i+1}. {b.name}</span><span className="font-bold text-orange-600">Rp {formatNumber(b.total)}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    
+                                    {/* FOOTER */}
+                                    <div className="mt-10 pt-4 border-t border-slate-200 text-center text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+                                        - Q-Nota Management System (Digenerate secara Otomatis) -
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* ACTION BUTTONS & AI INSIGHT DILUAR PRINT AREA */}
+                            <div className="mt-6 space-y-4 pb-10">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button onClick={handleSimpanArsipLaporan} className="w-full py-4 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border-2 border-indigo-600 dark:border-indigo-400 font-black rounded-2xl shadow-lg uppercase text-[10px] tracking-widest hover:bg-indigo-50 dark:hover:bg-slate-700 transition-colors">
+                                        <i className="fa-solid fa-archive"></i> SIMPAN KE ARSIP
+                                    </button>
+                                    <button onClick={requestAIReportInsight} disabled={isAnalyzingReport} className="w-full py-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-black rounded-2xl shadow-lg uppercase text-[10px] tracking-widest hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+                                        <div className="w-4 h-4"><Icons.Bot/></div> {isAnalyzingReport ? 'AI MENGANALISA...' : 'MINTA INSIGHT AI'}
+                                    </button>
+                                </div>
+
+                                {reportAIInsight && (
+                                    <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-2xl p-5 shadow-lg mt-4 animate-fadeIn">
+                                        <h3 className="font-black text-purple-800 dark:text-purple-300 uppercase tracking-widest text-[11px] flex items-center gap-2 mb-4 border-b border-purple-200 dark:border-purple-800 pb-2">
+                                            <div className="w-4 h-4"><Icons.Bot/></div> Evaluasi & Rekomendasi AI
+                                        </h3>
+                                        <div className="text-[12px] leading-relaxed markdown-body dark:text-slate-200" dangerouslySetInnerHTML={{__html: window.marked ? window.marked.parse(reportAIInsight) : reportAIInsight}} />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
             const renderDashboard = () => {
                 const data = getDashboardData();
                 const todayStr = getLocalDateStr();
@@ -1373,7 +1801,10 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 const monthlyAgendas = agendas.filter(a => a.date.startsWith(dashboardMonth));
                 const monthlyHistory = history.filter(h => h.date.startsWith(dashboardMonth));
 
+                // Hitung total semua omzet (termasuk modal/hutang) & omzet khusus penjualan murni
                 const omzetBulanIni = monthlyIncomes.reduce((s, i) => s + i.amount, 0) + monthlyAgendas.filter(a => a.type === 'masuk').reduce((s, a) => s + a.amount, 0);
+                const omzetPenjualanBulanIni = monthlyIncomes.filter(i => i.category === 'Penjualan' || !i.category).reduce((s, i) => s + i.amount, 0);
+
                 const avgInc = omzetBulanIni / daysPassed; 
 
                 const targetOmzetBulanan = settings.targetOmzet * daysInMonth;
@@ -1390,19 +1821,20 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 const HPPBulanIni = monthlyHistory.reduce((s,h)=>s+h.total, 0);
                 const pengeluaranBulanIni = HPPBulanIni + tagihanTerbayar;
                 
-                const profitKotor = omzetBulanIni - HPPBulanIni;
+                // Modifikasi Laba Kotor murni dari penjualan produk
+                const profitKotor = omzetPenjualanBulanIni - HPPBulanIni;
                 const profitBulanIni = omzetBulanIni - pengeluaranBulanIni;
 
-                // Break Even logic
-                const totalCappedKotor = Math.max(omzetBulanIni, HPPBulanIni);
-                const pctOmzetKotor = totalCappedKotor > 0 ? (omzetBulanIni / totalCappedKotor) * 100 : 0;
+                // Break Even logic Laba Kotor
+                const totalCappedKotor = Math.max(omzetPenjualanBulanIni, HPPBulanIni);
+                const pctOmzetKotor = totalCappedKotor > 0 ? (omzetPenjualanBulanIni / totalCappedKotor) * 100 : 0;
                 const pctHPPKotor = totalCappedKotor > 0 ? (HPPBulanIni / totalCappedKotor) * 100 : 0;
 
                 const totalCappedBersih = Math.max(omzetBulanIni, pengeluaranBulanIni);
                 const pctOmzetBersih = totalCappedBersih > 0 ? (omzetBulanIni / totalCappedBersih) * 100 : 0;
                 const pctExpBersih = totalCappedBersih > 0 ? (pengeluaranBulanIni / totalCappedBersih) * 100 : 0;
 
-                const marginKotorPct = omzetBulanIni > 0 ? (profitKotor / omzetBulanIni) * 100 : 0;
+                const marginKotorPct = omzetPenjualanBulanIni > 0 ? (profitKotor / omzetPenjualanBulanIni) * 100 : 0;
                 const marginBersihPct = omzetBulanIni > 0 ? (profitBulanIni / omzetBulanIni) * 100 : 0;
 
                 let statusKotor = marginKotorPct >= 50 ? '✨ IDEAL' : '⚠️ MAHAL';
@@ -1464,8 +1896,8 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                 
                                 <div className="space-y-2 mb-4">
                                     <div className="flex justify-between items-center text-[11px]">
-                                        <span className="text-slate-500 dark:text-slate-400 font-bold">Total Omzet</span>
-                                        <span className="font-black text-slate-800 dark:text-slate-200">Rp {formatNumber(omzetBulanIni)}</span>
+                                        <span className="text-slate-500 dark:text-slate-400 font-bold">Penjualan Produk</span>
+                                        <span className="font-black text-slate-800 dark:text-slate-200">Rp {formatNumber(omzetPenjualanBulanIni)}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-[11px]">
                                         <span className="text-slate-500 dark:text-slate-400 font-bold">HPP (Bahan Baku)</span>
@@ -1828,7 +2260,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                     return new Date(b.date) - new Date(a.date);
                 });
                 
-            const filteredHistory = history.filter(h => h.date.startsWith(filterMonth))
+            const filteredHistoryBelanja = history.filter(h => h.date.startsWith(belanjaMonth))
                 .sort((a, b) => {
                     if (a.date === b.date) return b.timestamp - a.timestamp;
                     return new Date(b.date) - new Date(a.date);
@@ -1841,9 +2273,9 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
             const totalFilteredIncome = filteredIncomes.reduce((s, i) => s + i.amount, 0);
 
             // FITUR BARU 4: Helper untuk Dashboard Belanja
-            const getBelanjaDashboardData = () => {
-                const now = new Date();
-                const currentMonth = getLocalDateStr(now).substring(0, 7);
+            const getBelanjaDashboardData = (endDateStr) => {
+                const endDateObj = new Date(endDateStr);
+                const currentMonth = endDateStr.substring(0, 7);
                 
                 // Omzet bulan ini
                 const monthlyOmzet = incomes.filter(i => i.date.startsWith(currentMonth)).reduce((s,i) => s + i.amount, 0);
@@ -1863,19 +2295,19 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 // Rasio HPP
                 const hppRatio = monthlyOmzet > 0 ? (monthlyHPP / monthlyOmzet) * 100 : 0;
                 
-                // Data chart 7 hari terakhir
+                // Data chart 7 hari terakhir dari filter tanggal
                 let last7Days = [];
                 let max7DayTotal = 0;
                 for(let i=6; i>=0; i--) {
-                    let d = new Date();
+                    let d = new Date(endDateObj);
                     d.setDate(d.getDate() - i);
                     let dStr = getLocalDateStr(d);
                     let t = history.filter(h => h.date === dStr).reduce((s,h) => s + h.total, 0);
-                    last7Days.push({ date: dStr, total: t, label: d.toLocaleDateString('id-ID', {weekday:'short'}) });
+                    last7Days.push({ date: dStr, total: t, label: d.toLocaleDateString('id-ID', {day:'numeric', month:'short'}) });
                     if(t > max7DayTotal) max7DayTotal = t;
                 }
 
-                return { monthlyOmzet, monthlyHPP, highestDay, hppRatio, last7Days, max7DayTotal };
+                return { monthlyOmzet, monthlyHPP, highestDay, hppRatio, last7Days, max7DayTotal, currentMonth };
             };
 
             return (
@@ -2024,12 +2456,12 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                 
                                 {/* FITUR BARU 4: Dashboard Keuangan Belanja */}
                                 {(() => {
-                                    const blnData = getBelanjaDashboardData();
+                                    const blnData = getBelanjaDashboardData(chartEndDate);
                                     return (
                                         <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-5 shadow-sm border border-slate-100 dark:border-slate-700 transition-colors">
                                             <div className="flex justify-between items-center mb-4">
                                                 <h2 className="font-black text-slate-800 dark:text-white text-[11px] uppercase tracking-widest flex items-center gap-2">
-                                                    <div className="w-4 h-4 text-indigo-500"><Icons.Chart/></div> Info Bahan Baku Bulan Ini
+                                                    <div className="w-4 h-4 text-indigo-500"><Icons.Chart/></div> Info Bahan {new Date(blnData.currentMonth + '-01').toLocaleDateString('id-ID', {month:'long'})}
                                                 </h2>
                                                 <button onClick={()=>setShowBelanjaChart(!showBelanjaChart)} className="text-[9px] font-bold text-slate-400 uppercase">
                                                     {showBelanjaChart ? 'Tutup Chart' : 'Buka Chart'}
@@ -2060,26 +2492,85 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
 
                                             {showBelanjaChart && (
                                                 <div className="animate-fadeIn mt-2 pt-4 border-t border-slate-100 dark:border-slate-700">
-                                                    <p className="text-[9px] font-bold text-slate-500 uppercase mb-3 text-center">Trend Belanja 7 Hari Terakhir</p>
-                                                    <div className="flex justify-between items-end h-24 gap-1">
+                                                    <div className="flex justify-between items-center mb-4">
+                                                        <p className="text-[9px] font-bold text-slate-500 uppercase">Trend Belanja Harian</p>
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-[8px] font-bold text-slate-400 uppercase">s/d</span>
+                                                            <input 
+                                                                type="date" 
+                                                                value={chartEndDate}
+                                                                onChange={(e) => setChartEndDate(e.target.value)}
+                                                                className="text-[9px] font-bold px-1.5 py-1 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 outline-none text-indigo-600 dark:text-indigo-400 cursor-pointer"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex justify-between items-end h-28 gap-1.5">
                                                         {blnData.last7Days.map((d, i) => {
                                                             const heightPct = blnData.max7DayTotal > 0 ? (d.total / blnData.max7DayTotal) * 100 : 0;
                                                             return (
-                                                                <div key={i} className="flex flex-col items-center flex-1 group relative">
-                                                                    <div className="absolute -top-6 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-white text-[8px] p-1 rounded z-10 font-bold whitespace-nowrap">Rp{formatNumber(d.total)}</div>
-                                                                    <div className="w-full bg-orange-100 dark:bg-orange-900/30 rounded-t-md relative flex items-end overflow-hidden" style={{height: '100%'}}>
-                                                                        <div className="w-full bg-orange-400 rounded-t-md transition-all duration-500" style={{height: `${heightPct}%`}}></div>
+                                                                <div key={i} className="flex flex-col items-center flex-1 group relative h-full justify-end">
+                                                                    <div className="absolute -top-7 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-white text-[8px] px-1.5 py-0.5 rounded z-10 font-bold whitespace-nowrap shadow-lg pointer-events-none">Rp{formatNumber(d.total)}</div>
+                                                                    <div className="w-full bg-slate-100 dark:bg-slate-900/30 rounded-t-lg relative flex items-end overflow-hidden border-b border-slate-200 dark:border-slate-700" style={{height: '80px'}}>
+                                                                        <div className={`w-full ${heightPct > 0 ? 'bg-gradient-to-t from-orange-400 to-orange-500 shadow-[0_-2px_10px_rgba(249,115,22,0.2)]' : 'bg-transparent'} rounded-t-lg transition-all duration-700 ease-in-out`} style={{height: `${heightPct}%`, minHeight: heightPct > 0 ? '3px' : '0'}}></div>
                                                                     </div>
-                                                                    <p className="text-[8px] font-bold text-slate-400 mt-1 uppercase">{d.label}</p>
+                                                                    <p className="text-[8px] font-bold text-slate-400 mt-1.5 text-center leading-[1.1] uppercase">{d.label.split(' ')[0]}<br/>{d.label.split(' ')[1]}</p>
                                                                 </div>
                                                             )
                                                         })}
                                                     </div>
+                                                    {blnData.max7DayTotal === 0 && (
+                                                        <p className="text-center text-[10px] text-slate-400 font-bold mt-3 italic">Kosong di rentang 7 hari ini.</p>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
                                     )
                                 })()}
+
+                                {/* FITUR BARU: Analisa Belanja Bulanan (Inventori/Rekap) */}
+                                <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-5 shadow-sm border border-slate-100 dark:border-slate-700 transition-colors">
+                                    <button 
+                                        onClick={() => setShowItemRecap(!showItemRecap)}
+                                        className="w-full flex justify-between items-center text-[11px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-100"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <div className="w-4 h-4 text-orange-500"><Icons.Chart /></div> Analisa Belanja per Item
+                                        </span>
+                                        <div className="w-4 h-4 text-slate-400">{showItemRecap ? <Icons.ChevronUp /> : <Icons.ChevronDown />}</div>
+                                    </button>
+
+                                    {showItemRecap && (
+                                        <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-700 animate-fadeIn">
+                                            <div className="flex justify-between items-center mb-4">
+                                                <span className="text-xs font-bold text-slate-500">Pilih Bulan:</span>
+                                                <input 
+                                                    type="month" 
+                                                    value={recapBelanjaMonth}
+                                                    onChange={(e) => setRecapBelanjaMonth(e.target.value)}
+                                                    className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700 dark:text-slate-200"
+                                                />
+                                            </div>
+
+                                            {monthlyItemRecap.length === 0 ? (
+                                                <p className="text-center text-xs text-slate-500 py-4 font-bold">Belum ada data belanja di bulan ini.</p>
+                                            ) : (
+                                                <div className="space-y-2 max-h-60 overflow-y-auto no-scrollbar">
+                                                    {monthlyItemRecap.map((item, idx) => (
+                                                        <div key={idx} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700">
+                                                            <div className="flex-1">
+                                                                <div className="text-[11px] font-black uppercase text-slate-800 dark:text-slate-200">{item.rawName}</div>
+                                                                <div className="text-[10px] text-slate-500 font-bold mt-0.5">Total Beli: {item.qty} {item.unit}</div>
+                                                            </div>
+                                                            <div className="text-xs font-black text-orange-500">
+                                                                Rp {formatNumber(item.total)}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
 
                                 <div className="p-6 rounded-[2.5rem] bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700 transition-colors">
                                     <div className="flex justify-between items-center mb-4">
@@ -2090,9 +2581,9 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                         {!editingId && <input type="date" value={transactionDate} onChange={e => handleDateChange(e, setTransactionDate)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl font-bold text-slate-700 dark:text-slate-200 outline-none" />}
                                         <div className="relative">
                                             <input type="text" value={itemName} onChange={e => { setItemName(e.target.value); setShowSuggestions(true); }} placeholder="Nama Barang..." className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl font-bold uppercase outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-500 placeholder-slate-400 dark:placeholder-slate-500 text-slate-800 dark:text-slate-200" />
-                                            {showSuggestions && itemName && itemsDB.filter(i=>i.toLowerCase().includes(itemName.toLowerCase())).length > 0 && (
+                                            {showSuggestions && itemName && autocompleteItems.filter(i=>i.toLowerCase().includes(itemName.toLowerCase())).length > 0 && (
                                                 <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-xl rounded-xl max-h-40 overflow-auto">
-                                                    {itemsDB.filter(i=>i.toLowerCase().includes(itemName.toLowerCase())).map((item, idx) => (
+                                                    {autocompleteItems.filter(i=>i.toLowerCase().includes(itemName.toLowerCase())).map((item, idx) => (
                                                         <div key={idx} onMouseDown={(e) => { e.preventDefault(); setItemName(item); setShowSuggestions(false); }} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700 font-bold text-xs cursor-pointer text-slate-800 dark:text-slate-200">{item}</div>
                                                     ))}
                                                 </div>
@@ -2159,6 +2650,42 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                         </div>
                                     </div>
                                 )}
+
+                                {/* FITUR BARU: ARSIP NOTA BELANJA */}
+                                <div className="px-2 mt-2">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h3 className="font-bold text-slate-400 text-[10px] uppercase tracking-widest">Arsip Nota Belanja</h3>
+                                        <input type="month" value={belanjaMonth} onChange={e => setBelanjaMonth(e.target.value)} className="bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-lg text-[10px] font-bold outline-none border border-transparent dark:border-slate-700" />
+                                    </div>
+                                    
+                                    {filteredHistoryBelanja.length === 0 ? <p className="text-xs text-center text-slate-400 py-4 font-bold">Belum ada histori belanja di bulan ini.</p> : 
+                                    filteredHistoryBelanja.map(note => (
+                                        <div key={note.id} className="bg-white dark:bg-slate-800 p-4 rounded-2xl mb-2 shadow-sm border border-slate-100 dark:border-slate-700 transition-colors">
+                                            <div className="flex justify-between items-start mb-2 border-b border-slate-100 dark:border-slate-700 pb-2">
+                                                <div>
+                                                    <p className="font-black text-slate-700 dark:text-slate-200 text-[11px] uppercase">Nota: {new Date(note.date).toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'})}</p>
+                                                    <p className="text-[9px] text-slate-400 font-bold mt-0.5">{note.items.length} Macam Barang</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="font-black text-orange-500 dark:text-orange-400 text-sm">Rp {formatNumber(note.total)}</p>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1 mb-3">
+                                                {note.items.slice(0, 3).map((item, idx) => (
+                                                    <div key={idx} className="flex justify-between text-[10px] text-slate-500 dark:text-slate-400">
+                                                        <span className="truncate pr-2">- {item.name}</span>
+                                                        <span className="shrink-0 font-bold">{item.qty} {item.unit}</span>
+                                                    </div>
+                                                ))}
+                                                {note.items.length > 3 && <p className="text-[9px] text-indigo-500 font-bold italic mt-1">+ {note.items.length - 3} barang lainnya...</p>}
+                                            </div>
+                                            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-50 dark:border-slate-700/50">
+                                                <button onClick={() => editNote(note)} className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-[9px] font-black uppercase flex items-center gap-1 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"><div className="w-3 h-3"><Icons.Edit/></div> Lihat / Edit</button>
+                                                <button onClick={() => deleteNote(note.id)} className="px-3 py-1.5 bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400 rounded-lg text-[9px] font-black uppercase flex items-center gap-1 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"><div className="w-3 h-3"><Icons.Trash/></div> Hapus</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
 
@@ -2168,6 +2695,13 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                     <h2 className="font-extrabold text-slate-800 dark:text-slate-100 uppercase text-[10px] tracking-widest mb-4 text-green-600 dark:text-green-400 flex items-center gap-2"><div className="w-4 h-4"><Icons.Wallet /></div> Input Pemasukan</h2>
                                     <form onSubmit={handleSaveIncome} className="space-y-4">
                                         <input type="date" value={incomeDate} onChange={e => handleDateChange(e, setIncomeDate)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl font-bold text-slate-700 dark:text-slate-200 outline-none" />
+                                        
+                                        {/* FITUR BARU: Dropdown Kategori Income */}
+                                        <select value={incomeCategory} onChange={e => setIncomeCategory(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl font-bold outline-none text-slate-700 dark:text-slate-200 appearance-none">
+                                            <option value="Penjualan">Kategori: Omzet Penjualan Produk</option>
+                                            <option value="Lainnya">Kategori: Hutang / Modal / Lainnya</option>
+                                        </select>
+
                                         <div className="relative">
                                             <input type="text" value={incomeSource} onChange={e => { setIncomeSource(e.target.value); setShowIncomeSuggestions(true); }} placeholder="Sumber (Grab, Kasir, dll)" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl font-bold uppercase outline-none text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500" />
                                             {showIncomeSuggestions && (
@@ -2211,7 +2745,10 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                     filteredIncomes.map(inc => (
                                         <div key={inc.id} className="bg-white dark:bg-slate-800 p-4 rounded-2xl mb-2 flex justify-between items-center shadow-sm border border-slate-100 dark:border-slate-700 transition-colors">
                                             <div>
-                                                <p className="font-black text-slate-700 dark:text-slate-200 text-[11px] uppercase">{inc.source}</p>
+                                                <p className="font-black text-slate-700 dark:text-slate-200 text-[11px] uppercase flex items-center gap-2">
+                                                    {inc.source}
+                                                    {inc.category === 'Lainnya' && <span className="text-[8px] bg-slate-200 dark:bg-slate-700 text-slate-500 px-1 py-0.5 rounded">Lainnya</span>}
+                                                </p>
                                                 <p className="text-[9px] text-slate-400 font-bold">{new Date(inc.date).toLocaleDateString('id-ID', {day:'numeric', month:'short'})}</p>
                                             </div>
                                             <div className="text-right">
@@ -2258,6 +2795,9 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                     const listBelumDibayar = groupAndSort(monthlyAgendasKeluar.filter(a => !a.isPaid && a.date >= todayStr));
                                     const listSudahDibayar = groupAndSort(monthlyAgendasKeluar.filter(a => a.isPaid || a.date < todayStr));
 
+                                    // Persentase Progress Bar
+                                    const billProgressPct = totalOpr > 0 ? Math.round((totalDibayar / totalOpr) * 100) : 0;
+
                                     return (
                                         <div className="bg-white dark:bg-slate-800 p-5 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 mb-4 transition-colors">
                                             <div className="flex justify-between items-center mb-3">
@@ -2267,6 +2807,20 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                                 <button onClick={() => setShowMonthlyAgenda(!showMonthlyAgenda)} className="text-[9px] font-bold bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-lg text-slate-500 hover:text-indigo-500 transition-colors">
                                                     {showMonthlyAgenda ? 'TUTUP DETAIL' : 'LIHAT DETAIL'}
                                                 </button>
+                                            </div>
+
+                                            {/* PROGRESS BAR TAGIHAN */}
+                                            <div className="mb-4">
+                                                <div className="flex justify-between text-[10px] font-bold mb-1.5 uppercase tracking-widest">
+                                                    <span className="text-slate-500">Status Pembayaran</span>
+                                                    <span className={billProgressPct === 100 ? 'text-green-500' : 'text-indigo-500'}>{billProgressPct}% Lunas</span>
+                                                </div>
+                                                <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                                                    <div 
+                                                        className={`h-full rounded-full transition-all duration-1000 ${billProgressPct === 100 ? 'bg-green-500' : 'bg-indigo-500'}`} 
+                                                        style={{ width: `${billProgressPct}%` }}
+                                                    ></div>
+                                                </div>
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-3 mb-2">
@@ -2373,55 +2927,55 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
 
                         {activeTab === 'arsip' && (
                             <div className="flex-1 overflow-y-auto no-scrollbar pb-32 space-y-4">
-                                <div className="px-2 flex justify-between items-center mb-2">
-                                    <h2 className="font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-widest text-[11px] italic text-slate-400 dark:text-slate-500">Riwayat Belanja</h2>
-                                    <input type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)} className="bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-lg text-[10px] font-bold outline-none border border-transparent dark:border-slate-700" />
-                                </div>
-                                {filteredHistory.length === 0 ? (
-                                    <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-[2.5rem] border border-dashed border-slate-200 dark:border-slate-700 mx-2 transition-colors">
-                                        <div className="w-10 h-10 mx-auto text-slate-200 dark:text-slate-600 mb-3"><Icons.Archive /></div>
-                                        <p className="text-slate-300 dark:text-slate-500 font-bold uppercase text-[10px] tracking-widest">Kosong</p>
+                                
+                                <div className="bg-indigo-600 text-white p-6 rounded-[2.5rem] shadow-lg relative overflow-hidden mt-2 border border-indigo-500">
+                                    <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+                                    <h2 className="text-xl font-black tracking-tighter mb-1 relative z-10 flex items-center gap-2"><div className="w-5 h-5"><Icons.FileText/></div> Laporan Keuangan</h2>
+                                    <p className="text-[10px] font-bold text-indigo-200 mb-4 relative z-10">Cetak Laporan PDF Bulanan Profesional</p>
+                                    
+                                    <div className="flex gap-2 relative z-10">
+                                        <input type="month" value={reportMonth} onChange={(e) => setReportMonth(e.target.value)} className="flex-1 p-3 bg-white/10 border border-white/20 rounded-xl font-bold outline-none text-white text-sm" />
+                                        <button onClick={() => { setReportDataState(getLaporanData(reportMonth)); setReportAIInsight(''); setShowReportFullscreen(true); }} className="px-4 bg-white text-indigo-600 font-black rounded-xl text-[10px] uppercase tracking-widest shadow-lg active:scale-95 transition-transform">
+                                            BUKA
+                                        </button>
                                     </div>
-                                ) : (
-                                    filteredHistory.map(note => (
-                                        <div key={note.id} className="bg-white dark:bg-slate-800 p-5 rounded-[2.2rem] border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden mb-4 transition-colors">
-                                            <div className="flex justify-between items-center mb-4">
-                                                <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-4 py-1.5 rounded-full uppercase tracking-widest font-mono italic">
-                                                    {new Date(note.date).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'})}
-                                                </span>
-                                                <span className="font-black text-slate-900 dark:text-slate-100 text-sm">Rp {formatNumber(note.total)}</span>
-                                            </div>
-                                            
-                                            <div className="mb-4">
-                                                {note.items.map((it, idx) => (
-                                                    <div key={idx} className="flex justify-between text-[11px] text-slate-600 dark:text-slate-300">
-                                                        <span>{it.name} {it.qty !== 1 ? `(${it.qty})` : ''}</span>
-                                                        <span className="font-bold">Rp {formatNumber(it.total)}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
+                                </div>
 
-                                            <div className="flex gap-2">
-                                                <button onClick={() => { setCart(note.items.map(it => ({...it, actualTotal: '', isBought: false}))); setTransactionDate(note.date); setCurrentNoteId(note.id); setActiveTab('plan'); showStatus('Mode Edit Arsip'); }} className="flex-1 bg-slate-900 dark:bg-slate-700 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 dark:hover:bg-slate-600 shadow-md">DETAIL / EDIT</button>
-                                                <button onClick={() => executePrompt(note.items, note.date)} className="w-12 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 rounded-xl flex justify-center items-center hover:bg-indigo-100 dark:hover:bg-indigo-900/50"><div className="w-5 h-5"><Icons.Copy /></div></button>
-                                                <button onClick={() => {
-                                                    setConfirmModal({ show: true, title: 'Hapus Arsip?', message: 'Data dihapus permanen?', onConfirm: async () => {
-                                                        setConfirmModal({ ...confirmModal, show: false }); showStatus('Menghapus...', 'loading');
-                                                        try {
-                                                            if (isLocalMode) setHistory(prev => prev.filter(h => h.id !== note.id));
-                                                            else if (user && paths) await db.collection(paths.history).doc(note.id).delete();
-                                                            showStatus('Arsip Dihapus!', 'success');
-                                                        } catch (e) { showStatus('Gagal Menghapus', 'error'); }
-                                                    }});
-                                                }} className="w-12 bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400 rounded-xl flex justify-center items-center hover:bg-red-100 dark:hover:bg-red-900/50"><div className="w-5 h-5"><Icons.Trash /></div></button>
-                                            </div>
+                                <div className="bg-white dark:bg-slate-800 p-5 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden transition-colors mt-4">
+                                    <h3 className="font-black text-slate-800 dark:text-slate-100 text-[11px] uppercase tracking-widest flex items-center gap-2 mb-4 border-b border-slate-100 dark:border-slate-700 pb-3">
+                                        <div className="w-4 h-4 text-indigo-500"><Icons.Archive/></div> Arsip Laporan Tersimpan
+                                    </h3>
+                                    
+                                    {reportArchives.length === 0 ? (
+                                        <div className="text-center py-10">
+                                            <p className="text-slate-400 dark:text-slate-500 font-bold text-[10px] uppercase tracking-widest">Belum ada arsip PDF.</p>
                                         </div>
-                                    ))
-                                )}
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {reportArchives.sort((a,b) => b.month.localeCompare(a.month)).map((ars, i) => (
+                                                <div key={i} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl flex justify-between items-center border border-slate-200 dark:border-slate-700">
+                                                    <div>
+                                                        <p className="font-black text-xs uppercase text-slate-800 dark:text-slate-100">
+                                                            {new Date(ars.month+'-01').toLocaleDateString('id-ID', {month:'long', year:'numeric'})}
+                                                        </p>
+                                                        <p className={`text-[9px] font-bold mt-0.5 ${ars.labaBersih >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                                            Laba: Rp {formatNumber(ars.labaBersih)}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <button onClick={() => { setReportDataState(ars); setReportAIInsight(''); setShowReportFullscreen(true); }} className="px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-black rounded-lg text-[9px] uppercase tracking-widest">Lihat</button>
+                                                        <button onClick={() => hapusArsipLaporan(ars.month)} className="w-8 h-8 bg-red-50 dark:bg-red-900/30 text-red-500 rounded-lg flex items-center justify-center hover:bg-red-100"><div className="w-3.5 h-3.5"><Icons.Trash/></div></button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         )}
                         
-                        {/* RENDER MARKET MODE JIKA DIAKTIFKAN */}
+                        {/* RENDER MARKET MODE & LAPORAN FULLSCREEN */}
+                        {showReportFullscreen && renderReportFullscreen()}
                         {showMarketMode && renderMarketMode()}
                     </main>
 
