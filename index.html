@@ -502,6 +502,15 @@
             }, [user, paths]);
 
             useEffect(() => {
+                if (showMarketMode || confirmModal.show || reminderModal.show || showSettings || showReportFullscreen) {
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    document.body.style.overflow = 'auto';
+                }
+                return () => { document.body.style.overflow = 'auto'; };
+            }, [showMarketMode, confirmModal.show, reminderModal.show, showSettings, showReportFullscreen]);
+
+            useEffect(() => {
                 if (hasCheckedAgenda.current) return;
                 const checkAgendas = () => {
                     const todayStr = getLocalDateStr();
@@ -1517,31 +1526,59 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                 const cogsRatio = omzetTercapai > 0 ? (hppTotal / omzetTercapai) * 100 : 0;
                 const bep = hppTotal + oprTotal + totalDeductions;
 
+                // DATA TAMBAHAN UNTUK PDF
+                const totalTransaksiPenjualan = incs.filter(i => i.category !== 'Lainnya').length;
+                const totalTransaksiBelanja = hists.length;
+                const rataRataPenjualanHarian = pendapatanPenjualan / daysInMonth;
+                const rataRataBelanjaHarian = hppTotal / daysInMonth;
+                
+                const hutangLunas = ags.filter(a => a.type === 'keluar' && (a.isPaid || a.date < getLocalDateStr())).map(a => ({...a, status: 'Lunas'}));
+                const hutangBelum = ags.filter(a => a.type === 'keluar' && !a.isPaid && a.date >= getLocalDateStr()).map(a => ({...a, status: 'Belum Lunas'}));
+                const semuaTagihan = [...hutangBelum, ...hutangLunas];
+
                 return { 
                     month, timestamp: Date.now(),
                     pendapatanPenjualan, pendapatanLainnya, rincianPenjualan,
                     hppTotal, oprTotal, totalDeductions, deductionDetails, pribadiTotal,
                     labaKotor, labaBersih, topBelanja, topOpr,
-                    targetOmzet, omzetTercapai, pctTarget, cogsRatio, bep
+                    targetOmzet, omzetTercapai, pctTarget, cogsRatio, bep,
+                    totalTransaksiPenjualan, totalTransaksiBelanja, rataRataPenjualanHarian, rataRataBelanjaHarian, semuaTagihan
                 };
             };
 
             const downloadPDF = async () => {
                 const printArea = document.getElementById('report-print-area');
                 if(!printArea) return;
-                showStatus('Menyiapkan PDF...', 'loading');
+                showStatus('Menyiapkan PDF (Bisa memakan waktu)...', 'loading');
                 
                 // Styling sementara untuk print
                 const originalStyle = printArea.style.cssText;
-                printArea.style.cssText = "background-color: white; padding: 20px; color: black; border: none; box-shadow: none;";
+                printArea.style.cssText = "background-color: white; padding: 30px; color: black; border: none; box-shadow: none; max-width: 800px; margin: 0 auto;";
                 
                 try {
                     const canvas = await html2canvas(printArea, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
                     const imgData = canvas.toDataURL('image/png');
                     const pdf = new window.jspdf.jsPDF('p', 'mm', 'a4');
+                    
                     const pdfWidth = pdf.internal.pageSize.getWidth();
-                    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                    const pdfHeight = pdf.internal.pageSize.getHeight();
+                    const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+                    
+                    let heightLeft = imgHeight;
+                    let position = 0;
+
+                    // Halaman Pertama
+                    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+                    heightLeft -= pdfHeight;
+
+                    // Loop untuk multipage (Jika laporan panjang dan terpotong ke halaman berikutnya)
+                    while (heightLeft > 0) {
+                        position = position - pdfHeight;
+                        pdf.addPage();
+                        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+                        heightLeft -= pdfHeight;
+                    }
+                    
                     pdf.save(`Laporan_Fin_${reportMonth}.pdf`);
                     showStatus('PDF Berhasil Diunduh!', 'success');
                 } catch (error) {
@@ -1608,7 +1645,24 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                     const res = await fetch(url, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }});
                     const data = await res.json();
                     if(data.error) throw new Error(data.error.message);
-                    setReportAIInsight(data.candidates[0].content.parts[0].text);
+                    
+                    const insightText = data.candidates[0].content.parts[0].text;
+                    setReportAIInsight(insightText);
+                    
+                    // Update state laporan saat ini agar terikut jika disave
+                    setReportDataState(prev => ({ ...prev, aiInsight: insightText }));
+                    
+                    // Auto-update arsip jika laporan bulan ini kebetulan sudah pernah disave di Arsip
+                    setReportArchives(prev => {
+                        const existingIdx = prev.findIndex(r => r.month === d.month);
+                        if(existingIdx >= 0) {
+                            let newArr = [...prev];
+                            newArr[existingIdx] = { ...newArr[existingIdx], aiInsight: insightText };
+                            return newArr;
+                        }
+                        return prev;
+                    });
+                    showStatus('Insight AI Berhasil Digenerate & Terlampir!', 'success');
                 } catch(e) {
                     setReportAIInsight(`*Gagal memuat insight AI. Pastikan API Key benar dan ada koneksi internet. Error: ${e.message}*`);
                 } finally {
@@ -1622,162 +1676,211 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                 const monthName = new Date(d.month + '-01').toLocaleDateString('id-ID', {month: 'long', year: 'numeric'});
 
                 return (
-                    <div className="fixed inset-0 z-[1000] bg-slate-100 dark:bg-slate-900 overflow-y-auto w-full h-full flex flex-col transition-colors animate-fadeIn">
-                        <div className="bg-slate-900 dark:bg-black p-4 flex justify-between items-center shadow-md shrink-0 sticky top-0 z-50">
+                    <div className="fixed inset-0 z-[1000] bg-slate-100 dark:bg-slate-900 flex flex-col transition-colors animate-fadeIn" style={{ height: '100dvh' }}>
+                        <div className="bg-slate-900 dark:bg-black px-4 py-3 flex justify-between items-center shadow-md shrink-0 z-50">
                             <h3 className="font-black text-white uppercase tracking-widest text-[11px] flex items-center gap-2">
-                                <Icons.FileText /> PREVIEW LAPORAN
+                                <div className="w-4 h-4"><Icons.FileText /></div> PREVIEW LAPORAN
                             </h3>
                             <div className="flex gap-2">
-                                <button onClick={downloadPDF} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-black uppercase shadow-sm flex items-center gap-1 transition-colors"><div className="w-3 h-3"><Icons.Copy/></div> PDF / Print</button>
-                                <button onClick={() => setShowReportFullscreen(false)} className="w-8 h-8 bg-red-500 hover:bg-red-400 text-white rounded-full flex justify-center items-center transition-colors"><Icons.X /></button>
+                                <button onClick={downloadPDF} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-black uppercase shadow-sm flex items-center gap-1 transition-colors"><div className="w-3 h-3"><Icons.Copy/></div> CETAK PDF</button>
+                                <button onClick={() => setShowReportFullscreen(false)} className="w-8 h-8 bg-red-500 hover:bg-red-400 text-white rounded-full flex justify-center items-center transition-colors"><div className="w-4 h-4"><Icons.X /></div></button>
                             </div>
                         </div>
 
-                        <div className="flex-1 p-2 sm:p-4 w-full max-w-2xl mx-auto">
-                            {/* Area Print PDF */}
-                            <div id="report-print-area" className="bg-white p-6 sm:p-10 shadow-xl border border-slate-200">
-                                {/* KOP SURAT */}
-                                <div className="text-center mb-6 pb-6 border-b-4 border-slate-800">
-                                    <div className="flex justify-center items-center gap-3 mb-2">
-                                        <div className="w-12 h-12 bg-indigo-600 text-white rounded-xl flex items-center justify-center font-black text-2xl shadow-sm rotate-3">Q</div>
-                                        <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Warung Mbah Marto</h1>
+                        <div className="flex-1 overflow-y-auto no-scrollbar p-3 sm:p-5 w-full flex flex-col items-center">
+                            <div className="w-full max-w-2xl mx-auto space-y-6">
+                                {/* Area Print PDF */}
+                                <div id="report-print-area" className="bg-white p-6 sm:p-10 shadow-xl border border-slate-200 rounded-xl sm:rounded-none">
+                                    {/* KOP SURAT */}
+                                    <div className="text-center mb-6 pb-6 border-b-4 border-slate-800">
+                                        <h1 className="text-xl sm:text-3xl font-black text-slate-900 uppercase tracking-tighter whitespace-nowrap">Warung Makan Mbah Marto</h1>
+                                        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-2">Laporan Kinerja Keuangan & Operasional</p>
+                                        <div className="flex justify-between items-end mt-4 text-[10px] font-bold text-slate-400">
+                                            <span>Periode: <span className="text-slate-800">{monthName}</span></span>
+                                            <span>Dicetak: <span className="text-slate-800">{new Date().toLocaleString('id-ID')}</span></span>
+                                        </div>
                                     </div>
-                                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-2">Laporan Kinerja Keuangan & Operasional</p>
-                                    <div className="flex justify-between items-end mt-4 text-[10px] font-bold text-slate-400">
-                                        <span>Periode: <span className="text-slate-800">{monthName}</span></span>
-                                        <span>Dicetak: <span className="text-slate-800">{new Date().toLocaleString('id-ID')}</span></span>
-                                    </div>
-                                </div>
 
-                                <div className="space-y-6 text-slate-800">
-                                    {/* 1. PEMASUKAN */}
-                                    <div>
-                                        <h3 className="font-black text-[13px] uppercase tracking-widest bg-slate-100 p-2 border-l-4 border-green-500 mb-3">1. Rincian Pemasukan</h3>
-                                        <div className="pl-2 space-y-1">
-                                            <p className="text-[11px] font-bold text-slate-500 uppercase mb-1">A. Omzet Penjualan Produk</p>
-                                            {Object.entries(d.rincianPenjualan).map(([src, amt]) => (
-                                                <div key={src} className="flex justify-between text-[11px] border-b border-slate-100 py-1 pl-4">
-                                                    <span>- {src}</span><span className="font-bold">Rp {formatNumber(amt)}</span>
+                                    <div className="space-y-6 text-slate-800">
+                                        {/* 1. PEMASUKAN */}
+                                        <div>
+                                            <h3 className="font-black text-[13px] uppercase tracking-widest bg-slate-100 p-2 border-l-4 border-green-500 mb-3">1. Rincian Pemasukan</h3>
+                                            <div className="pl-2 space-y-1">
+                                                <p className="text-[11px] font-bold text-slate-500 uppercase mb-1">A. Omzet Penjualan Produk</p>
+                                                {Object.entries(d.rincianPenjualan).map(([src, amt]) => (
+                                                    <div key={src} className="flex justify-between text-[11px] border-b border-slate-100 py-1 pl-4">
+                                                        <span>- {src}</span><span className="font-bold">Rp {formatNumber(amt)}</span>
+                                                    </div>
+                                                ))}
+                                                <div className="flex justify-between text-[11px] border-b border-slate-100 py-1 pl-4 bg-slate-50 font-bold">
+                                                    <span>Subtotal Omzet Penjualan</span><span className="text-green-600">Rp {formatNumber(d.pendapatanPenjualan)}</span>
                                                 </div>
-                                            ))}
-                                            <div className="flex justify-between text-[11px] border-b border-slate-100 py-1 pl-4 bg-slate-50 font-bold">
-                                                <span>Subtotal Omzet Penjualan</span><span className="text-green-600">Rp {formatNumber(d.pendapatanPenjualan)}</span>
-                                            </div>
-                                            
-                                            <p className="text-[11px] font-bold text-slate-500 uppercase mt-3 mb-1">B. Pemasukan Lainnya (Hutang/Modal)</p>
-                                            <div className="flex justify-between text-[11px] border-b border-slate-100 py-1 pl-4">
-                                                <span>- Pemasukan Lainnya</span><span className="font-bold">Rp {formatNumber(d.pendapatanLainnya)}</span>
-                                            </div>
-                                            
-                                            <div className="flex justify-between text-[12px] font-black mt-3 pt-2 border-t-2 border-slate-800">
-                                                <span>TOTAL PEMASUKAN KOTOR (A + B)</span><span>Rp {formatNumber(d.pendapatanPenjualan + d.pendapatanLainnya)}</span>
+                                                
+                                                <p className="text-[11px] font-bold text-slate-500 uppercase mt-3 mb-1">B. Pemasukan Lainnya (Hutang/Modal)</p>
+                                                <div className="flex justify-between text-[11px] border-b border-slate-100 py-1 pl-4">
+                                                    <span>- Pemasukan Lainnya</span><span className="font-bold">Rp {formatNumber(d.pendapatanLainnya)}</span>
+                                                </div>
+                                                
+                                                <div className="flex justify-between text-[12px] font-black mt-3 pt-2 border-t-2 border-slate-800">
+                                                    <span>TOTAL PEMASUKAN KOTOR (A + B)</span><span>Rp {formatNumber(d.pendapatanPenjualan + d.pendapatanLainnya)}</span>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    {/* 2. PENGELUARAN */}
-                                    <div>
-                                        <h3 className="font-black text-[13px] uppercase tracking-widest bg-slate-100 p-2 border-l-4 border-red-500 mb-3">2. Rincian Pengeluaran & Modal</h3>
-                                        <div className="pl-2 space-y-1">
-                                            <div className="flex justify-between text-[11px] border-b border-slate-100 py-1">
-                                                <span className="font-bold">A. HPP (Total Belanja Bahan Baku)</span><span className="font-bold text-red-600">Rp {formatNumber(d.hppTotal)}</span>
-                                            </div>
-                                            <div className="flex justify-between text-[11px] border-b border-slate-100 py-1 mt-2">
-                                                <span className="font-bold">B. Biaya Operasional & Gaji</span><span className="font-bold text-red-600">Rp {formatNumber(d.oprTotal)}</span>
-                                            </div>
-                                            <div className="mt-1 pl-4 space-y-1 opacity-80">
-                                                {d.topOpr.slice(0,3).map((op,i) => (
-                                                    <div key={i} className="flex justify-between text-[10px] border-b border-slate-50 py-0.5">
-                                                        <span>- {op.name}</span><span>Rp {formatNumber(op.total)}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            <div className="flex justify-between text-[11px] border-b border-slate-100 py-1 mt-2">
-                                                <span className="font-bold">C. Potongan Sistem (Deductions/Pinjaman)</span><span className="font-bold text-red-600">Rp {formatNumber(d.totalDeductions)}</span>
-                                            </div>
-                                            <div className="mt-1 pl-4 space-y-1 opacity-80">
-                                                {Object.entries(d.deductionDetails).map(([name, amt],i) => (
-                                                    <div key={i} className="flex justify-between text-[10px] border-b border-slate-50 py-0.5">
-                                                        <span>- {name}</span><span>Rp {formatNumber(amt)}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            
-                                            <div className="flex justify-between text-[12px] font-black mt-3 pt-2 border-t-2 border-slate-800">
-                                                <span>TOTAL PENGELUARAN (A + B + C)</span><span className="text-red-600">Rp {formatNumber(d.hppTotal + d.oprTotal + d.totalDeductions)}</span>
+                                        {/* 2. PENGELUARAN */}
+                                        <div>
+                                            <h3 className="font-black text-[13px] uppercase tracking-widest bg-slate-100 p-2 border-l-4 border-red-500 mb-3">2. Rincian Pengeluaran & Modal</h3>
+                                            <div className="pl-2 space-y-1">
+                                                <div className="flex justify-between text-[11px] border-b border-slate-100 py-1">
+                                                    <span className="font-bold">A. HPP (Total Belanja Bahan Baku)</span><span className="font-bold text-red-600">Rp {formatNumber(d.hppTotal)}</span>
+                                                </div>
+                                                <div className="flex justify-between text-[11px] border-b border-slate-100 py-1 mt-2">
+                                                    <span className="font-bold">B. Biaya Operasional & Gaji</span><span className="font-bold text-red-600">Rp {formatNumber(d.oprTotal)}</span>
+                                                </div>
+                                                <div className="mt-1 pl-4 space-y-1 opacity-80">
+                                                    {d.topOpr.slice(0,3).map((op,i) => (
+                                                        <div key={i} className="flex justify-between text-[10px] border-b border-slate-50 py-0.5">
+                                                            <span>- {op.name}</span><span>Rp {formatNumber(op.total)}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <div className="flex justify-between text-[11px] border-b border-slate-100 py-1 mt-2">
+                                                    <span className="font-bold">C. Potongan Sistem (Deductions/Pinjaman)</span><span className="font-bold text-red-600">Rp {formatNumber(d.totalDeductions)}</span>
+                                                </div>
+                                                <div className="mt-1 pl-4 space-y-1 opacity-80">
+                                                    {Object.entries(d.deductionDetails).map(([name, amt],i) => (
+                                                        <div key={i} className="flex justify-between text-[10px] border-b border-slate-50 py-0.5">
+                                                            <span>- {name}</span><span>Rp {formatNumber(amt)}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                
+                                                <div className="flex justify-between text-[12px] font-black mt-3 pt-2 border-t-2 border-slate-800">
+                                                    <span>TOTAL PENGELUARAN (A + B + C)</span><span className="text-red-600">Rp {formatNumber(d.hppTotal + d.oprTotal + d.totalDeductions)}</span>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    {/* 3. PROFITABILITAS & ANALISIS */}
-                                    <div>
-                                        <h3 className="font-black text-[13px] uppercase tracking-widest bg-slate-100 p-2 border-l-4 border-indigo-500 mb-3">3. Profitabilitas & Kinerja</h3>
+                                        {/* 3. PROFITABILITAS & ANALISIS */}
+                                        <div>
+                                            <h3 className="font-black text-[13px] uppercase tracking-widest bg-slate-100 p-2 border-l-4 border-indigo-500 mb-3">3. Profitabilitas & Kinerja</h3>
+                                            
+                                            <div className="grid grid-cols-2 gap-4 mb-4">
+                                                <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg text-center">
+                                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Laba Kotor (Penjualan - HPP)</p>
+                                                    <p className={`text-lg font-black mt-1 ${d.labaKotor >= 0 ? 'text-green-600' : 'text-red-600'}`}>Rp {formatNumber(d.labaKotor)}</p>
+                                                </div>
+                                                <div className="bg-indigo-50 border border-indigo-200 p-3 rounded-lg text-center">
+                                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Laba Bersih Akhir</p>
+                                                    <p className={`text-lg font-black mt-1 ${d.labaBersih >= 0 ? 'text-indigo-600' : 'text-red-600'}`}>Rp {formatNumber(d.labaBersih)}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-[11px] space-y-2">
+                                                <div className="flex justify-between border-b border-slate-200 pb-1">
+                                                    <span className="font-bold">Break Even Point (Titik Impas/Modal)</span><span className="font-black text-slate-700">Rp {formatNumber(d.bep)}</span>
+                                                </div>
+                                                <div className="flex justify-between border-b border-slate-200 pb-1">
+                                                    <span className="font-bold">Pencapaian Target Omzet Bulanan</span><span className={`font-black ${d.pctTarget >= 100 ? 'text-green-600' : 'text-orange-500'}`}>{d.pctTarget.toFixed(1)}%</span>
+                                                </div>
+                                                <div className="flex justify-between border-b border-slate-200 pb-1">
+                                                    <span className="font-bold">Rasio COGS (HPP vs Penjualan)</span><span className={`font-black ${d.cogsRatio <= 50 ? 'text-green-600' : 'text-red-600'}`}>{d.cogsRatio.toFixed(1)}% {d.cogsRatio > 50 ? '(MAHAL)' : '(SEHAT)'}</span>
+                                                </div>
+                                                <div className="flex justify-between pb-1">
+                                                    <span className="font-bold text-slate-500">Pengambilan Pribadi (Owner)</span><span className="font-black text-indigo-500">Rp {formatNumber(d.pribadiTotal)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                         
-                                        <div className="grid grid-cols-2 gap-4 mb-4">
-                                            <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg text-center">
-                                                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Laba Kotor (Penjualan - HPP)</p>
-                                                <p className={`text-lg font-black mt-1 ${d.labaKotor >= 0 ? 'text-green-600' : 'text-red-600'}`}>Rp {formatNumber(d.labaKotor)}</p>
-                                            </div>
-                                            <div className="bg-indigo-50 border border-indigo-200 p-3 rounded-lg text-center">
-                                                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Laba Bersih Akhir</p>
-                                                <p className={`text-lg font-black mt-1 ${d.labaBersih >= 0 ? 'text-indigo-600' : 'text-red-600'}`}>Rp {formatNumber(d.labaBersih)}</p>
+                                        {/* 4. TOP 5 PENGELUARAN BAHAN BAKU */}
+                                        <div>
+                                            <h3 className="font-black text-[13px] uppercase tracking-widest bg-slate-100 p-2 border-l-4 border-orange-500 mb-3">4. Top Pengeluaran Bahan Baku</h3>
+                                            <div className="pl-2">
+                                                {d.topBelanja.map((b,i) => (
+                                                    <div key={i} className="flex justify-between text-[11px] border-b border-slate-100 py-1">
+                                                        <span>{i+1}. {b.name}</span><span className="font-bold text-orange-600">Rp {formatNumber(b.total)}</span>
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
 
-                                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-[11px] space-y-2">
-                                            <div className="flex justify-between border-b border-slate-200 pb-1">
-                                                <span className="font-bold">Break Even Point (Titik Impas/Modal)</span><span className="font-black text-slate-700">Rp {formatNumber(d.bep)}</span>
-                                            </div>
-                                            <div className="flex justify-between border-b border-slate-200 pb-1">
-                                                <span className="font-bold">Pencapaian Target Omzet Bulanan</span><span className={`font-black ${d.pctTarget >= 100 ? 'text-green-600' : 'text-orange-500'}`}>{d.pctTarget.toFixed(1)}%</span>
-                                            </div>
-                                            <div className="flex justify-between border-b border-slate-200 pb-1">
-                                                <span className="font-bold">Rasio COGS (HPP vs Penjualan)</span><span className={`font-black ${d.cogsRatio <= 50 ? 'text-green-600' : 'text-red-600'}`}>{d.cogsRatio.toFixed(1)}% {d.cogsRatio > 50 ? '(MAHAL)' : '(SEHAT)'}</span>
-                                            </div>
-                                            <div className="flex justify-between pb-1">
-                                                <span className="font-bold text-slate-500">Pengambilan Pribadi (Owner)</span><span className="font-black text-indigo-500">Rp {formatNumber(d.pribadiTotal)}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* 4. TOP 5 PENGELUARAN BAHAN BAKU */}
-                                    <div>
-                                        <h3 className="font-black text-[13px] uppercase tracking-widest bg-slate-100 p-2 border-l-4 border-orange-500 mb-3">4. Top Pengeluaran Bahan Baku</h3>
-                                        <div className="pl-2">
-                                            {d.topBelanja.map((b,i) => (
-                                                <div key={i} className="flex justify-between text-[11px] border-b border-slate-100 py-1">
-                                                    <span>{i+1}. {b.name}</span><span className="font-bold text-orange-600">Rp {formatNumber(b.total)}</span>
+                                        {/* 5. STATISTIK & RATA-RATA HARIAN */}
+                                        <div>
+                                            <h3 className="font-black text-[13px] uppercase tracking-widest bg-slate-100 p-2 border-l-4 border-teal-500 mb-3 mt-4">5. Statistik Transaksi & Harian</h3>
+                                            <div className="grid grid-cols-2 gap-4 pl-2">
+                                                <div className="bg-slate-50 p-2 rounded border border-slate-200">
+                                                    <p className="text-[9px] text-slate-500 uppercase font-bold">Total Trx Penjualan</p>
+                                                    <p className="text-[12px] font-black">{d.totalTransaksiPenjualan} Transaksi</p>
                                                 </div>
-                                            ))}
+                                                <div className="bg-slate-50 p-2 rounded border border-slate-200">
+                                                    <p className="text-[9px] text-slate-500 uppercase font-bold">Total Trx Belanja</p>
+                                                    <p className="text-[12px] font-black">{d.totalTransaksiBelanja} Transaksi</p>
+                                                </div>
+                                                <div className="bg-slate-50 p-2 rounded border border-slate-200">
+                                                    <p className="text-[9px] text-slate-500 uppercase font-bold">Rata-rata Omzet/Hari</p>
+                                                    <p className="text-[12px] font-black text-green-600">Rp {formatNumber(Math.round(d.rataRataPenjualanHarian))}</p>
+                                                </div>
+                                                <div className="bg-slate-50 p-2 rounded border border-slate-200">
+                                                    <p className="text-[9px] text-slate-500 uppercase font-bold">Rata-rata Belanja/Hari</p>
+                                                    <p className="text-[12px] font-black text-red-600">Rp {formatNumber(Math.round(d.rataRataBelanjaHarian))}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* 6. DAFTAR TAGIHAN OPERASIONAL */}
+                                        <div>
+                                            <h3 className="font-black text-[13px] uppercase tracking-widest bg-slate-100 p-2 border-l-4 border-purple-500 mb-3 mt-4">6. Daftar Tagihan & Operasional</h3>
+                                            <div className="pl-2">
+                                                {d.semuaTagihan.length === 0 ? (
+                                                    <p className="text-[11px] text-slate-500 italic">Tidak ada data tagihan operasional bulan ini.</p>
+                                                ) : (
+                                                    d.semuaTagihan.map((tagihan, i) => (
+                                                        <div key={i} className="flex justify-between items-center text-[10px] border-b border-slate-100 py-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-bold w-4">{i+1}.</span>
+                                                                <span className="font-bold truncate max-w-[120px] sm:max-w-[200px]">{tagihan.title}</span>
+                                                                <span className="text-[8px] text-slate-400">({tagihan.date})</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${tagihan.status === 'Lunas' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                                    {tagihan.status}
+                                                                </span>
+                                                                <span className="font-black text-slate-800 w-16 text-right">Rp {formatNumber(tagihan.amount)}</span>
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* 7. LAMPIRAN INSIGHT AI (Dicetak ke PDF) */}
+                                        {reportAIInsight && (
+                                            <div className="mt-8 pt-6 border-t-4 border-slate-800">
+                                                <h3 className="font-black text-[13px] uppercase tracking-widest bg-slate-100 p-2 border-l-4 border-indigo-500 mb-3 flex items-center gap-2">
+                                                    <div className="w-4 h-4"><Icons.Bot/></div> Evaluasi & Rekomendasi AI
+                                                </h3>
+                                                <div className="text-[11px] leading-relaxed markdown-body text-slate-800" dangerouslySetInnerHTML={{__html: window.marked ? window.marked.parse(reportAIInsight) : reportAIInsight}} />
+                                            </div>
+                                        )}
+                                        
+                                        {/* FOOTER */}
+                                        <div className="mt-10 pt-4 border-t border-slate-200 text-center text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+                                            - Q-Nota Management System (Digenerate secara Otomatis) -
                                         </div>
                                     </div>
-                                    
-                                    {/* FOOTER */}
-                                    <div className="mt-10 pt-4 border-t border-slate-200 text-center text-[9px] text-slate-400 font-bold uppercase tracking-widest">
-                                        - Q-Nota Management System (Digenerate secara Otomatis) -
+                                </div>
+                                
+                                {/* ACTION BUTTONS DILUAR PRINT AREA */}
+                                <div className="space-y-4 pb-10 w-full px-2">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button onClick={handleSimpanArsipLaporan} className="w-full py-4 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border-2 border-indigo-600 dark:border-indigo-400 font-black rounded-2xl shadow-lg uppercase text-[10px] tracking-widest hover:bg-indigo-50 dark:hover:bg-slate-700 transition-colors">
+                                            <i className="fa-solid fa-archive"></i> SIMPAN KE ARSIP
+                                        </button>
+                                        <button onClick={requestAIReportInsight} disabled={isAnalyzingReport} className="w-full py-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-black rounded-2xl shadow-lg uppercase text-[10px] tracking-widest hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+                                            <div className="w-4 h-4"><Icons.Bot/></div> {isAnalyzingReport ? 'AI MENGANALISA...' : (reportAIInsight ? 'UPDATE INSIGHT AI' : 'MINTA INSIGHT AI')}
+                                        </button>
                                     </div>
                                 </div>
-                            </div>
-                            
-                            {/* ACTION BUTTONS & AI INSIGHT DILUAR PRINT AREA */}
-                            <div className="mt-6 space-y-4 pb-10">
-                                <div className="grid grid-cols-2 gap-3">
-                                    <button onClick={handleSimpanArsipLaporan} className="w-full py-4 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border-2 border-indigo-600 dark:border-indigo-400 font-black rounded-2xl shadow-lg uppercase text-[10px] tracking-widest hover:bg-indigo-50 dark:hover:bg-slate-700 transition-colors">
-                                        <i className="fa-solid fa-archive"></i> SIMPAN KE ARSIP
-                                    </button>
-                                    <button onClick={requestAIReportInsight} disabled={isAnalyzingReport} className="w-full py-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-black rounded-2xl shadow-lg uppercase text-[10px] tracking-widest hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
-                                        <div className="w-4 h-4"><Icons.Bot/></div> {isAnalyzingReport ? 'AI MENGANALISA...' : 'MINTA INSIGHT AI'}
-                                    </button>
-                                </div>
-
-                                {reportAIInsight && (
-                                    <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-2xl p-5 shadow-lg mt-4 animate-fadeIn">
-                                        <h3 className="font-black text-purple-800 dark:text-purple-300 uppercase tracking-widest text-[11px] flex items-center gap-2 mb-4 border-b border-purple-200 dark:border-purple-800 pb-2">
-                                            <div className="w-4 h-4"><Icons.Bot/></div> Evaluasi & Rekomendasi AI
-                                        </h3>
-                                        <div className="text-[12px] leading-relaxed markdown-body dark:text-slate-200" dangerouslySetInnerHTML={{__html: window.marked ? window.marked.parse(reportAIInsight) : reportAIInsight}} />
-                                    </div>
-                                )}
                             </div>
                         </div>
                     </div>
@@ -2431,22 +2534,24 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                         </div>
                     )}
 
-                    <header className="p-6 pt-10 flex justify-between items-center bg-transparent z-10 shrink-0">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-indigo-600 text-white rounded-[0.8rem] flex items-center justify-center font-black text-xl shadow-md rotate-3">Q</div>
-                            <div>
-                                <h1 className="text-2xl font-black tracking-tighter text-slate-900 dark:text-white">Q-Nota<span className="text-indigo-600">.</span></h1>
-                                <p className="text-[9px] uppercase font-bold text-slate-400 mt-0.5 tracking-[0.2em]">{isLocalMode ? 'Mode Offline' : 'Cloud Sync'}</p>
+                    {!(showReportFullscreen || showMarketMode) && (
+                        <header className="p-6 pt-10 flex justify-between items-center bg-transparent z-10 shrink-0">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-indigo-600 text-white rounded-[0.8rem] flex items-center justify-center font-black text-xl shadow-md rotate-3">Q</div>
+                                <div>
+                                    <h1 className="text-2xl font-black tracking-tighter text-slate-900 dark:text-white">Q-Nota<span className="text-indigo-600">.</span></h1>
+                                    <p className="text-[9px] uppercase font-bold text-slate-400 mt-0.5 tracking-[0.2em]">{isLocalMode ? 'Mode Offline' : 'Cloud Sync'}</p>
+                                </div>
                             </div>
-                        </div>
-                        <div className="flex gap-2">
-                            <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-10 h-10 bg-white dark:bg-slate-800 rounded-full shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                                <div className="w-5 h-5">{isDarkMode ? <Icons.Sun /> : <Icons.Moon />}</div>
-                            </button>
-                            <button onClick={() => setShowSettings(true)} className="w-10 h-10 bg-white dark:bg-slate-800 rounded-full shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"><div className="w-5 h-5"><Icons.Gear /></div></button>
-                            <button onClick={handleExit} className="w-10 h-10 bg-red-50 dark:bg-red-900/20 rounded-full shadow-sm border border-red-100 dark:border-red-900 flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition-colors"><div className="w-5 h-5"><Icons.Power /></div></button>
-                        </div>
-                    </header>
+                            <div className="flex gap-2">
+                                <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-10 h-10 bg-white dark:bg-slate-800 rounded-full shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                                    <div className="w-5 h-5">{isDarkMode ? <Icons.Sun /> : <Icons.Moon />}</div>
+                                </button>
+                                <button onClick={() => setShowSettings(true)} className="w-10 h-10 bg-white dark:bg-slate-800 rounded-full shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"><div className="w-5 h-5"><Icons.Gear /></div></button>
+                                <button onClick={handleExit} className="w-10 h-10 bg-red-50 dark:bg-red-900/20 rounded-full shadow-sm border border-red-100 dark:border-red-900 flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition-colors"><div className="w-5 h-5"><Icons.Power /></div></button>
+                            </div>
+                        </header>
+                    )}
 
                     <main className="flex-1 px-5 pb-5 overflow-hidden flex flex-col relative z-0">
                         {activeTab === 'dashboard' && renderDashboard()}
@@ -2935,7 +3040,17 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                                     
                                     <div className="flex gap-2 relative z-10">
                                         <input type="month" value={reportMonth} onChange={(e) => setReportMonth(e.target.value)} className="flex-1 p-3 bg-white/10 border border-white/20 rounded-xl font-bold outline-none text-white text-sm" />
-                                        <button onClick={() => { setReportDataState(getLaporanData(reportMonth)); setReportAIInsight(''); setShowReportFullscreen(true); }} className="px-4 bg-white text-indigo-600 font-black rounded-xl text-[10px] uppercase tracking-widest shadow-lg active:scale-95 transition-transform">
+                                        <button onClick={() => { 
+                                            const existingArchive = reportArchives.find(r => r.month === reportMonth);
+                                            if (existingArchive) {
+                                                setReportDataState(existingArchive);
+                                                setReportAIInsight(existingArchive.aiInsight || '');
+                                            } else {
+                                                setReportDataState(getLaporanData(reportMonth)); 
+                                                setReportAIInsight(''); 
+                                            }
+                                            setShowReportFullscreen(true); 
+                                        }} className="px-4 bg-white text-indigo-600 font-black rounded-xl text-[10px] uppercase tracking-widest shadow-lg active:scale-95 transition-transform">
                                             BUKA
                                         </button>
                                     </div>
@@ -2963,7 +3078,7 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                                                         </p>
                                                     </div>
                                                     <div className="flex gap-2">
-                                                        <button onClick={() => { setReportDataState(ars); setReportAIInsight(''); setShowReportFullscreen(true); }} className="px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-black rounded-lg text-[9px] uppercase tracking-widest">Lihat</button>
+                                                        <button onClick={() => { setReportDataState(ars); setReportAIInsight(ars.aiInsight || ''); setShowReportFullscreen(true); }} className="px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-black rounded-lg text-[9px] uppercase tracking-widest">Lihat</button>
                                                         <button onClick={() => hapusArsipLaporan(ars.month)} className="w-8 h-8 bg-red-50 dark:bg-red-900/30 text-red-500 rounded-lg flex items-center justify-center hover:bg-red-100"><div className="w-3.5 h-3.5"><Icons.Trash/></div></button>
                                                     </div>
                                                 </div>
