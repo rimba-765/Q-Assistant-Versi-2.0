@@ -276,6 +276,10 @@
             const [belanjaMonth, setBelanjaMonth] = useState(getLocalDateStr().substring(0, 7));
             const [dashboardMonth, setDashboardMonth] = useState(getLocalDateStr().substring(0, 7));
 
+            // STATE FITUR RESET BULAN TERTENTU
+            const [bulanYangDireset, setBulanYangDireset] = useState(new Date().getMonth().toString());
+            const [tahunYangDireset, setTahunYangDireset] = useState(new Date().getFullYear().toString());
+
             const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null });
             const [showSettings, setShowSettings] = useState(false);
             const [isSaving, setIsSaving] = useState(false);
@@ -345,6 +349,39 @@
                         
                         setShowSettings(false);
                         showStatus('Semua Data Berhasil Direset!', 'success');
+                    }
+                });
+            };
+
+            const handleResetBulanPilihan = () => {
+                const namaBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+                const bulanText = namaBulan[parseInt(bulanYangDireset)];
+
+                setConfirmModal({
+                    show: true,
+                    title: `Reset Data ${bulanText} ${tahunYangDireset}?`,
+                    message: `Yakin ingin menghapus HANYA data (Pemasukan, Pengeluaran, & Agenda) pada bulan ${bulanText} ${tahunYangDireset}? Data bulan lain akan tetap aman.`,
+                    onConfirm: async () => {
+                        setConfirmModal({ ...confirmModal, show: false });
+                        showStatus('Membersihkan data...', 'loading');
+
+                        const filterData = (dataArray) => {
+                            return dataArray.filter(item => {
+                                if (!item.date) return true; // Lewati jika tidak ada tanggal
+                                const itemDate = new Date(item.date);
+                                const isBulanSama = itemDate.getMonth() === parseInt(bulanYangDireset);
+                                const isTahunSama = itemDate.getFullYear() === parseInt(tahunYangDireset);
+                                // Simpan data JIKA BUKAN dari bulan/tahun yang dipilih
+                                return !(isBulanSama && isTahunSama); 
+                            });
+                        };
+
+                        setHistory(filterData(history));
+                        setIncomes(filterData(incomes));
+                        setAgendas(filterData(agendas));
+
+                        setShowSettings(false);
+                        showStatus(`Data ${bulanText} ${tahunYangDireset} Berhasil Direset!`, 'success');
                     }
                 });
             };
@@ -2513,13 +2550,33 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                                 
                                 <div className="mt-8 pt-6 border-t border-red-100 dark:border-red-900/50">
                                     <h4 className="text-[10px] font-black uppercase tracking-widest text-red-500 mb-3 text-center">Zona Berbahaya</h4>
-                                    <button onClick={handleResetAllData} className="w-full py-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-black rounded-2xl border border-red-100 dark:border-red-900 flex items-center justify-center gap-2 active:bg-red-100 dark:active:bg-red-900/40 transition-colors">
-                                        <div className="w-4 h-4"><Icons.Trash /></div> RESET DATA BULAN INI
+                                    
+                                    {/* KOTAK RESET BULAN PILIHAN */}
+                                    <div className="bg-red-50 dark:bg-red-900/10 p-4 rounded-2xl border border-red-100 dark:border-red-900/50 mb-4">
+                                        <p className="text-[10px] text-red-600 dark:text-red-400 font-bold mb-2 text-center uppercase tracking-widest">Hapus Data Bulan Tertentu</p>
+                                        <div className="flex gap-2 mb-3">
+                                            <select value={bulanYangDireset} onChange={(e) => setBulanYangDireset(e.target.value)} className="flex-1 p-2.5 rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold border border-red-200 dark:border-red-800 outline-none">
+                                                <option value="0">Januari</option><option value="1">Februari</option><option value="2">Maret</option><option value="3">April</option>
+                                                <option value="4">Mei</option><option value="5">Juni</option><option value="6">Juli</option><option value="7">Agustus</option>
+                                                <option value="8">September</option><option value="9">Oktober</option><option value="10">November</option><option value="11">Desember</option>
+                                            </select>
+                                            <select value={tahunYangDireset} onChange={(e) => setTahunYangDireset(e.target.value)} className="w-24 p-2.5 rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold border border-red-200 dark:border-red-800 outline-none text-center">
+                                                <option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option>
+                                            </select>
+                                        </div>
+                                        <button onClick={handleResetBulanPilihan} className="w-full py-3 bg-red-500 text-white font-black rounded-xl border flex items-center justify-center gap-2 active:bg-red-600 transition-colors text-xs">
+                                            <div className="w-4 h-4"><Icons.Trash /></div> BERSIHKAN BULAN INI
+                                        </button>
+                                    </div>
+
+                                    {/* TOMBOL RESET TOTAL (Diubah sedikit jadi transparan agar tidak salah pencet) */}
+                                    <button onClick={handleResetAllData} className="w-full py-3 bg-transparent text-red-400 font-black rounded-2xl border border-red-100 dark:border-red-900 flex items-center justify-center gap-2 active:bg-red-50 dark:active:bg-red-900/20 transition-colors text-[10px]">
+                                        <div className="w-3 h-3"><Icons.Warn /></div> RESET TOTAL SEMUA DATA
                                     </button>
                                 </div>
                             </div>
                         </div>
-                    )}
+                )}
 
                     {confirmModal.show && (
                         <div className="fixed inset-0 z-[750] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
