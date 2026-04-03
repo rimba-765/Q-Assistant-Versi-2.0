@@ -280,6 +280,15 @@
             const [bulanYangDireset, setBulanYangDireset] = useState(new Date().getMonth().toString());
             const [tahunYangDireset, setTahunYangDireset] = useState(new Date().getFullYear().toString());
 
+            // FITUR BARU: HPP & KEBOCORAN (TANPA RESEP)
+            const [menus, setMenus] = useState(() => JSON.parse(localStorage.getItem('fin-menus') || '[]'));
+            const [dailyStocks, setDailyStocks] = useState(() => JSON.parse(localStorage.getItem('fin-daily-stocks') || '[]'));
+            const [showHppAnalysis, setShowHppAnalysis] = useState(false);
+            const [hppTab, setHppTab] = useState('analisa');
+            const [hppDate, setHppDate] = useState(getLocalDateStr());
+            const [hppStockValue, setHppStockValue] = useState('');
+            const [menuForm, setMenuForm] = useState({ name: '', priceOffline: '', priceShopee: '', priceGrab: '', priceGojek: '' });
+
             const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null });
             const [showSettings, setShowSettings] = useState(false);
             const [isSaving, setIsSaving] = useState(false);
@@ -520,7 +529,20 @@
             useEffect(() => { localStorage.setItem('fin-deductions', JSON.stringify(deductions)); }, [deductions]); // FITUR 1 Save
             useEffect(() => { localStorage.setItem('fin-reports', JSON.stringify(reportArchives)); }, [reportArchives]);
 
+            // FITUR BARU: Simpan Data Menu & Stok HPP
+            useEffect(() => { localStorage.setItem('fin-menus', JSON.stringify(menus)); }, [menus]);
+            useEffect(() => { localStorage.setItem('fin-daily-stocks', JSON.stringify(dailyStocks)); }, [dailyStocks]);
+
             useEffect(() => { if (isChatOpen) chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chats, isTyping, isChatOpen]);
+
+            useEffect(() => {
+                if (showMarketMode || confirmModal.show || reminderModal.show || showSettings || showReportFullscreen || showHppAnalysis) {
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    document.body.style.overflow = 'auto';
+                }
+                return () => { document.body.style.overflow = 'auto'; };
+            }, [showMarketMode, confirmModal.show, reminderModal.show, showSettings, showReportFullscreen, showHppAnalysis]);
 
             useEffect(() => {
                 if (showMarketMode || confirmModal.show || reminderModal.show || showSettings || showReportFullscreen) {
@@ -1947,6 +1969,239 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                 );
             };
 
+            // FITUR BARU: RENDER MODAL HPP ANALISIS (TANPA RESEP)
+            const renderHppAnalysis = () => {
+                const handleHppDateChange = (e) => {
+                    const d = e.target.value;
+                    setHppDate(d);
+                    const existing = dailyStocks.find(s => s.date === d);
+                    setHppStockValue(existing ? existing.totalValue : '');
+                };
+
+                const handleSaveStock = () => {
+                    const val = parseFloat(hppStockValue.toString().replace(/[^0-9]/g, '')) || 0;
+                    const newStocks = [...dailyStocks.filter(s => s.date !== hppDate), { date: hppDate, totalValue: val }];
+                    setDailyStocks(newStocks);
+                    showStatus('Stok Akhir Disimpan!', 'success');
+                };
+
+                const handleSaveMenu = (e) => {
+                    e.preventDefault();
+                    if(!menuForm.name) return;
+                    const newM = {
+                        id: Date.now(),
+                        name: menuForm.name,
+                        priceOffline: parseFloat(menuForm.priceOffline.toString().replace(/[^0-9]/g, '')) || 0,
+                        priceShopee: parseFloat(menuForm.priceShopee.toString().replace(/[^0-9]/g, '')) || 0,
+                        priceGrab: parseFloat(menuForm.priceGrab.toString().replace(/[^0-9]/g, '')) || 0,
+                        priceGojek: parseFloat(menuForm.priceGojek.toString().replace(/[^0-9]/g, '')) || 0
+                    };
+                    setMenus([...menus, newM]);
+                    setMenuForm({ name: '', priceOffline: '', priceShopee: '', priceGrab: '', priceGojek: '' });
+                    showStatus('Menu Tersimpan', 'success');
+                };
+
+                // MATH LOGIC
+                const yDate = new Date(hppDate); yDate.setDate(yDate.getDate() - 1);
+                const yStr = getLocalDateStr(yDate);
+
+                const yStock = dailyStocks.find(s => s.date === yStr)?.totalValue || 0;
+                const tStockObj = dailyStocks.find(s => s.date === hppDate);
+                const tStock = tStockObj ? tStockObj.totalValue : 0;
+                
+                const tBelanja = history.filter(h => h.date === hppDate).reduce((s, h) => s + h.total, 0);
+                const realHpp = Math.max(0, yStock + tBelanja - tStock); // Mencegah minus jika salah input
+
+                let incOffline = 0, incShopee = 0, incGrab = 0, incGojek = 0;
+                incomes.filter(i => i.date === hppDate && i.category === 'Penjualan').forEach(i => {
+                    let src = i.source.toLowerCase();
+                    if (src.includes('shopee')) incShopee += i.amount;
+                    else if (src.includes('grab')) incGrab += i.amount;
+                    else if (src.includes('go')) incGojek += i.amount;
+                    else incOffline += i.amount; 
+                });
+                const totalInc = incOffline + incShopee + incGrab + incGojek;
+
+                let avgOff = 0, avgShopee = 0, avgGrab = 0, avgGo = 0;
+                if (menus.length > 0) {
+                    let cOff = 0, cSh = 0, cGr = 0, cGo = 0;
+                    menus.forEach(m => {
+                        if(m.priceOffline) { avgOff += m.priceOffline; cOff++; }
+                        if(m.priceShopee) { avgShopee += m.priceShopee; cSh++; }
+                        if(m.priceGrab) { avgGrab += m.priceGrab; cGr++; }
+                        if(m.priceGojek) { avgGo += m.priceGojek; cGo++; }
+                    });
+                    if(cOff) avgOff /= cOff;
+                    if(cSh) avgShopee /= cSh;
+                    if(cGr) avgGrab /= cGr;
+                    if(cGo) avgGo /= cGo;
+                } else {
+                    avgOff = 15000; avgShopee = 18000; avgGrab = 18000; avgGo = 18000;
+                }
+
+                let estPortions = 0;
+                if(avgOff > 0) estPortions += incOffline / avgOff;
+                if(avgShopee > 0) estPortions += incShopee / avgShopee;
+                if(avgGrab > 0) estPortions += incGrab / avgGrab;
+                if(avgGo > 0) estPortions += incGojek / avgGo;
+
+                if (estPortions === 0 && totalInc > 0) estPortions = totalInc / 15000;
+
+                const hppPerPortion = estPortions > 0 ? realHpp / estPortions : 0;
+                
+                const marginOffPct = avgOff > 0 ? ((avgOff - hppPerPortion) / avgOff) * 100 : 0;
+                const netOnline = (avgShopee > 0 ? avgShopee : (avgGrab > 0 ? avgGrab : avgGo)) * 0.8; // Rata-rata online bersih (potong 20%)
+                const marginOnPct = netOnline > 0 ? ((netOnline - hppPerPortion) / netOnline) * 100 : 0;
+
+                let insightMsg = "";
+                let isDanger = false;
+                if (menus.length === 0) {
+                    insightMsg = "⚠️ Isi dulu 'Harga Menu' di tab sebelah agar analisa estimasi porsi & margin akurat berdasarkan channel penjualan Bos.";
+                } else if (totalInc === 0) {
+                    insightMsg = "Hari ini belum ada pemasukan jualan. Masukkan omzet pendapatan dulu untuk mulai analisa.";
+                } else if (!tStockObj && tBelanja > 0) {
+                    insightMsg = "⚠️ Bos belum memasukkan 'Sisa Stok Akhir' hari ini. HPP dihitung kotor total dari belanja, sehingga Margin hari ini terlihat sangat kecil. Silakan isi Sisa Stok!";
+                    isDanger = true;
+                } else if (realHpp === 0) {
+                    insightMsg = "Data belum cukup. HPP Rp 0. Pastikan stok akhir tidak salah, atau memang warung belum belanja dan stok kemarin kosong.";
+                } else {
+                    if (marginOffPct < 35) {
+                        isDanger = true;
+                        insightMsg = `🚨 RAWAN KEBOCORAN!\nMargin offline cuma ${Math.round(marginOffPct)}%. HPP per porsi (Rp ${formatNumber(Math.round(hppPerPortion))}) terlalu mahal. \n\nCek segera: \n1) Porsi terlalu banyak (boros)? \n2) Harga bahan baku di pasar naik? \n3) Banyak bahan basi/terbuang?`;
+                    } else if (marginOnPct < 15 && (incShopee + incGrab + incGojek) > 0) {
+                        isDanger = true;
+                        insightMsg = `🚨 UNTUNG ONLINE TIPIS!\nMargin di aplikasi (setelah potong admin ~20%) cuma sisa ${Math.round(marginOnPct)}% per porsi. Jika HPP Rp ${formatNumber(Math.round(hppPerPortion))}, harga di aplikasi saat ini jelas TERLALU MURAH. Segera naikkan harga online!`;
+                    } else {
+                        insightMsg = `✅ BISNIS SEHAT!\nMargin Offline ${Math.round(marginOffPct)}% dan Margin Online Bersih ${Math.round(marginOnPct)}%. Estimasi terjual ${Math.round(estPortions)} porsi. Porsi stabil & harga sudah pas. Pertahankan Bos!`;
+                    }
+                }
+
+                return (
+                    <div className="fixed inset-0 z-[1000] bg-slate-100 dark:bg-slate-900 flex flex-col transition-colors animate-fadeIn" style={{ height: '100dvh' }}>
+                        <div className="bg-indigo-600 px-4 py-3 flex justify-between items-center shadow-md shrink-0 z-50">
+                            <h3 className="font-black text-white uppercase tracking-widest text-[11px] flex items-center gap-2">
+                                <div className="w-4 h-4"><Icons.Chart /></div> KONTROL MARGIN & HPP
+                            </h3>
+                            <button onClick={() => setShowHppAnalysis(false)} className="w-8 h-8 bg-white/20 hover:bg-white/30 text-white rounded-full flex justify-center items-center transition-colors"><div className="w-4 h-4"><Icons.X /></div></button>
+                        </div>
+
+                        <div className="flex bg-white dark:bg-slate-800 shadow-sm shrink-0 border-b border-slate-200 dark:border-slate-700">
+                            <button onClick={() => setHppTab('analisa')} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest ${hppTab === 'analisa' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20' : 'text-slate-400'}`}>Analisa Harian</button>
+                            <button onClick={() => setHppTab('stok')} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest ${hppTab === 'stok' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20' : 'text-slate-400'}`}>Sisa Stok</button>
+                            <button onClick={() => setHppTab('menu')} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest ${hppTab === 'menu' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20' : 'text-slate-400'}`}>Harga Menu</button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto no-scrollbar p-4 flex flex-col items-center pb-10">
+                            <div className="w-full max-w-md space-y-4">
+                                
+                                {hppTab === 'analisa' && (
+                                    <div className="animate-fadeIn space-y-4">
+                                        <div className="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
+                                            <div className="flex justify-between items-center mb-4">
+                                                <h4 className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">Pilih Tanggal:</h4>
+                                                <input type="date" value={hppDate} onChange={handleHppDateChange} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-bold outline-none text-indigo-600 dark:text-indigo-400" />
+                                            </div>
+
+                                            <div className={`p-4 rounded-2xl border mb-4 whitespace-pre-line ${isDanger ? 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300' : 'bg-indigo-50 border-indigo-200 text-indigo-800 dark:bg-indigo-900/20 dark:border-indigo-800 dark:text-indigo-300'}`}>
+                                                <p className="text-xs font-bold leading-relaxed">{insightMsg}</p>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-3 mb-4">
+                                                <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-2xl border border-slate-100 dark:border-slate-700">
+                                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Real HPP Hari Ini</p>
+                                                    <p className="font-black text-orange-500 text-sm mt-0.5">Rp {formatNumber(realHpp)}</p>
+                                                    <p className="text-[8px] text-slate-400 mt-1 leading-tight">Sisa Kmrn + Belanja - Sisa Hr Ini</p>
+                                                </div>
+                                                <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-2xl border border-slate-100 dark:border-slate-700">
+                                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Total Pemasukan</p>
+                                                    <p className="font-black text-green-500 text-sm mt-0.5">Rp {formatNumber(totalInc)}</p>
+                                                    <p className="text-[8px] text-slate-400 mt-1 leading-tight">Total Penjualan Produk</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-2xl border border-slate-100 dark:border-slate-700 flex justify-between items-center mb-2">
+                                                <div>
+                                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Estimasi Terjual</p>
+                                                    <p className="text-[8px] text-slate-400 mt-0.5">Pendapatan / Rata2 Harga</p>
+                                                </div>
+                                                <p className="font-black text-slate-800 dark:text-slate-200 text-lg">~{Math.round(estPortions)} <span className="text-[10px] font-bold">Porsi</span></p>
+                                            </div>
+
+                                            <div className="bg-indigo-600 p-5 rounded-2xl shadow-md text-white flex justify-between items-center">
+                                                <div>
+                                                    <p className="text-[10px] font-bold text-indigo-200 uppercase tracking-widest">HPP Per Porsi</p>
+                                                    <p className="text-[8px] text-indigo-300 mt-0.5">Real HPP / Est Porsi</p>
+                                                </div>
+                                                <p className="font-black text-xl drop-shadow-md">Rp {formatNumber(Math.round(hppPerPortion))}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {hppTab === 'stok' && (
+                                    <div className="animate-fadeIn space-y-4">
+                                        <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
+                                            <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest mb-2">Input Sisa Bahan (Opname)</h4>
+                                            <p className="text-[10px] text-slate-500 mb-6 leading-relaxed">Cukup cek kulkas atau dapur, lalu <b>taksir secara kotor berapa ribu nilai sisa bahan utama</b> (seperti beras, ayam, dll) yang masih bisa dipakai besok. Angka ini dipakai untuk menghitung HPP (modal keluar) yang sesungguhnya hari ini.</p>
+                                            
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-slate-400 uppercase">Tanggal Stok</label>
+                                                    <input type="date" value={hppDate} onChange={handleHppDateChange} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold mt-1 outline-none border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200" />
+                                                </div>
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-slate-400 uppercase">Estimasi Nilai Sisa Bahan (Rp)</label>
+                                                    <input type="text" inputMode="numeric" value={formatInputRp(hppStockValue)} onChange={e => setHppStockValue(parseInputRp(e.target.value))} placeholder="Misal: Rp 150.000" className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-black text-right text-indigo-600 dark:text-indigo-400 mt-1 outline-none border border-slate-200 dark:border-slate-700 placeholder-slate-300 dark:placeholder-slate-600 text-lg" />
+                                                </div>
+                                                <button onClick={handleSaveStock} className="w-full py-4 bg-indigo-600 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-lg mt-2 hover:bg-indigo-700 transition-colors">SIMPAN SISA STOK</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {hppTab === 'menu' && (
+                                    <div className="animate-fadeIn space-y-4">
+                                        <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
+                                            <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest mb-2">Tambah Harga Menu Utama</h4>
+                                            <p className="text-[10px] text-slate-500 mb-6 leading-relaxed">Masukkan menu andalan Anda beserta harga jualnya di tiap channel (Aplikasi / Offline). Jika tidak jualan di salah satu channel, kosongkan saja kolomnya.</p>
+                                            
+                                            <form onSubmit={handleSaveMenu} className="space-y-3">
+                                                <input type="text" value={menuForm.name} onChange={e=>setMenuForm({...menuForm, name: e.target.value})} placeholder="Nama Menu (Cth: Nasi Ayam)" className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-slate-700 uppercase text-slate-800 dark:text-slate-200" required/>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <input type="text" inputMode="numeric" value={formatInputRp(menuForm.priceOffline)} onChange={e=>setMenuForm({...menuForm, priceOffline: parseInputRp(e.target.value)})} placeholder="Hrg Offline" className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-slate-700 text-right text-indigo-700 dark:text-indigo-300" />
+                                                    <input type="text" inputMode="numeric" value={formatInputRp(menuForm.priceShopee)} onChange={e=>setMenuForm({...menuForm, priceShopee: parseInputRp(e.target.value)})} placeholder="Hrg Shopee" className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-slate-700 text-right text-orange-600 dark:text-orange-400" />
+                                                    <input type="text" inputMode="numeric" value={formatInputRp(menuForm.priceGrab)} onChange={e=>setMenuForm({...menuForm, priceGrab: parseInputRp(e.target.value)})} placeholder="Hrg Grab" className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-slate-700 text-right text-emerald-600 dark:text-emerald-400" />
+                                                    <input type="text" inputMode="numeric" value={formatInputRp(menuForm.priceGojek)} onChange={e=>setMenuForm({...menuForm, priceGojek: parseInputRp(e.target.value)})} placeholder="Hrg Gojek" className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-slate-700 text-right text-green-600 dark:text-green-400" />
+                                                </div>
+                                                <button type="submit" className="w-full py-4 mt-2 bg-slate-800 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-md hover:bg-slate-700">TAMBAH MENU</button>
+                                            </form>
+                                        </div>
+
+                                        <div className="bg-white dark:bg-slate-800 p-5 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
+                                            <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[10px] tracking-widest mb-4">Daftar Menu Tersimpan</h4>
+                                            {menus.length === 0 ? <p className="text-xs text-slate-400 font-bold italic text-center py-4">Belum ada menu, tambahkan di atas.</p> :
+                                                menus.map(m => (
+                                                    <div key={m.id} className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-700 mb-3 relative group">
+                                                        <button onClick={() => setMenus(menus.filter(x => x.id !== m.id))} className="absolute top-3 right-3 text-red-400 p-1.5 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg"><div className="w-4 h-4"><Icons.Trash/></div></button>
+                                                        <p className="font-black text-xs uppercase pr-8 text-slate-800 dark:text-slate-200">{m.name}</p>
+                                                        <div className="grid grid-cols-2 gap-2 mt-3 text-[10px] font-bold text-slate-500">
+                                                            {m.priceOffline > 0 && <div>Offline: <span className="text-slate-700 dark:text-slate-300 font-black">Rp {formatNumber(m.priceOffline)}</span></div>}
+                                                            {m.priceShopee > 0 && <div>Shopee: <span className="text-orange-500 font-black">Rp {formatNumber(m.priceShopee)}</span></div>}
+                                                            {m.priceGrab > 0 && <div>Grab: <span className="text-emerald-500 font-black">Rp {formatNumber(m.priceGrab)}</span></div>}
+                                                            {m.priceGojek > 0 && <div>Gojek: <span className="text-green-500 font-black">Rp {formatNumber(m.priceGojek)}</span></div>}
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            }
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
             const renderDashboard = () => {
                 const data = getDashboardData();
                 const todayStr = getLocalDateStr();
@@ -2042,6 +2297,24 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                                 <span className="text-emerald-200">Terpakai: Rp {formatNumber(jatahPribadiInfo.sudahDiambil)}</span>
                             </div>
                         </div>
+
+                        {/* FITUR BARU: Tombol Analisa Margin & HPP */}
+                        <button onClick={() => {
+                            setShowHppAnalysis(true);
+                            // Ambil otomatis stok akhir hari ini jika sudah pernah diisi
+                            const existing = dailyStocks.find(s => s.date === getLocalDateStr());
+                            setHppStockValue(existing ? existing.totalValue : '');
+                            setHppTab('analisa');
+                        }} className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-5 rounded-[2.5rem] shadow-lg w-full flex items-center justify-between hover:scale-[1.02] transition-transform active:scale-95 mt-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white"><Icons.Chart /></div>
+                                <div className="text-left">
+                                    <p className="font-black text-sm uppercase tracking-widest">Cek Kebocoran & Margin</p>
+                                    <p className="text-[10px] text-orange-100 font-bold mt-1">Analisa Harian Tanpa Ribet Resep</p>
+                                </div>
+                            </div>
+                            <div className="w-5 h-5 text-orange-200"><Icons.ChevronUp className="rotate-90" /></div>
+                        </button>
 
                         <div className="bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 mt-4 transition-colors">
                             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-100 mb-5 flex items-center gap-2">
@@ -3215,6 +3488,7 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                         )}
                         
                         {/* RENDER MARKET MODE & LAPORAN FULLSCREEN */}
+                        {showHppAnalysis && renderHppAnalysis()}
                         {showReportFullscreen && renderReportFullscreen()}
                         {showMarketMode && renderMarketMode()}
                     </main>
