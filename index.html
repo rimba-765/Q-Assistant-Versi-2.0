@@ -213,6 +213,10 @@
             const [reportAIInsight, setReportAIInsight] = useState('');
             const [isAnalyzingReport, setIsAnalyzingReport] = useState(false);
 
+            // FITUR BARU: State Channel Dinamis & Pemasukan Kotor
+            const [salesChannels, setSalesChannels] = useState(() => JSON.parse(localStorage.getItem('fin-channels') || '["Offline", "ShopeeFood", "GrabFood", "GoFood"]'));
+            const [incomeGrossAmount, setIncomeGrossAmount] = useState('');
+
             const [geminiApiKey, setGeminiApiKey] = useState(() => localStorage.getItem('fin-gemini-api-key') || '');
             const [user, setUser] = useState(null);
 
@@ -288,6 +292,9 @@
             const [hppDate, setHppDate] = useState(getLocalDateStr());
             const [hppStockValue, setHppStockValue] = useState('');
             const [menuForm, setMenuForm] = useState({ name: '', priceOffline: '', priceShopee: '', priceGrab: '', priceGojek: '' });
+            const [hppAiInsight, setHppAiInsight] = useState('');
+            const [isAnalyzingHpp, setIsAnalyzingHpp] = useState(false);
+            const [newChannelName, setNewChannelName] = useState('');
 
             const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null });
             const [showSettings, setShowSettings] = useState(false);
@@ -528,6 +535,7 @@
             useEffect(() => { localStorage.setItem('fin-holidays', JSON.stringify(holidays)); }, [holidays]);
             useEffect(() => { localStorage.setItem('fin-deductions', JSON.stringify(deductions)); }, [deductions]); // FITUR 1 Save
             useEffect(() => { localStorage.setItem('fin-reports', JSON.stringify(reportArchives)); }, [reportArchives]);
+            useEffect(() => { localStorage.setItem('fin-channels', JSON.stringify(salesChannels)); }, [salesChannels]);
 
             // FITUR BARU: Simpan Data Menu & Stok HPP
             useEffect(() => { localStorage.setItem('fin-menus', JSON.stringify(menus)); }, [menus]);
@@ -1162,18 +1170,45 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
             const handleSaveIncome = (e) => {
                 e.preventDefault();
                 if (!incomeSource || !incomeAmount) { showStatus('Data Belum Lengkap', 'error'); return; }
-                const amount = parseFloat(incomeAmount.toString().replace(/[^0-9]/g, ''));
-                const stdSource = toTitleCase(incomeSource.trim());
                 
-                const newIncome = { id: 'inc-' + Date.now(), date: incomeDate, source: stdSource, amount: amount, category: incomeCategory, timestamp: Date.now() };
+                const amountNet = parseFloat(incomeAmount.toString().replace(/[^0-9]/g, ''));
+                let amountGross = amountNet;
+                
+                // Cek jika ada Pemasukan Kotor (Gross)
+                if (incomeGrossAmount) {
+                    const parsedGross = parseFloat(incomeGrossAmount.toString().replace(/[^0-9]/g, ''));
+                    if (!isNaN(parsedGross) && parsedGross > amountNet) {
+                        amountGross = parsedGross;
+                    }
+                }
+                
+                const platformFee = amountGross - amountNet;
+                const stdSource = incomeCategory === 'Lainnya' ? toTitleCase(incomeSource.trim()) : toTitleCase(incomeSource.trim());
+                
+                const newIncome = { 
+                    id: 'inc-' + Date.now(), 
+                    date: incomeDate, 
+                    source: stdSource, 
+                    amount: amountNet, 
+                    grossAmount: amountGross,
+                    platformFee: platformFee,
+                    category: incomeCategory, 
+                    timestamp: Date.now() 
+                };
                 
                 setIncomes(prev => [newIncome, ...prev].sort((a,b) => b.timestamp - a.timestamp));
-                setIncomeSource(''); setIncomeAmount(''); showStatus('Pemasukan Ditambahkan!', 'success');
+                setIncomeSource(''); setIncomeAmount(''); setIncomeGrossAmount('');
+                showStatus('Pemasukan Ditambahkan!', 'success');
 
-                let idealBelanjaBesok = amount * 0.5;
-                let sisaOperasionalProfit = amount - idealBelanjaBesok;
+                let idealBelanjaBesok = amountNet * 0.5;
+                let sisaOperasionalProfit = amountNet - idealBelanjaBesok;
 
-                let finMsg = `Mantap Bos! Pemasukan dari **${stdSource}** (${incomeCategory}) senilai **Rp ${formatNumber(amount)}** berhasil masuk brankas. 💰\n\n`;
+                let finMsg = `Mantap Bos! Pemasukan dari **${stdSource}** (${incomeCategory}) senilai bersih **Rp ${formatNumber(amountNet)}** berhasil masuk brankas. 💰\n\n`;
+                
+                if(platformFee > 0) {
+                    finMsg += `⚠️ *Tercatat ada potongan platform/admin sebesar Rp ${formatNumber(platformFee)} dari total kotor Rp ${formatNumber(amountGross)}.*\n\n`;
+                }
+
                 if(incomeCategory === 'Penjualan') {
                     finMsg += `💡 **Rencana Alokasi (Rule 50%):**\n`;
                     finMsg += `Dari omzet ini, Bos punya *budget* maksimal **Rp ${formatNumber(idealBelanjaBesok)}** untuk kulakan/belanja bahan baku besok.\n`;
@@ -1976,6 +2011,7 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                     setHppDate(d);
                     const existing = dailyStocks.find(s => s.date === d);
                     setHppStockValue(existing ? existing.totalValue : '');
+                    setHppAiInsight(''); // Reset insight saat pindah tanggal
                 };
 
                 const handleSaveStock = () => {
@@ -1991,17 +2027,24 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                     const newM = {
                         id: Date.now(),
                         name: menuForm.name,
-                        priceOffline: parseFloat(menuForm.priceOffline.toString().replace(/[^0-9]/g, '')) || 0,
-                        priceShopee: parseFloat(menuForm.priceShopee.toString().replace(/[^0-9]/g, '')) || 0,
-                        priceGrab: parseFloat(menuForm.priceGrab.toString().replace(/[^0-9]/g, '')) || 0,
-                        priceGojek: parseFloat(menuForm.priceGojek.toString().replace(/[^0-9]/g, '')) || 0
+                        prices: menuForm.prices || {}
                     };
                     setMenus([...menus, newM]);
-                    setMenuForm({ name: '', priceOffline: '', priceShopee: '', priceGrab: '', priceGojek: '' });
+                    setMenuForm({ name: '', prices: {} });
                     showStatus('Menu Tersimpan', 'success');
                 };
 
-                // MATH LOGIC
+                const handleAddChannel = (e) => {
+                    e.preventDefault();
+                    const stdName = toTitleCase(newChannelName.trim());
+                    if(stdName && !salesChannels.includes(stdName)){
+                        setSalesChannels([...salesChannels, stdName]);
+                        setNewChannelName('');
+                        showStatus('Channel Jualan Ditambahkan', 'success');
+                    }
+                };
+
+                // MATH LOGIC - MENGUMPULKAN DATA UNTUK AI (LAYER 2)
                 const yDate = new Date(hppDate); yDate.setDate(yDate.getDate() - 1);
                 const yStr = getLocalDateStr(yDate);
 
@@ -2010,85 +2053,110 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                 const tStock = tStockObj ? tStockObj.totalValue : 0;
                 
                 const tBelanja = history.filter(h => h.date === hppDate).reduce((s, h) => s + h.total, 0);
-                const realHpp = Math.max(0, yStock + tBelanja - tStock); // Mencegah minus jika salah input
+                const realHpp = Math.max(0, yStock + tBelanja - tStock); 
 
-                let incOffline = 0, incShopee = 0, incGrab = 0, incGojek = 0;
-                incomes.filter(i => i.date === hppDate && i.category === 'Penjualan').forEach(i => {
-                    let src = i.source.toLowerCase();
-                    if (src.includes('shopee')) incShopee += i.amount;
-                    else if (src.includes('grab')) incGrab += i.amount;
-                    else if (src.includes('go')) incGojek += i.amount;
-                    else incOffline += i.amount; 
+                // Income calculations
+                const incs = incomes.filter(i => i.date === hppDate && i.category === 'Penjualan');
+                let totalNet = 0;
+                let totalGross = 0;
+                let totalPlatformFee = 0;
+                let channelSales = {};
+
+                incs.forEach(i => {
+                    totalNet += i.amount;
+                    let gross = i.grossAmount || i.amount;
+                    totalGross += gross;
+                    totalPlatformFee += (gross - i.amount);
+
+                    if(!channelSales[i.source]) channelSales[i.source] = { net: 0, gross: 0, count: 0 };
+                    channelSales[i.source].net += i.amount;
+                    channelSales[i.source].gross += gross;
+                    channelSales[i.source].count++;
                 });
-                const totalInc = incOffline + incShopee + incGrab + incGojek;
 
-                let avgOff = 0, avgShopee = 0, avgGrab = 0, avgGo = 0;
-                if (menus.length > 0) {
-                    let cOff = 0, cSh = 0, cGr = 0, cGo = 0;
-                    menus.forEach(m => {
-                        if(m.priceOffline) { avgOff += m.priceOffline; cOff++; }
-                        if(m.priceShopee) { avgShopee += m.priceShopee; cSh++; }
-                        if(m.priceGrab) { avgGrab += m.priceGrab; cGr++; }
-                        if(m.priceGojek) { avgGo += m.priceGojek; cGo++; }
-                    });
-                    if(cOff) avgOff /= cOff;
-                    if(cSh) avgShopee /= cSh;
-                    if(cGr) avgGrab /= cGr;
-                    if(cGo) avgGo /= cGo;
-                } else {
-                    avgOff = 15000; avgShopee = 18000; avgGrab = 18000; avgGo = 18000;
-                }
+                const globalHppRatio = totalGross > 0 ? (realHpp / totalGross) * 100 : 0;
+                const globalFeeRatio = totalGross > 0 ? (totalPlatformFee / totalGross) * 100 : 0;
 
-                let estPortions = 0;
-                if(avgOff > 0) estPortions += incOffline / avgOff;
-                if(avgShopee > 0) estPortions += incShopee / avgShopee;
-                if(avgGrab > 0) estPortions += incGrab / avgGrab;
-                if(avgGo > 0) estPortions += incGojek / avgGo;
-
-                if (estPortions === 0 && totalInc > 0) estPortions = totalInc / 15000;
-
-                const hppPerPortion = estPortions > 0 ? realHpp / estPortions : 0;
-                
-                const marginOffPct = avgOff > 0 ? ((avgOff - hppPerPortion) / avgOff) * 100 : 0;
-                const netOnline = (avgShopee > 0 ? avgShopee : (avgGrab > 0 ? avgGrab : avgGo)) * 0.8; // Rata-rata online bersih (potong 20%)
-                const marginOnPct = netOnline > 0 ? ((netOnline - hppPerPortion) / netOnline) * 100 : 0;
-
-                let insightMsg = "";
-                let isDanger = false;
-                if (menus.length === 0) {
-                    insightMsg = "⚠️ Isi dulu 'Harga Menu' di tab sebelah agar analisa estimasi porsi & margin akurat berdasarkan channel penjualan Bos.";
-                } else if (totalInc === 0) {
-                    insightMsg = "Hari ini belum ada pemasukan jualan. Masukkan omzet pendapatan dulu untuk mulai analisa.";
-                } else if (!tStockObj && tBelanja > 0) {
-                    insightMsg = "⚠️ Bos belum memasukkan 'Sisa Stok Akhir' hari ini. HPP dihitung kotor total dari belanja, sehingga Margin hari ini terlihat sangat kecil. Silakan isi Sisa Stok!";
-                    isDanger = true;
-                } else if (realHpp === 0) {
-                    insightMsg = "Data belum cukup. HPP Rp 0. Pastikan stok akhir tidak salah, atau memang warung belum belanja dan stok kemarin kosong.";
-                } else {
-                    if (marginOffPct < 35) {
-                        isDanger = true;
-                        insightMsg = `🚨 RAWAN KEBOCORAN!\nMargin offline cuma ${Math.round(marginOffPct)}%. HPP per porsi (Rp ${formatNumber(Math.round(hppPerPortion))}) terlalu mahal. \n\nCek segera: \n1) Porsi terlalu banyak (boros)? \n2) Harga bahan baku di pasar naik? \n3) Banyak bahan basi/terbuang?`;
-                    } else if (marginOnPct < 15 && (incShopee + incGrab + incGojek) > 0) {
-                        isDanger = true;
-                        insightMsg = `🚨 UNTUNG ONLINE TIPIS!\nMargin di aplikasi (setelah potong admin ~20%) cuma sisa ${Math.round(marginOnPct)}% per porsi. Jika HPP Rp ${formatNumber(Math.round(hppPerPortion))}, harga di aplikasi saat ini jelas TERLALU MURAH. Segera naikkan harga online!`;
-                    } else {
-                        insightMsg = `✅ BISNIS SEHAT!\nMargin Offline ${Math.round(marginOffPct)}% dan Margin Online Bersih ${Math.round(marginOnPct)}%. Estimasi terjual ${Math.round(estPortions)} porsi. Porsi stabil & harga sudah pas. Pertahankan Bos!`;
+                const requestHppAnalysisAI = async () => {
+                    const apiKey = localStorage.getItem('fin-gemini-api-key') || ""; 
+                    if (!apiKey) {
+                        showStatus("API Key Gemini belum diatur!", "error");
+                        return;
                     }
-                }
+
+                    setIsAnalyzingHpp(true);
+                    
+                    const tItems = history.filter(h => h.date === hppDate)
+                        .flatMap(h => h.items)
+                        .map(i => `${i.name} (${i.qty}${i.unit}=Rp${i.total})`)
+                        .join(', ');
+
+                    const menuListText = menus.map(m => {
+                        let pricesTxt = salesChannels.map(ch => `${ch}: Rp${m.prices?.[ch] || (m['price'+ch] || 0)}`).join(', ');
+                        return `- ${m.name} (${pricesTxt})`;
+                    }).join('\n');
+
+                    const salesListText = Object.entries(channelSales).map(([k, v]) => 
+                        `- ${k}: Kotor Rp${v.gross}, Bersih Rp${v.net} (Potongan Rp${v.gross - v.net})`
+                    ).join('\n');
+
+                    const prompt = `Anda adalah "Fin", AI Spesialis Analisa HPP & Deteksi Kebocoran Margin Kuliner.
+Lakukan Analisa 2 Layer SUPER DETAIL untuk warung pada tanggal ${hppDate}.
+
+=== DATA LAYER 2 (PENGELUARAN GLOBAL & POTONGAN PLATFORM) ===
+- Total Belanja Bahan Hari Ini: Rp ${tBelanja}
+- Sisa Stok Bahan Kemarin: Rp ${yStock}
+- Sisa Stok Bahan Hari Ini: Rp ${tStock}
+=> TOTAL HPP (Beban Pokok) Hari Ini: Rp ${realHpp} (Rasio terhadap Kotor: ${globalHppRatio.toFixed(1)}%)
+=> Total Pemasukan Kotor (Omzet Publik): Rp ${totalGross}
+=> Total Pemasukan Bersih (Diterima Kas): Rp ${totalNet}
+=> Kebocoran Platform (Biaya Admin/Merchant): Rp ${totalPlatformFee} (Rasio: ${globalFeeRatio.toFixed(1)}%)
+Daftar Belanjaan: ${tItems || 'Tidak ada belanja'}
+Penjualan per Channel:
+${salesListText || 'Belum ada penjualan'}
+
+=== DATA LAYER 1 (HARGA MENU & CHANNEL JUALAN) ===
+Daftar Menu Utama & Harga Jual:
+${menuListText || 'Belum ada menu diatur. Beri tahu bos untuk isi menu!'}
+
+TUGAS ANDA (Gunakan bahasa Markdown, blak-blakan, tajam menganalisa, panggil "Bos"):
+1. **Analisa Layer 2 (Global Leak)**: Evaluasi Rasio HPP (${globalHppRatio.toFixed(1)}%) dan Potongan Platform (${globalFeeRatio.toFixed(1)}%). Apakah warung boncos di ongkos admin atau boros di belanja bahan baku hari ini?
+2. **Analisa Layer 1 (Harga vs Channel)**: Coba proyeksikan HPP global Rp ${realHpp} ke omzet yang didapat. Jika menu andalan harganya segitu dan dipotong admin merchant segitu, harga di channel mana yang **terlalu murah / rawan rugi**?
+3. **Deteksi Biang Kerok**: Cari item belanjaan yang mungkin bikin boros, ATAU channel jualan yang membunuh margin.
+4. **Saran Aksi**: Berikan 3 instruksi taktis (misal: "Naikkan harga Gofood 15%", "Kurangi porsi beras", dsb).
+
+Jawab tanpa basa-basi, langsung ke poin analisa!`;
+
+                    var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
+                    const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3 } };
+                    
+                    try {
+                        const res = await fetch(url, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }});
+                        const data = await res.json();
+                        if(data.error) throw new Error(data.error.message);
+                        
+                        setHppAiInsight(data.candidates[0].content.parts[0].text);
+                        showStatus('Analisa Kebocoran Selesai!', 'success');
+                    } catch(e) {
+                        setHppAiInsight(`*Gagal menganalisa. Pastikan API Key valid. Error: ${e.message}*`);
+                    } finally {
+                        setIsAnalyzingHpp(false);
+                    }
+                };
 
                 return (
                     <div className="fixed inset-0 z-[1000] bg-slate-100 dark:bg-slate-900 flex flex-col transition-colors animate-fadeIn" style={{ height: '100dvh' }}>
                         <div className="bg-indigo-600 px-4 py-3 flex justify-between items-center shadow-md shrink-0 z-50">
                             <h3 className="font-black text-white uppercase tracking-widest text-[11px] flex items-center gap-2">
-                                <div className="w-4 h-4"><Icons.Chart /></div> KONTROL MARGIN & HPP
+                                <div className="w-4 h-4"><Icons.Warn /></div> DETEKSI KEBOCORAN & HPP
                             </h3>
                             <button onClick={() => setShowHppAnalysis(false)} className="w-8 h-8 bg-white/20 hover:bg-white/30 text-white rounded-full flex justify-center items-center transition-colors"><div className="w-4 h-4"><Icons.X /></div></button>
                         </div>
 
-                        <div className="flex bg-white dark:bg-slate-800 shadow-sm shrink-0 border-b border-slate-200 dark:border-slate-700">
-                            <button onClick={() => setHppTab('analisa')} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest ${hppTab === 'analisa' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20' : 'text-slate-400'}`}>Analisa Harian</button>
-                            <button onClick={() => setHppTab('stok')} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest ${hppTab === 'stok' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20' : 'text-slate-400'}`}>Sisa Stok</button>
-                            <button onClick={() => setHppTab('menu')} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest ${hppTab === 'menu' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20' : 'text-slate-400'}`}>Harga Menu</button>
+                        <div className="flex bg-white dark:bg-slate-800 shadow-sm shrink-0 border-b border-slate-200 dark:border-slate-700 overflow-x-auto no-scrollbar">
+                            <button onClick={() => setHppTab('analisa')} className={`px-4 py-3 shrink-0 text-[10px] font-black uppercase tracking-widest ${hppTab === 'analisa' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20' : 'text-slate-400'}`}>Analisa AI</button>
+                            <button onClick={() => setHppTab('stok')} className={`px-4 py-3 shrink-0 text-[10px] font-black uppercase tracking-widest ${hppTab === 'stok' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20' : 'text-slate-400'}`}>Sisa Stok</button>
+                            <button onClick={() => setHppTab('menu')} className={`px-4 py-3 shrink-0 text-[10px] font-black uppercase tracking-widest ${hppTab === 'menu' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20' : 'text-slate-400'}`}>Harga Menu & Channel</button>
                         </div>
 
                         <div className="flex-1 overflow-y-auto no-scrollbar p-4 flex flex-col items-center pb-10">
@@ -2097,42 +2165,63 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                                 {hppTab === 'analisa' && (
                                     <div className="animate-fadeIn space-y-4">
                                         <div className="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
-                                            <div className="flex justify-between items-center mb-4">
+                                            <div className="flex justify-between items-center mb-4 border-b border-slate-100 dark:border-slate-700 pb-3">
                                                 <h4 className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">Pilih Tanggal:</h4>
                                                 <input type="date" value={hppDate} onChange={handleHppDateChange} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-bold outline-none text-indigo-600 dark:text-indigo-400" />
                                             </div>
 
-                                            <div className={`p-4 rounded-2xl border mb-4 whitespace-pre-line ${isDanger ? 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300' : 'bg-indigo-50 border-indigo-200 text-indigo-800 dark:bg-indigo-900/20 dark:border-indigo-800 dark:text-indigo-300'}`}>
-                                                <p className="text-xs font-bold leading-relaxed">{insightMsg}</p>
-                                            </div>
-
+                                            {/* Top Level Summary Cards */}
                                             <div className="grid grid-cols-2 gap-3 mb-4">
-                                                <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-2xl border border-slate-100 dark:border-slate-700">
-                                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Real HPP Hari Ini</p>
-                                                    <p className="font-black text-orange-500 text-sm mt-0.5">Rp {formatNumber(realHpp)}</p>
-                                                    <p className="text-[8px] text-slate-400 mt-1 leading-tight">Sisa Kmrn + Belanja - Sisa Hr Ini</p>
+                                                <div className="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-2xl border border-indigo-100 dark:border-indigo-800/50">
+                                                    <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">Pemasukan Kotor</p>
+                                                    <p className="font-black text-indigo-600 dark:text-indigo-400 text-sm mt-0.5">Rp {formatNumber(totalGross)}</p>
+                                                    <p className="text-[8px] text-slate-400 mt-1">Omzet sblm admin</p>
                                                 </div>
-                                                <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-2xl border border-slate-100 dark:border-slate-700">
-                                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Total Pemasukan</p>
-                                                    <p className="font-black text-green-500 text-sm mt-0.5">Rp {formatNumber(totalInc)}</p>
-                                                    <p className="text-[8px] text-slate-400 mt-1 leading-tight">Total Penjualan Produk</p>
+                                                <div className="bg-green-50 dark:bg-green-900/30 p-3 rounded-2xl border border-green-100 dark:border-green-800/50">
+                                                    <p className="text-[9px] font-bold text-green-500 uppercase tracking-widest">Pemasukan Bersih</p>
+                                                    <p className="font-black text-green-600 dark:text-green-400 text-sm mt-0.5">Rp {formatNumber(totalNet)}</p>
+                                                    <p className="text-[8px] text-slate-400 mt-1">Yg masuk kantong</p>
+                                                </div>
+                                                <div className="bg-orange-50 dark:bg-orange-900/30 p-3 rounded-2xl border border-orange-100 dark:border-orange-800/50">
+                                                    <p className="text-[9px] font-bold text-orange-500 uppercase tracking-widest">Real HPP (Bahan)</p>
+                                                    <p className="font-black text-orange-600 dark:text-orange-400 text-sm mt-0.5">Rp {formatNumber(realHpp)}</p>
+                                                    <p className="text-[8px] text-slate-400 mt-1">{globalHppRatio.toFixed(1)}% dari Kotor</p>
+                                                </div>
+                                                <div className="bg-red-50 dark:bg-red-900/30 p-3 rounded-2xl border border-red-100 dark:border-red-800/50">
+                                                    <p className="text-[9px] font-bold text-red-500 uppercase tracking-widest">Biaya Platform / Admin</p>
+                                                    <p className="font-black text-red-600 dark:text-red-400 text-sm mt-0.5">Rp {formatNumber(totalPlatformFee)}</p>
+                                                    <p className="text-[8px] text-slate-400 mt-1">{globalFeeRatio.toFixed(1)}% dari Kotor</p>
                                                 </div>
                                             </div>
 
-                                            <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-2xl border border-slate-100 dark:border-slate-700 flex justify-between items-center mb-2">
-                                                <div>
-                                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Estimasi Terjual</p>
-                                                    <p className="text-[8px] text-slate-400 mt-0.5">Pendapatan / Rata2 Harga</p>
-                                                </div>
-                                                <p className="font-black text-slate-800 dark:text-slate-200 text-lg">~{Math.round(estPortions)} <span className="text-[10px] font-bold">Porsi</span></p>
-                                            </div>
+                                            {/* AI INSIGHT BOX */}
+                                            <div className="border-t-2 border-slate-800 dark:border-slate-500 pt-4 mt-2">
+                                                <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest mb-3 flex items-center gap-2">
+                                                    <div className="w-4 h-4 text-indigo-500"><Icons.Bot/></div> Insight Kebocoran 2-Layer
+                                                </h4>
+                                                
+                                                {!hppAiInsight && !isAnalyzingHpp && (
+                                                    <div className="bg-slate-50 dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-600 p-6 rounded-2xl text-center">
+                                                        <p className="text-[10px] text-slate-500 mb-3 font-medium">Fin akan mengkorelasikan harga jual menu di tiap channel dengan realita belanja HPP dan Pemasukan hari ini untuk melacak lokasi kebocoran profit Anda.</p>
+                                                        <button onClick={requestHppAnalysisAI} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl text-[10px] uppercase shadow-lg transition-colors">
+                                                            MINTA ANALISA AI
+                                                        </button>
+                                                    </div>
+                                                )}
 
-                                            <div className="bg-indigo-600 p-5 rounded-2xl shadow-md text-white flex justify-between items-center">
-                                                <div>
-                                                    <p className="text-[10px] font-bold text-indigo-200 uppercase tracking-widest">HPP Per Porsi</p>
-                                                    <p className="text-[8px] text-indigo-300 mt-0.5">Real HPP / Est Porsi</p>
-                                                </div>
-                                                <p className="font-black text-xl drop-shadow-md">Rp {formatNumber(Math.round(hppPerPortion))}</p>
+                                                {isAnalyzingHpp && (
+                                                    <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 p-6 rounded-2xl text-center animate-pulse">
+                                                        <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                                                        <p className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Fin Sedang Menghitung Kebocoran...</p>
+                                                    </div>
+                                                )}
+
+                                                {hppAiInsight && !isAnalyzingHpp && (
+                                                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-4 rounded-2xl shadow-sm relative">
+                                                        <button onClick={requestHppAnalysisAI} className="absolute top-3 right-3 text-[9px] bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded font-bold text-slate-500 hover:text-indigo-500">Refresh</button>
+                                                        <div className="text-[11px] leading-relaxed markdown-body text-slate-800 dark:text-slate-200 mt-2" dangerouslySetInnerHTML={{__html: window.marked ? window.marked.parse(hppAiInsight) : hppAiInsight}} />
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -2142,7 +2231,7 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                                     <div className="animate-fadeIn space-y-4">
                                         <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
                                             <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest mb-2">Input Sisa Bahan (Opname)</h4>
-                                            <p className="text-[10px] text-slate-500 mb-6 leading-relaxed">Cukup cek kulkas atau dapur, lalu <b>taksir secara kotor berapa ribu nilai sisa bahan utama</b> (seperti beras, ayam, dll) yang masih bisa dipakai besok. Angka ini dipakai untuk menghitung HPP (modal keluar) yang sesungguhnya hari ini.</p>
+                                            <p className="text-[10px] text-slate-500 mb-6 leading-relaxed">Cek kulkas, lalu taksir nilai sisa bahan utama (beras, ayam, dll) yang masih bisa dipakai besok. Ini wajib agar AI tahu HPP Modal yang benar-benar habis dipakai jualan hari ini.</p>
                                             
                                             <div className="space-y-4">
                                                 <div>
@@ -2150,7 +2239,7 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                                                     <input type="date" value={hppDate} onChange={handleHppDateChange} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold mt-1 outline-none border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200" />
                                                 </div>
                                                 <div>
-                                                    <label className="text-[10px] font-bold text-slate-400 uppercase">Estimasi Nilai Sisa Bahan (Rp)</label>
+                                                    <label className="text-[10px] font-bold text-slate-400 uppercase">Nilai Sisa Bahan (Rp)</label>
                                                     <input type="text" inputMode="numeric" value={formatInputRp(hppStockValue)} onChange={e => setHppStockValue(parseInputRp(e.target.value))} placeholder="Misal: Rp 150.000" className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-black text-right text-indigo-600 dark:text-indigo-400 mt-1 outline-none border border-slate-200 dark:border-slate-700 placeholder-slate-300 dark:placeholder-slate-600 text-lg" />
                                                 </div>
                                                 <button onClick={handleSaveStock} className="w-full py-4 bg-indigo-600 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-lg mt-2 hover:bg-indigo-700 transition-colors">SIMPAN SISA STOK</button>
@@ -2162,37 +2251,58 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                                 {hppTab === 'menu' && (
                                     <div className="animate-fadeIn space-y-4">
                                         <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
-                                            <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest mb-2">Tambah Harga Menu Utama</h4>
-                                            <p className="text-[10px] text-slate-500 mb-6 leading-relaxed">Masukkan menu andalan Anda beserta harga jualnya di tiap channel (Aplikasi / Offline). Jika tidak jualan di salah satu channel, kosongkan saja kolomnya.</p>
+                                            <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest mb-2 border-b border-slate-100 dark:border-slate-700 pb-2">Manajemen Channel Jualan</h4>
                                             
-                                            <form onSubmit={handleSaveMenu} className="space-y-3">
-                                                <input type="text" value={menuForm.name} onChange={e=>setMenuForm({...menuForm, name: e.target.value})} placeholder="Nama Menu (Cth: Nasi Ayam)" className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-slate-700 uppercase text-slate-800 dark:text-slate-200" required/>
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <input type="text" inputMode="numeric" value={formatInputRp(menuForm.priceOffline)} onChange={e=>setMenuForm({...menuForm, priceOffline: parseInputRp(e.target.value)})} placeholder="Hrg Offline" className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-slate-700 text-right text-indigo-700 dark:text-indigo-300" />
-                                                    <input type="text" inputMode="numeric" value={formatInputRp(menuForm.priceShopee)} onChange={e=>setMenuForm({...menuForm, priceShopee: parseInputRp(e.target.value)})} placeholder="Hrg Shopee" className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-slate-700 text-right text-orange-600 dark:text-orange-400" />
-                                                    <input type="text" inputMode="numeric" value={formatInputRp(menuForm.priceGrab)} onChange={e=>setMenuForm({...menuForm, priceGrab: parseInputRp(e.target.value)})} placeholder="Hrg Grab" className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-slate-700 text-right text-emerald-600 dark:text-emerald-400" />
-                                                    <input type="text" inputMode="numeric" value={formatInputRp(menuForm.priceGojek)} onChange={e=>setMenuForm({...menuForm, priceGojek: parseInputRp(e.target.value)})} placeholder="Hrg Gojek" className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-slate-700 text-right text-green-600 dark:text-green-400" />
-                                                </div>
-                                                <button type="submit" className="w-full py-4 mt-2 bg-slate-800 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-md hover:bg-slate-700">TAMBAH MENU</button>
+                                            <div className="flex flex-wrap gap-2 mb-4">
+                                                {salesChannels.map(ch => (
+                                                    <span key={ch} className="text-[10px] bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-full font-bold flex items-center gap-1">
+                                                        {ch}
+                                                        {ch !== 'Offline' && (
+                                                            <button onClick={() => setSalesChannels(salesChannels.filter(c => c !== ch))} className="text-red-400 hover:text-red-500"><Icons.X className="w-3 h-3"/></button>
+                                                        )}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                            <form onSubmit={handleAddChannel} className="flex gap-2">
+                                                <input type="text" value={newChannelName} onChange={e=>setNewChannelName(e.target.value)} placeholder="Nama Merchant Baru (Cth: Tokopedia)" className="flex-1 p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-[11px] outline-none border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200" />
+                                                <button type="submit" className="px-4 bg-indigo-600 text-white font-black rounded-xl text-[10px] uppercase shadow-md">TAMBAH</button>
                                             </form>
                                         </div>
 
-                                        <div className="bg-white dark:bg-slate-800 p-5 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
-                                            <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[10px] tracking-widest mb-4">Daftar Menu Tersimpan</h4>
-                                            {menus.length === 0 ? <p className="text-xs text-slate-400 font-bold italic text-center py-4">Belum ada menu, tambahkan di atas.</p> :
-                                                menus.map(m => (
-                                                    <div key={m.id} className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-700 mb-3 relative group">
-                                                        <button onClick={() => setMenus(menus.filter(x => x.id !== m.id))} className="absolute top-3 right-3 text-red-400 p-1.5 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg"><div className="w-4 h-4"><Icons.Trash/></div></button>
-                                                        <p className="font-black text-xs uppercase pr-8 text-slate-800 dark:text-slate-200">{m.name}</p>
-                                                        <div className="grid grid-cols-2 gap-2 mt-3 text-[10px] font-bold text-slate-500">
-                                                            {m.priceOffline > 0 && <div>Offline: <span className="text-slate-700 dark:text-slate-300 font-black">Rp {formatNumber(m.priceOffline)}</span></div>}
-                                                            {m.priceShopee > 0 && <div>Shopee: <span className="text-orange-500 font-black">Rp {formatNumber(m.priceShopee)}</span></div>}
-                                                            {m.priceGrab > 0 && <div>Grab: <span className="text-emerald-500 font-black">Rp {formatNumber(m.priceGrab)}</span></div>}
-                                                            {m.priceGojek > 0 && <div>Gojek: <span className="text-green-500 font-black">Rp {formatNumber(m.priceGojek)}</span></div>}
+                                        <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
+                                            <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest mb-2 border-b border-slate-100 dark:border-slate-700 pb-2">Harga Jual Menu</h4>
+                                            <p className="text-[10px] text-slate-500 mb-4 leading-relaxed">Masukkan daftar menu dan bedakan harga jualnya per channel untuk deteksi kebocoran margin online.</p>
+                                            
+                                            <form onSubmit={handleSaveMenu} className="space-y-3 bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
+                                                <input type="text" value={menuForm.name} onChange={e=>setMenuForm({...menuForm, name: e.target.value})} placeholder="Nama Menu (Cth: Nasi Ayam)" className="w-full p-3 bg-white dark:bg-slate-800 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-slate-700 uppercase text-slate-800 dark:text-slate-200" required/>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {salesChannels.map(ch => (
+                                                        <div key={ch}>
+                                                            <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">{ch}</label>
+                                                            <input type="text" inputMode="numeric" placeholder={`Hrg ${ch}`} value={formatInputRp(menuForm.prices?.[ch] || '')} onChange={e=>setMenuForm({...menuForm, prices: {...menuForm.prices, [ch]: parseInputRp(e.target.value)}})} className="w-full p-3 bg-white dark:bg-slate-800 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-slate-700 text-right text-indigo-700 dark:text-indigo-300" />
                                                         </div>
-                                                    </div>
-                                                ))
-                                            }
+                                                    ))}
+                                                </div>
+                                                <button type="submit" className="w-full py-3.5 mt-2 bg-indigo-600 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-md">SIMPAN MENU BARU</button>
+                                            </form>
+
+                                            <div className="mt-5 space-y-3">
+                                                {menus.length === 0 ? <p className="text-xs text-slate-400 font-bold italic text-center py-2">Belum ada menu tersimpan.</p> :
+                                                    menus.map(m => (
+                                                        <div key={m.id} className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-700 relative group">
+                                                            <button onClick={() => setMenus(menus.filter(x => x.id !== m.id))} className="absolute top-3 right-3 text-red-400 p-1.5 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg"><div className="w-4 h-4"><Icons.Trash/></div></button>
+                                                            <p className="font-black text-xs uppercase pr-8 text-slate-800 dark:text-slate-200 mb-2">{m.name}</p>
+                                                            <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] font-bold text-slate-500">
+                                                                {salesChannels.map(ch => {
+                                                                    const pr = m.prices?.[ch] || (m['price'+ch]); // backward compatibility
+                                                                    if(!pr) return null;
+                                                                    return <div key={ch} className="flex justify-between border-b border-slate-100 dark:border-slate-700/50 py-0.5"><span className="truncate">{ch}:</span> <span className="text-slate-700 dark:text-slate-300 font-black">Rp {formatNumber(pr)}</span></div>
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                }
+                                            </div>
                                         </div>
                                     </div>
                                 )}
@@ -3199,22 +3309,32 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                                     <form onSubmit={handleSaveIncome} className="space-y-4">
                                         <input type="date" value={incomeDate} onChange={e => handleDateChange(e, setIncomeDate)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl font-bold text-slate-700 dark:text-slate-200 outline-none" />
                                         
-                                        {/* FITUR BARU: Dropdown Kategori Income */}
                                         <select value={incomeCategory} onChange={e => setIncomeCategory(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl font-bold outline-none text-slate-700 dark:text-slate-200 appearance-none">
-                                            <option value="Penjualan">Kategori: Omzet Penjualan Produk</option>
-                                            <option value="Lainnya">Kategori: Hutang / Modal / Lainnya</option>
+                                            <option value="Penjualan">Kategori: Penjualan Produk (Omzet)</option>
+                                            <option value="Lainnya">Kategori: Hutang / Tambahan Modal / Lainnya</option>
                                         </select>
 
                                         <div className="relative">
-                                            <input type="text" value={incomeSource} onChange={e => { setIncomeSource(e.target.value); setShowIncomeSuggestions(true); }} placeholder="Sumber (Grab, Kasir, dll)" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl font-bold uppercase outline-none text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500" />
-                                            {showIncomeSuggestions && (
+                                            <input type="text" value={incomeSource} onChange={e => { setIncomeSource(e.target.value); setShowIncomeSuggestions(true); }} placeholder={incomeCategory === 'Lainnya' ? "Ketik Sumber (Cth: Pinjaman Bank, Tambahan Modal)" : "Ketik Sumber (Kasir, Grab, Shopee, dll)"} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl font-bold uppercase outline-none text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500" />
+                                            {showIncomeSuggestions && incomeCategory === 'Penjualan' && (
                                                 <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-xl rounded-xl overflow-hidden">
-                                                    {incomeTypes.map(t => <div key={t} onMouseDown={(e)=>{e.preventDefault(); setIncomeSource(t); setShowIncomeSuggestions(false);}} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700 font-bold text-xs cursor-pointer text-slate-800 dark:text-slate-200">{t}</div>)}
+                                                    {salesChannels.map(t => <div key={t} onMouseDown={(e)=>{e.preventDefault(); setIncomeSource(t); setShowIncomeSuggestions(false);}} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700 font-bold text-xs cursor-pointer text-slate-800 dark:text-slate-200">{t}</div>)}
                                                 </div>
                                             )}
                                         </div>
-                                        <input type="text" inputMode="numeric" value={formatInputRp(incomeAmount)} onChange={e => setIncomeAmount(parseInputRp(e.target.value))} placeholder="Nominal Bersih Rp" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl font-bold text-right text-green-700 dark:text-green-400 outline-none placeholder-slate-400 dark:placeholder-slate-500" />
-                                        <button type="submit" className="w-full py-4 bg-green-600 text-white font-black rounded-2xl shadow-lg text-[10px] uppercase tracking-widest mt-2">TAMBAH KE KAS</button>
+                                        
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div className="relative group">
+                                                <input type="text" inputMode="numeric" value={formatInputRp(incomeGrossAmount)} onChange={e => setIncomeGrossAmount(parseInputRp(e.target.value))} placeholder="Pemasukan Kotor (Opsi)" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl font-bold text-right text-slate-600 dark:text-slate-400 outline-none placeholder-slate-400 dark:placeholder-slate-500 text-sm" />
+                                                <p className="absolute -top-2 left-3 bg-white dark:bg-slate-800 px-1 text-[8px] font-bold text-slate-400 uppercase tracking-widest hidden group-focus-within:block">Sebelum Potong Admin</p>
+                                            </div>
+                                            <div className="relative">
+                                                <input type="text" inputMode="numeric" value={formatInputRp(incomeAmount)} onChange={e => setIncomeAmount(parseInputRp(e.target.value))} placeholder="Pemasukan Bersih Rp *" className="w-full p-4 bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800/50 rounded-2xl font-black text-right text-green-700 dark:text-green-400 outline-none placeholder-green-300 dark:placeholder-green-700/50 text-lg shadow-inner" required/>
+                                                <p className="absolute top-1.5 left-3 text-[8px] font-bold text-green-600 uppercase tracking-widest opacity-70">Masuk Kas / Realita</p>
+                                            </div>
+                                        </div>
+
+                                        <button type="submit" className="w-full py-4 bg-green-600 text-white font-black rounded-2xl shadow-lg text-[10px] uppercase tracking-widest mt-2 hover:bg-green-700 transition-colors">TAMBAH KE KAS</button>
                                     </form>
                                 </div>
                                 <div className="px-2">
@@ -3252,11 +3372,14 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                                                     {inc.source}
                                                     {inc.category === 'Lainnya' && <span className="text-[8px] bg-slate-200 dark:bg-slate-700 text-slate-500 px-1 py-0.5 rounded">Lainnya</span>}
                                                 </p>
-                                                <p className="text-[9px] text-slate-400 font-bold">{new Date(inc.date).toLocaleDateString('id-ID', {day:'numeric', month:'short'})}</p>
+                                                <p className="text-[9px] text-slate-400 font-bold mt-0.5">{new Date(inc.date).toLocaleDateString('id-ID', {day:'numeric', month:'short'})}</p>
                                             </div>
                                             <div className="text-right">
-                                                <p className="font-black text-green-600 dark:text-green-400 text-sm mb-1">+ Rp {formatNumber(inc.amount)}</p>
-                                                <div className="flex items-center justify-end gap-1">
+                                                <p className="font-black text-green-600 dark:text-green-400 text-sm mb-0.5">+ Rp {formatNumber(inc.amount)}</p>
+                                                {(inc.grossAmount && inc.grossAmount > inc.amount) && (
+                                                    <p className="text-[8px] font-bold text-slate-400 line-through mb-1">Kotor: Rp {formatNumber(inc.grossAmount)}</p>
+                                                )}
+                                                <div className="flex items-center justify-end gap-1 mt-1">
                                                     <button onClick={() => triggerIncomePrompt(inc.source, inc.amount, inc.date)} className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 rounded text-[8px] font-black uppercase flex items-center gap-1"><div className="w-2.5 h-2.5"><Icons.Copy/></div> Prompt</button>
                                                     <button onClick={() => deleteIncome(inc.id)} className="p-1 bg-red-50 dark:bg-red-900/30 text-red-400 rounded"><div className="w-3.5 h-3.5"><Icons.Trash/></div></button>
                                                 </div>
