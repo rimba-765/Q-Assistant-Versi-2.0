@@ -2072,18 +2072,18 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                 // Cek 1: HPP / Bahan Baku
                 if (globalHppRatio > 50) {
                     autoAlerts.push({
-                        title: 'HPP Terlalu Tinggi / Margin Tipis',
-                        desc: `Biaya bahan baku Anda tembus ${globalHppRatio.toFixed(1)}% dari Pemasukan Kotor. Idealnya harus di bawah 50%.`,
-                        solution: 'Evaluasi ulang porsi makanan atau naikkan harga jual secara keseluruhan sekitar 10-15%. Cek juga apakah ada bahan mentah yang terbuang sia-sia (waste) di hari ini.'
+                        title: 'HPP Tinggi (Margin Bahan Tipis)',
+                        desc: `Biaya bahan baku Anda mencapai ${globalHppRatio.toFixed(1)}% dari Pemasukan Kotor. Batas sehat maksimal 50%.`,
+                        solution: '1. Lakukan audit timbangan/porsi masakan dapur.\n2. Buat menu "Paket Bundling" (Gabungkan menu utama dengan Es Teh/Gorengan yang marginnya besar).\n3. Coba cari supplier alternatif atau kurangi bahan yang sering terbuang (waste).'
                     });
                 }
 
                 // Cek 2: Biaya Platform / Admin
                 if (globalFeeRatio > 20) {
                     autoAlerts.push({
-                        title: 'Kebocoran Biaya Platform / Iklan',
-                        desc: `Potongan aplikasi mengambil ${globalFeeRatio.toFixed(1)}% dari Omzet. Potongan sebesar ini akan sangat mematikan laba bersih Anda.`,
-                        solution: 'Pastikan semua menu di Gofood/Grab/Shopee sudah dinaikkan harganya (markup) minimal 20-25% dari harga offline. Kurangi promo berbayar jika omzet sedang turun.'
+                        title: 'Biaya Platform Membengkak',
+                        desc: `Potongan aplikasi merampas ${globalFeeRatio.toFixed(1)}% dari Omzet Kotor Anda. Ini sangat mematikan laba bersih.`,
+                        solution: '1. Naikkan harga menu khusus di aplikasi (markup minimal 20-25%).\n2. Kurangi ikut kampanye promo diskon aplikasi yang membakar margin.\n3. Sisipkan brosur di setiap pesanan online untuk promosi pesan langsung via WA (iming-iming gratis ongkir jarak dekat/bonus minuman).'
                     });
                 }
 
@@ -2094,9 +2094,9 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                     if (offlinePrice > 0) {
                         salesChannels.filter(c => c !== 'Offline').forEach(ch => {
                             const onlinePrice = m.prices?.[ch] || m['price'+ch] || 0;
-                            // Jika harga online diset, dan selisihnya sangat tipis (di bawah 5% dari harga offline)
-                            if (onlinePrice > 0 && onlinePrice <= offlinePrice * 1.05) {
-                                badMenus.push(`${m.name} di merchant ${ch}`);
+                            // Peringatan jika harga online diset tapi selisihnya kurang dari 15% dari offline
+                            if (onlinePrice > 0 && onlinePrice <= offlinePrice * 1.15) {
+                                badMenus.push(`${m.name} (${ch})`);
                             }
                         });
                     }
@@ -2104,9 +2104,19 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
 
                 if (badMenus.length > 0) {
                     autoAlerts.push({
-                        title: 'Harga Jual Online Kemurahan!',
-                        desc: `Terdeteksi ada menu yang harga Online-nya sama persis atau nyaris sama dengan harga Offline: ${badMenus.slice(0, 3).join(', ')}${badMenus.length > 3 ? ' dan lainnya' : ''}.`,
-                        solution: 'Segera ubah harga menu tersebut di tab "Harga Menu & Channel". Jika harga tidak dibedakan, Anda yang akan menanggung penuh potongan admin aplikasi!'
+                        title: 'Kesalahan Harga Jual Online!',
+                        desc: `Ada menu yang harga Online-nya terlalu murah (selisih < 15% dari Offline): ${badMenus.slice(0, 3).join(', ')}${badMenus.length > 3 ? ' dll' : ''}.`,
+                        solution: 'Segera revisi harga di tab "Harga Menu & Channel". Pastikan harga online dinaikkan minimal 20-25% dari harga offline. Jika tidak dibedakan, Anda yang akan menanggung penuh seluruh potongan admin aplikasi!'
+                    });
+                }
+
+                // Cek 4: Omzet Lesu (Pencapaian Omzet Harian di bawah 60% dari Target)
+                const targetHarian = settings.targetOmzet || 0;
+                if (targetHarian > 0 && totalGross > 0 && totalGross < (targetHarian * 0.6)) {
+                    autoAlerts.push({
+                        title: 'Omzet Harian Lesu (Traffic Turun)',
+                        desc: `Pemasukan kotor hari ini baru Rp ${formatNumber(totalGross)}, jauh di bawah target harian Rp ${formatNumber(targetHarian)}.`,
+                        solution: '1. Buat "Flash Sale" di jam sepi (idle hour) untuk memancing orderan masuk.\n2. Lakukan promosi jemput bola (sebar e-brosur ke grup WA warga sekitar/kantor terdekat).\n3. Segera evaluasi apakah cuaca/hari libur berpengaruh, jika ya, ngerem belanja besok agar stok tidak basi.'
                     });
                 }
 
@@ -2245,16 +2255,16 @@ Jawab tanpa basa-basi, langsung ke poin analisa!`;
                                                             <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
                                                             <p className="font-black text-[11px] text-red-600 dark:text-red-400 uppercase mb-1.5">{al.title}</p>
                                                             <p className="text-[10px] text-slate-600 dark:text-slate-400 mb-3 leading-relaxed">{al.desc}</p>
-                                                            <div className="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-100 dark:border-slate-700">
-                                                                <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest block mb-1">💡 Solusi Cepat:</span>
-                                                                <span className="text-[10px] font-medium text-slate-700 dark:text-slate-300 leading-relaxed">{al.solution}</span>
+                                                            <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                                                                <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest block mb-1.5">💡 Solusi Praktis:</span>
+                                                                <span className="text-[10px] font-medium text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line block">{al.solution}</span>
                                                             </div>
                                                         </div>
                                                     ))}
                                                     
                                                     {systemHealth.includes('KRITIS') && (
                                                         <div className="text-center pt-2">
-                                                            <p className="text-[10px] text-red-500 dark:text-red-400 font-bold mb-2">⚠️ Kondisi sangat rawan! AI perlu menganalisa lebih dalam korelasi menu dan pembelanjaan Anda.</p>
+                                                            <p className="text-[10px] text-red-500 dark:text-red-400 font-bold mb-2">⚠️ Kondisi sangat rawan! Minta AI menganalisa lebih dalam korelasi menu dan daftar belanjaan Anda hari ini.</p>
                                                             <div className="w-5 h-5 border-b-2 border-r-2 border-red-500 mx-auto rotate-45 mb-1 animate-bounce"></div>
                                                         </div>
                                                     )}
