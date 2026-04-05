@@ -291,7 +291,7 @@
             const [hppTab, setHppTab] = useState('analisa');
             const [hppDate, setHppDate] = useState(getLocalDateStr());
             const [hppStockValue, setHppStockValue] = useState('');
-            const [menuForm, setMenuForm] = useState({ name: '', priceOffline: '', priceShopee: '', priceGrab: '', priceGojek: '' });
+            const [menuForm, setMenuForm] = useState({ name: '', inputs: {} });
             const [hppAiInsight, setHppAiInsight] = useState('');
             const [isAnalyzingHpp, setIsAnalyzingHpp] = useState(false);
             const [newChannelName, setNewChannelName] = useState('');
@@ -1997,14 +1997,41 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                 const handleSaveMenu = (e) => {
                     e.preventDefault();
                     if(!menuForm.name) return;
+                    
+                    const finalPrices = {};
+                    Object.keys(menuForm.inputs || {}).forEach(ch => {
+                        const netVal = parseFloat(menuForm.inputs[ch].net?.toString().replace(/[^0-9]/g, ''));
+                        if (!isNaN(netVal) && netVal > 0) finalPrices[ch] = netVal;
+                    });
+
                     const newM = {
                         id: Date.now(),
                         name: menuForm.name,
-                        prices: menuForm.prices || {}
+                        prices: finalPrices
                     };
                     setMenus([...menus, newM]);
-                    setMenuForm({ name: '', prices: {} });
+                    setMenuForm({ name: '', inputs: {} });
                     showStatus('Menu Tersimpan', 'success');
+                };
+
+                const updateMenuInput = (ch, field, val) => {
+                    setMenuForm(prev => {
+                        const currentCh = prev.inputs[ch] || { gross: '', pct: '', net: '' };
+                        let newCh = { ...currentCh, [field]: val };
+
+                        // Kalkulasi otomatis Harga Bersih jika Kotor/Persen diubah
+                        if (field === 'gross' || field === 'pct') {
+                            const g = parseFloat(newCh.gross.toString().replace(/[^0-9]/g, '')) || 0;
+                            const p = parseFloat(newCh.pct) || 0;
+                            if (g > 0) {
+                                newCh.net = Math.round(g - (g * p / 100)).toString();
+                            } else {
+                                newCh.net = '';
+                            }
+                        }
+
+                        return { ...prev, inputs: { ...prev.inputs, [ch]: newCh } };
+                    });
                 };
 
                 const handleAddChannel = (e) => {
@@ -2425,14 +2452,39 @@ Jawab tanpa basa-basi, langsung ke poin analisa!`;
                                                 </div>
                                                 
                                                 <div>
-                                                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Harga Jual Per Channel (Rp)</label>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                        {salesChannels.map(ch => (
-                                                            <div key={ch} className="flex items-center bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden pr-3 shadow-sm">
-                                                                <span className="bg-slate-100 dark:bg-slate-700 text-[9px] font-bold text-slate-600 dark:text-slate-300 uppercase px-3 py-3 w-24 shrink-0 text-center border-r border-slate-200 dark:border-slate-700">{ch}</span>
-                                                                <input type="text" inputMode="numeric" placeholder="0" value={formatInputRp(menuForm.prices?.[ch] || '').replace('Rp ', '')} onChange={e=>setMenuForm({...menuForm, prices: {...menuForm.prices, [ch]: parseInputRp(e.target.value)}})} className="w-full bg-transparent font-black text-sm outline-none text-right text-indigo-700 dark:text-indigo-400 py-2.5" />
-                                                            </div>
-                                                        ))}
+                                                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Harga Jual Per Channel</label>
+                                                    <div className="space-y-3">
+                                                        {salesChannels.map(ch => {
+                                                            const inp = menuForm.inputs?.[ch] || { gross: '', pct: '', net: '' };
+                                                            return (
+                                                                <div key={ch} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3 shadow-sm">
+                                                                    <p className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 mb-2">{ch}</p>
+                                                                    <div className="grid grid-cols-12 gap-2 items-center">
+                                                                        <div className="col-span-5">
+                                                                            <label className="text-[8px] font-bold text-slate-400 uppercase">Harga Kotor</label>
+                                                                            <input type="text" inputMode="numeric" placeholder="0" 
+                                                                                value={formatInputRp(inp.gross).replace('Rp ', '')} 
+                                                                                onChange={e => updateMenuInput(ch, 'gross', parseInputRp(e.target.value))} 
+                                                                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-2 py-1.5 text-[11px] font-bold outline-none mt-1 text-slate-700 dark:text-slate-200" />
+                                                                        </div>
+                                                                        <div className="col-span-2">
+                                                                            <label className="text-[8px] font-bold text-slate-400 uppercase">Pot (%)</label>
+                                                                            <input type="number" placeholder="0" 
+                                                                                value={inp.pct} 
+                                                                                onChange={e => updateMenuInput(ch, 'pct', e.target.value)} 
+                                                                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-1 py-1.5 text-[11px] font-bold outline-none mt-1 text-center text-red-500 dark:text-red-400 appearance-none" />
+                                                                        </div>
+                                                                        <div className="col-span-5">
+                                                                            <label className="text-[8px] font-bold text-green-500 uppercase">Harga Bersih</label>
+                                                                            <input type="text" inputMode="numeric" placeholder="0" 
+                                                                                value={formatInputRp(inp.net).replace('Rp ', '')} 
+                                                                                onChange={e => updateMenuInput(ch, 'net', parseInputRp(e.target.value))} 
+                                                                                className="w-full bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded px-2 py-1.5 text-[11px] font-black outline-none mt-1 text-green-700 dark:text-green-400 text-right" />
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
                                                     </div>
                                                 </div>
                                                 <button type="submit" className="w-full py-4 mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl text-[11px] uppercase tracking-widest shadow-md transition-colors">SIMPAN MENU BARU</button>
