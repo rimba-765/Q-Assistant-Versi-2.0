@@ -553,24 +553,6 @@
             }, [showMarketMode, confirmModal.show, reminderModal.show, showSettings, showReportFullscreen, showHppAnalysis]);
 
             useEffect(() => {
-                if (showMarketMode || confirmModal.show || reminderModal.show || showSettings || showReportFullscreen) {
-                    document.body.style.overflow = 'hidden';
-                } else {
-                    document.body.style.overflow = 'auto';
-                }
-                return () => { document.body.style.overflow = 'auto'; };
-            }, [showMarketMode, confirmModal.show, reminderModal.show, showSettings, showReportFullscreen]);
-
-            useEffect(() => {
-                if (showMarketMode || confirmModal.show || reminderModal.show || showSettings) {
-                    document.body.style.overflow = 'hidden';
-                } else {
-                    document.body.style.overflow = 'auto';
-                }
-                return () => { document.body.style.overflow = 'auto'; };
-            }, [showMarketMode, confirmModal.show, reminderModal.show, showSettings]);
-
-            useEffect(() => {
                 const login = async () => {
                     if (isLocalMode) { setUser({ uid: 'local_user', displayName: 'Guest' }); return; }
                     try {
@@ -590,15 +572,6 @@
                 });
                 return () => unsubHistory();
             }, [user, paths]);
-
-            useEffect(() => {
-                if (showMarketMode || confirmModal.show || reminderModal.show || showSettings || showReportFullscreen) {
-                    document.body.style.overflow = 'hidden';
-                } else {
-                    document.body.style.overflow = 'auto';
-                }
-                return () => { document.body.style.overflow = 'auto'; };
-            }, [showMarketMode, confirmModal.show, reminderModal.show, showSettings, showReportFullscreen]);
 
             useEffect(() => {
                 if (hasCheckedAgenda.current) return;
@@ -2077,6 +2050,66 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                 const globalHppRatio = totalGross > 0 ? (realHpp / totalGross) * 100 : 0;
                 const globalFeeRatio = totalGross > 0 ? (totalPlatformFee / totalGross) * 100 : 0;
 
+                // ====================================================
+                // LOGIKA AUTO-INSIGHT & SISTEM KESEHATAN (TANPA AI)
+                // ====================================================
+                let systemHealth = 'SEHAT';
+                let healthColor = 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400 border-green-200 dark:border-green-800';
+                let healthIcon = <Icons.Check />;
+
+                if (globalHppRatio > 55 || globalFeeRatio > 25) {
+                    systemHealth = 'KRITIS (BONCOS)';
+                    healthColor = 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400 border-red-200 dark:border-red-800';
+                    healthIcon = <Icons.Warn />;
+                } else if (globalHppRatio > 45 || globalFeeRatio > 15) {
+                    systemHealth = 'WASPADA (TIPIS)';
+                    healthColor = 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400 border-amber-200 dark:border-amber-800';
+                    healthIcon = <Icons.Info />;
+                }
+
+                const autoAlerts = [];
+
+                // Cek 1: HPP / Bahan Baku
+                if (globalHppRatio > 50) {
+                    autoAlerts.push({
+                        title: 'HPP Terlalu Tinggi / Margin Tipis',
+                        desc: `Biaya bahan baku Anda tembus ${globalHppRatio.toFixed(1)}% dari Pemasukan Kotor. Idealnya harus di bawah 50%.`,
+                        solution: 'Evaluasi ulang porsi makanan atau naikkan harga jual secara keseluruhan sekitar 10-15%. Cek juga apakah ada bahan mentah yang terbuang sia-sia (waste) di hari ini.'
+                    });
+                }
+
+                // Cek 2: Biaya Platform / Admin
+                if (globalFeeRatio > 20) {
+                    autoAlerts.push({
+                        title: 'Kebocoran Biaya Platform / Iklan',
+                        desc: `Potongan aplikasi mengambil ${globalFeeRatio.toFixed(1)}% dari Omzet. Potongan sebesar ini akan sangat mematikan laba bersih Anda.`,
+                        solution: 'Pastikan semua menu di Gofood/Grab/Shopee sudah dinaikkan harganya (markup) minimal 20-25% dari harga offline. Kurangi promo berbayar jika omzet sedang turun.'
+                    });
+                }
+
+                // Cek 3: Analisa Harga Menu vs Channel (Harga terlalu murah)
+                let badMenus = [];
+                menus.forEach(m => {
+                    const offlinePrice = m.prices?.['Offline'] || m.priceOffline || 0;
+                    if (offlinePrice > 0) {
+                        salesChannels.filter(c => c !== 'Offline').forEach(ch => {
+                            const onlinePrice = m.prices?.[ch] || m['price'+ch] || 0;
+                            // Jika harga online diset, dan selisihnya sangat tipis (di bawah 5% dari harga offline)
+                            if (onlinePrice > 0 && onlinePrice <= offlinePrice * 1.05) {
+                                badMenus.push(`${m.name} di merchant ${ch}`);
+                            }
+                        });
+                    }
+                });
+
+                if (badMenus.length > 0) {
+                    autoAlerts.push({
+                        title: 'Harga Jual Online Kemurahan!',
+                        desc: `Terdeteksi ada menu yang harga Online-nya sama persis atau nyaris sama dengan harga Offline: ${badMenus.slice(0, 3).join(', ')}${badMenus.length > 3 ? ' dan lainnya' : ''}.`,
+                        solution: 'Segera ubah harga menu tersebut di tab "Harga Menu & Channel". Jika harga tidak dibedakan, Anda yang akan menanggung penuh potongan admin aplikasi!'
+                    });
+                }
+
                 const requestHppAnalysisAI = async () => {
                     const apiKey = localStorage.getItem('fin-gemini-api-key') || ""; 
                     if (!apiKey) {
@@ -2170,6 +2203,15 @@ Jawab tanpa basa-basi, langsung ke poin analisa!`;
                                                 <input type="date" value={hppDate} onChange={handleHppDateChange} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-bold outline-none text-indigo-600 dark:text-indigo-400" />
                                             </div>
 
+                                            {/* SYSTEM HEALTH BADGE */}
+                                            <div className={`p-4 rounded-2xl border flex items-center gap-3 mb-4 ${healthColor}`}>
+                                                <div className="w-8 h-8 rounded-full bg-white/50 dark:bg-slate-900/50 flex items-center justify-center shrink-0"><div className="w-5 h-5">{healthIcon}</div></div>
+                                                <div>
+                                                    <p className="text-[9px] font-bold uppercase tracking-widest opacity-80 mb-0.5">Status Kesehatan Harian</p>
+                                                    <p className="text-sm font-black">{systemHealth}</p>
+                                                </div>
+                                            </div>
+
                                             {/* Top Level Summary Cards */}
                                             <div className="grid grid-cols-2 gap-3 mb-4">
                                                 <div className="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-2xl border border-indigo-100 dark:border-indigo-800/50">
@@ -2194,17 +2236,42 @@ Jawab tanpa basa-basi, langsung ke poin analisa!`;
                                                 </div>
                                             </div>
 
+                                            {/* AUTO ALERTS (Sistem Deteksi Otomatis) */}
+                                            {autoAlerts.length > 0 && (
+                                                <div className="space-y-3 mb-6">
+                                                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Deteksi Otomatis Sistem:</h4>
+                                                    {autoAlerts.map((al, idx) => (
+                                                        <div key={idx} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border border-red-200 dark:border-red-900/50 shadow-sm relative overflow-hidden">
+                                                            <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
+                                                            <p className="font-black text-[11px] text-red-600 dark:text-red-400 uppercase mb-1.5">{al.title}</p>
+                                                            <p className="text-[10px] text-slate-600 dark:text-slate-400 mb-3 leading-relaxed">{al.desc}</p>
+                                                            <div className="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-100 dark:border-slate-700">
+                                                                <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest block mb-1">💡 Solusi Cepat:</span>
+                                                                <span className="text-[10px] font-medium text-slate-700 dark:text-slate-300 leading-relaxed">{al.solution}</span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    
+                                                    {systemHealth.includes('KRITIS') && (
+                                                        <div className="text-center pt-2">
+                                                            <p className="text-[10px] text-red-500 dark:text-red-400 font-bold mb-2">⚠️ Kondisi sangat rawan! AI perlu menganalisa lebih dalam korelasi menu dan pembelanjaan Anda.</p>
+                                                            <div className="w-5 h-5 border-b-2 border-r-2 border-red-500 mx-auto rotate-45 mb-1 animate-bounce"></div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
                                             {/* AI INSIGHT BOX */}
-                                            <div className="border-t-2 border-slate-800 dark:border-slate-500 pt-4 mt-2">
+                                            <div className="border-t-2 border-slate-100 dark:border-slate-700 pt-4 mt-2">
                                                 <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest mb-3 flex items-center gap-2">
-                                                    <div className="w-4 h-4 text-indigo-500"><Icons.Bot/></div> Insight Kebocoran 2-Layer
+                                                    <div className="w-4 h-4 text-indigo-500"><Icons.Bot/></div> Insight Mendalam AI
                                                 </h4>
                                                 
                                                 {!hppAiInsight && !isAnalyzingHpp && (
                                                     <div className="bg-slate-50 dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-600 p-6 rounded-2xl text-center">
-                                                        <p className="text-[10px] text-slate-500 mb-3 font-medium">Fin akan mengkorelasikan harga jual menu di tiap channel dengan realita belanja HPP dan Pemasukan hari ini untuk melacak lokasi kebocoran profit Anda.</p>
-                                                        <button onClick={requestHppAnalysisAI} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl text-[10px] uppercase shadow-lg transition-colors">
-                                                            MINTA ANALISA AI
+                                                        <p className="text-[10px] text-slate-500 mb-4 font-medium">Jika solusi otomatis di atas belum cukup, Fin AI dapat mengkorelasikan harga jual di tiap channel dengan realita item belanja hari ini.</p>
+                                                        <button onClick={requestHppAnalysisAI} className={`w-full py-3.5 ${systemHealth.includes('KRITIS') ? 'bg-red-600 hover:bg-red-700 animate-pulse' : 'bg-indigo-600 hover:bg-indigo-700'} text-white font-black rounded-xl text-[10px] uppercase shadow-lg transition-colors flex items-center justify-center gap-2`}>
+                                                            <div className="w-4 h-4"><Icons.Bot/></div> MINTA ANALISA AI
                                                         </button>
                                                     </div>
                                                 )}
@@ -2332,43 +2399,62 @@ Jawab tanpa basa-basi, langsung ke poin analisa!`;
                                                 ))}
                                             </div>
                                             <form onSubmit={handleAddChannel} className="flex gap-2">
-                                                <input type="text" value={newChannelName} onChange={e=>setNewChannelName(e.target.value)} placeholder="Nama Merchant Baru (Cth: Tokopedia)" className="flex-1 p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-[11px] outline-none border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200" />
+                                                <input type="text" value={newChannelName} onChange={e=>setNewChannelName(e.target.value)} placeholder="Nama Channel Baru (Cth: Tokopedia)" className="flex-1 p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-[11px] outline-none border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200" />
                                                 <button type="submit" className="px-4 bg-indigo-600 text-white font-black rounded-xl text-[10px] uppercase shadow-md">TAMBAH</button>
                                             </form>
                                         </div>
 
-                                        <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
+                                        <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
                                             <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest mb-2 border-b border-slate-100 dark:border-slate-700 pb-2">Harga Jual Menu</h4>
                                             <p className="text-[10px] text-slate-500 mb-4 leading-relaxed">Masukkan daftar menu dan bedakan harga jualnya per channel untuk deteksi kebocoran margin online.</p>
                                             
-                                            <form onSubmit={handleSaveMenu} className="space-y-3 bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
-                                                <input type="text" value={menuForm.name} onChange={e=>setMenuForm({...menuForm, name: e.target.value})} placeholder="Nama Menu (Cth: Nasi Ayam)" className="w-full p-3 bg-white dark:bg-slate-800 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-slate-700 uppercase text-slate-800 dark:text-slate-200" required/>
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    {salesChannels.map(ch => (
-                                                        <div key={ch}>
-                                                            <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">{ch}</label>
-                                                            <input type="text" inputMode="numeric" placeholder={`Hrg ${ch}`} value={formatInputRp(menuForm.prices?.[ch] || '')} onChange={e=>setMenuForm({...menuForm, prices: {...menuForm.prices, [ch]: parseInputRp(e.target.value)}})} className="w-full p-3 bg-white dark:bg-slate-800 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-slate-700 text-right text-indigo-700 dark:text-indigo-300" />
-                                                        </div>
-                                                    ))}
+                                            <form onSubmit={handleSaveMenu} className="space-y-4 bg-slate-50 dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-700">
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nama Menu</label>
+                                                    <input type="text" value={menuForm.name} onChange={e=>setMenuForm({...menuForm, name: e.target.value})} placeholder="Nama Menu (Cth: Nasi Ayam)" className="w-full p-3 bg-white dark:bg-slate-800 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-slate-700 uppercase text-slate-800 dark:text-slate-200 shadow-sm" required/>
                                                 </div>
-                                                <button type="submit" className="w-full py-3.5 mt-2 bg-indigo-600 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-md">SIMPAN MENU BARU</button>
+                                                
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Harga Jual Per Channel (Rp)</label>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        {salesChannels.map(ch => (
+                                                            <div key={ch} className="flex items-center bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden pr-3 shadow-sm">
+                                                                <span className="bg-slate-100 dark:bg-slate-700 text-[9px] font-bold text-slate-600 dark:text-slate-300 uppercase px-3 py-3 w-24 shrink-0 text-center border-r border-slate-200 dark:border-slate-700">{ch}</span>
+                                                                <input type="text" inputMode="numeric" placeholder="0" value={formatInputRp(menuForm.prices?.[ch] || '').replace('Rp ', '')} onChange={e=>setMenuForm({...menuForm, prices: {...menuForm.prices, [ch]: parseInputRp(e.target.value)}})} className="w-full bg-transparent font-black text-sm outline-none text-right text-indigo-700 dark:text-indigo-400 py-2.5" />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <button type="submit" className="w-full py-4 mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl text-[11px] uppercase tracking-widest shadow-md transition-colors">SIMPAN MENU BARU</button>
                                             </form>
 
-                                            <div className="mt-5 space-y-3">
-                                                {menus.length === 0 ? <p className="text-xs text-slate-400 font-bold italic text-center py-2">Belum ada menu tersimpan.</p> :
-                                                    menus.map(m => (
-                                                        <div key={m.id} className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-700 relative group">
-                                                            <button onClick={() => setMenus(menus.filter(x => x.id !== m.id))} className="absolute top-3 right-3 text-red-400 p-1.5 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg"><div className="w-4 h-4"><Icons.Trash/></div></button>
-                                                            <p className="font-black text-xs uppercase pr-8 text-slate-800 dark:text-slate-200 mb-2">{m.name}</p>
-                                                            <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] font-bold text-slate-500">
-                                                                {salesChannels.map(ch => {
-                                                                    const pr = m.prices?.[ch] || (m['price'+ch]); // backward compatibility
-                                                                    if(!pr) return null;
-                                                                    return <div key={ch} className="flex justify-between border-b border-slate-100 dark:border-slate-700/50 py-0.5"><span className="truncate">{ch}:</span> <span className="text-slate-700 dark:text-slate-300 font-black">Rp {formatNumber(pr)}</span></div>
-                                                                })}
-                                                            </div>
-                                                        </div>
-                                                    ))
+                                            <div className="mt-6 space-y-3">
+                                                {menus.length === 0 ? <p className="text-xs text-slate-400 font-bold italic text-center py-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">Belum ada menu tersimpan.</p> :
+                                                    <div className="overflow-x-auto no-scrollbar border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+                                                        <table className="w-full text-left border-collapse min-w-[500px]">
+                                                            <thead>
+                                                                <tr className="bg-slate-100 dark:bg-slate-800 text-[10px] uppercase text-slate-500 font-bold tracking-widest">
+                                                                    <th className="p-3 border-b border-slate-200 dark:border-slate-700 whitespace-nowrap">Nama Menu</th>
+                                                                    {salesChannels.map(ch => <th key={ch} className="p-3 border-b border-slate-200 dark:border-slate-700 whitespace-nowrap text-right">{ch}</th>)}
+                                                                    <th className="p-3 border-b border-slate-200 dark:border-slate-700 text-center">Aksi</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {menus.map(m => (
+                                                                    <tr key={m.id} className="border-b border-slate-100 dark:border-slate-700 last:border-0 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                                                        <td className="p-3 font-black text-xs uppercase whitespace-nowrap text-slate-800 dark:text-slate-100">{m.name}</td>
+                                                                        {salesChannels.map(ch => {
+                                                                            const pr = m.prices?.[ch] || (m['price'+ch] || 0);
+                                                                            return <td key={ch} className="p-3 text-[11px] font-bold text-slate-600 dark:text-slate-300 text-right whitespace-nowrap">Rp {formatNumber(pr)}</td>
+                                                                        })}
+                                                                        <td className="p-3 text-center">
+                                                                            <button onClick={() => setMenus(menus.filter(x => x.id !== m.id))} className="text-red-400 hover:text-red-600 p-1.5 bg-red-50 dark:bg-red-900/30 rounded-md transition-colors"><div className="w-4 h-4 mx-auto"><Icons.Trash/></div></button>
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
                                                 }
                                             </div>
                                         </div>
@@ -2436,6 +2522,16 @@ Jawab tanpa basa-basi, langsung ke poin analisa!`;
                 let statusKotor = marginKotorPct >= 50 ? '✨ IDEAL' : '⚠️ MAHAL';
                 let statusBersih = marginBersihPct > 20 ? '🔥 SEHAT' : (marginBersihPct > 0 ? '✅ TIPIS' : '🚨 BONCOS');
 
+                // LOGIKA AUTO-DETEKSI UNTUK TOMBOL DASHBOARD HPP
+                const blnHppRatio = omzetPenjualanBulanIni > 0 ? (HPPBulanIni / omzetPenjualanBulanIni) * 100 : 0;
+                let blnGross = 0; let blnNet = 0;
+                monthlyIncomes.filter(i => i.category === 'Penjualan').forEach(i => {
+                    blnNet += i.amount;
+                    blnGross += (i.grossAmount || i.amount);
+                });
+                const blnFeeRatio = blnGross > 0 ? ((blnGross - blnNet) / blnGross) * 100 : 0;
+                const isDashboardHppKritis = blnHppRatio > 50 || blnFeeRatio > 25;
+
                 // FITUR BARU 3: Dapatkan Jatah Pribadi
                 const jatahPribadiInfo = getJatahPribadi();
 
@@ -2483,12 +2579,14 @@ Jawab tanpa basa-basi, langsung ke poin analisa!`;
                             const existing = dailyStocks.find(s => s.date === getLocalDateStr());
                             setHppStockValue(existing ? existing.totalValue : '');
                             setHppTab('analisa');
-                        }} className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-5 rounded-[2.5rem] shadow-lg w-full flex items-center justify-between hover:scale-[1.02] transition-transform active:scale-95 mt-4">
+                        }} className={`${isDashboardHppKritis ? 'bg-gradient-to-r from-red-600 to-rose-600 animate-pulse shadow-red-500/40 border-2 border-red-400' : 'bg-gradient-to-r from-orange-500 to-red-500'} text-white p-5 rounded-[2.5rem] shadow-lg w-full flex items-center justify-between hover:scale-[1.02] transition-transform active:scale-95 mt-4`}>
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white"><Icons.Chart /></div>
                                 <div className="text-left">
-                                    <p className="font-black text-sm uppercase tracking-widest">Cek Kebocoran & Margin</p>
-                                    <p className="text-[10px] text-orange-100 font-bold mt-1">Analisa Harian Tanpa Ribet Resep</p>
+                                    <p className="font-black text-sm uppercase tracking-widest flex items-center gap-1">
+                                        Cek Kebocoran {isDashboardHppKritis && <span className="w-4 h-4"><Icons.Warn /></span>}
+                                    </p>
+                                    <p className="text-[10px] text-orange-100 font-bold mt-1">{isDashboardHppKritis ? '⚠️ ADA KEBOCORAN! CEK SEKARANG!' : 'Analisa Harian Tanpa Ribet Resep'}</p>
                                 </div>
                             </div>
                             <div className="w-5 h-5 text-orange-200"><Icons.ChevronUp className="rotate-90" /></div>
