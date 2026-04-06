@@ -2170,32 +2170,55 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                         `- ${k}: Kotor Rp${v.gross}, Bersih Rp${v.net} (Potongan Rp${v.gross - v.net})`
                     ).join('\n');
 
-                    const prompt = `Anda adalah "Fin", AI Spesialis Analisa HPP & Deteksi Kebocoran Margin Kuliner.
-Lakukan Analisa 2 Layer SUPER DETAIL untuk warung pada tanggal ${hppDate}.
+                    // --- HITUNG AKUMULASI BULANAN UNTUK AI ---
+                    const monthStr = hppDate.substring(0, 7);
+                    const monthlyIncomes = incomes.filter(i => i.date.startsWith(monthStr));
+                    const monthlyOmzet = monthlyIncomes.reduce((s,i) => s + i.amount, 0) + agendas.filter(a => a.date.startsWith(monthStr) && a.type === 'masuk').reduce((s,a) => s + a.amount, 0);
+                    const monthlyHPP = history.filter(h => h.date.startsWith(monthStr)).reduce((s,h) => s + h.total, 0);
+                    const monthlyOpr = agendas.filter(a => a.date.startsWith(monthStr) && a.type === 'keluar').reduce((s,a) => s + a.amount, 0);
+                    
+                    // Hitung total potongan/deduction bulanan berjalan
+                    const [yStr, mStr] = monthStr.split('-');
+                    const daysInMonth = new Date(parseInt(yStr), parseInt(mStr), 0).getDate();
+                    let monthlyDeduction = 0;
+                    for(let d=1; d<=daysInMonth; d++){
+                        let dObj = new Date(parseInt(yStr), parseInt(mStr)-1, d);
+                        let dStrFormated = getLocalDateStr(dObj);
+                        deductions.forEach(ded => {
+                            if(dStrFormated >= ded.startDate && dStrFormated <= ded.endDate) monthlyDeduction += ded.amount;
+                        });
+                    }
+                    const rasioBulanIni = monthlyOmzet > 0 ? ((monthlyHPP / monthlyOmzet) * 100).toFixed(1) : 0;
 
-=== DATA LAYER 2 (PENGELUARAN GLOBAL & POTONGAN PLATFORM) ===
-- Total Belanja Bahan Hari Ini: Rp ${tBelanja}
-- Sisa Stok Bahan Kemarin: Rp ${yStock}
-- Sisa Stok Bahan Hari Ini: Rp ${tStock}
-=> TOTAL HPP (Beban Pokok) Hari Ini: Rp ${realHpp} (Rasio terhadap Kotor: ${globalHppRatio.toFixed(1)}%)
-=> Total Pemasukan Kotor (Omzet Publik): Rp ${totalGross}
-=> Total Pemasukan Bersih (Diterima Kas): Rp ${totalNet}
-=> Kebocoran Platform (Biaya Admin/Merchant): Rp ${totalPlatformFee} (Rasio: ${globalFeeRatio.toFixed(1)}%)
+                    const prompt = `Anda adalah "Fin", AI Spesialis Analisa HPP & Perumus Harga Kuliner.
+Lakukan Analisa Deteksi Kebocoran berdasarkan data Harian & Bulanan, lalu rumuskan Harga Jual Ideal.
+
+=== DATA AKUMULASI BULAN INI (${monthStr}) ===
+- Total Pemasukan/Omzet: Rp ${monthlyOmzet}
+- Total Belanja Bahan (HPP Bulanan): Rp ${monthlyHPP} (Rasio HPP: ${rasioBulanIni}%)
+- Total Biaya Operasional & Tagihan: Rp ${monthlyOpr}
+- Total Beban Potongan/Cicilan: Rp ${monthlyDeduction}
+
+=== DATA HARIAN HARI INI (${hppDate}) ===
+- Pemasukan Kotor: Rp ${totalGross} | Pemasukan Bersih: Rp ${totalNet} (Potongan Admin: Rp ${totalPlatformFee})
+- Belanja Hari Ini: Rp ${tBelanja} | HPP Terpakai Real: Rp ${realHpp}
 Daftar Belanjaan: ${tItems || 'Tidak ada belanja'}
 Penjualan per Channel:
 ${salesListText || 'Belum ada penjualan'}
 
-=== DATA LAYER 1 (HARGA MENU & CHANNEL JUALAN) ===
-Daftar Menu Utama & Harga Jual:
-${menuListText || 'Belum ada menu diatur. Beri tahu bos untuk isi menu!'}
+=== DATA DAFTAR MENU & HARGA SAAT INI ===
+${menuListText || 'Belum ada menu diatur. Berikan simulasi tabel untuk 5 menu standar warung makan.'}
 
-TUGAS ANDA (Gunakan bahasa Markdown, blak-blakan, tajam menganalisa, panggil "Bos"):
-1. **Analisa Layer 2 (Global Leak)**: Evaluasi Rasio HPP (${globalHppRatio.toFixed(1)}%) dan Potongan Platform (${globalFeeRatio.toFixed(1)}%). Apakah warung boncos di ongkos admin atau boros di belanja bahan baku hari ini?
-2. **Analisa Layer 1 (Harga vs Channel)**: Coba proyeksikan HPP global Rp ${realHpp} ke omzet yang didapat. Jika menu andalan harganya segitu dan dipotong admin merchant segitu, harga di channel mana yang **terlalu murah / rawan rugi**?
-3. **Deteksi Biang Kerok**: Cari item belanjaan yang mungkin bikin boros, ATAU channel jualan yang membunuh margin.
-4. **Saran Aksi**: Berikan 3 instruksi taktis (misal: "Naikkan harga Gofood 15%", "Kurangi porsi beras", dsb).
+TUGAS ANDA (Gunakan format Markdown rapi, tajam menganalisa, panggil user "Bos"):
+1. **Evaluasi Kebocoran (Harian & Bulanan)**: Analisa rasio HPP bulanan (${rasioBulanIni}%) vs beban operasional. Apakah sudah sehat atau boncos? Apakah ada indikasi kebocoran dari daftar belanja hari ini?
+2. **Evaluasi Potongan Platform**: Analisa potongan dari aplikasi Gofood/Grabfood hari ini.
+3. **TABEL REKOMENDASI HARGA JUAL IDEAL**: Berdasarkan seluruh beban biaya bulanan di atas, buatkan TABEL MARKDOWN untuk merekomendasikan harga jual baru setiap menu (atau 5 menu simulasi). 
+Tabel WAJIB memiliki susunan kolom persis seperti ini:
+| Nama Menu | Estimasi HPP | Harga Bersih (Tiba di Kas) | Harga Kotor Aplikasi (+25% s/d 30%) | Margin Profit |
 
-Jawab tanpa basa-basi, langsung ke poin analisa!`;
+*Aturan Rumus Harga AI: Harga Bersih harus memperhitungkan HPP + Porsi Operasional + Target Laba Sehat. Harga Kotor Aplikasi dinaikkan min 25% dari Harga Bersih agar warung tidak nombok biaya admin.*
+
+Jawab tanpa basa-basi, langsung berikan evaluasi taktis dan tampilkan tabel rekomendasi harga!`;
 
                     var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
                     const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3 } };
