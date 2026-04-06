@@ -292,7 +292,7 @@
             const [hppDate, setHppDate] = useState(getLocalDateStr());
             const [hppStockValue, setHppStockValue] = useState('');
             const [menuForm, setMenuForm] = useState({ name: '', inputs: {} });
-            const [hppAiInsight, setHppAiInsight] = useState('');
+            const [hppAiInsight, setHppAiInsight] = useState(() => localStorage.getItem('fin-hpp-ai-insight') || '');
             const [isAnalyzingHpp, setIsAnalyzingHpp] = useState(false);
             const [newChannelName, setNewChannelName] = useState('');
 
@@ -536,6 +536,7 @@
             useEffect(() => { localStorage.setItem('fin-deductions', JSON.stringify(deductions)); }, [deductions]); // FITUR 1 Save
             useEffect(() => { localStorage.setItem('fin-reports', JSON.stringify(reportArchives)); }, [reportArchives]);
             useEffect(() => { localStorage.setItem('fin-channels', JSON.stringify(salesChannels)); }, [salesChannels]);
+            useEffect(() => { localStorage.setItem('fin-hpp-ai-insight', hppAiInsight); }, [hppAiInsight]);
 
             // FITUR BARU: Simpan Data Menu & Stok HPP
             useEffect(() => { localStorage.setItem('fin-menus', JSON.stringify(menus)); }, [menus]);
@@ -1984,7 +1985,7 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                     setHppDate(d);
                     const existing = dailyStocks.find(s => s.date === d);
                     setHppStockValue(existing ? existing.totalValue : '');
-                    setHppAiInsight(''); // Reset insight saat pindah tanggal
+                    // Analisa AI sengaja tidak di-reset agar tabel tetap muncul sebelum digenerate ulang
                 };
 
                 const handleSaveStock = () => {
@@ -2161,15 +2162,6 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                         .map(i => `${i.name} (${i.qty}${i.unit}=Rp${i.total})`)
                         .join(', ');
 
-                    const menuListText = menus.map(m => {
-                        let pricesTxt = salesChannels.map(ch => `${ch}: Rp${m.prices?.[ch] || (m['price'+ch] || 0)}`).join(', ');
-                        return `- ${m.name} (${pricesTxt})`;
-                    }).join('\n');
-
-                    const salesListText = Object.entries(channelSales).map(([k, v]) => 
-                        `- ${k}: Kotor Rp${v.gross}, Bersih Rp${v.net} (Potongan Rp${v.gross - v.net})`
-                    ).join('\n');
-
                     // --- HITUNG AKUMULASI BULANAN UNTUK AI ---
                     const monthStr = hppDate.substring(0, 7);
                     const monthlyIncomes = incomes.filter(i => i.date.startsWith(monthStr));
@@ -2190,35 +2182,24 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                     }
                     const rasioBulanIni = monthlyOmzet > 0 ? ((monthlyHPP / monthlyOmzet) * 100).toFixed(1) : 0;
 
-                    const prompt = `Anda adalah "Fin", AI Spesialis Analisa HPP & Perumus Harga Kuliner.
-Lakukan Analisa Deteksi Kebocoran berdasarkan data Harian & Bulanan, lalu rumuskan Harga Jual Ideal.
+                    const prompt = `Anda adalah "Fin", AI Spesialis Analisa Keuangan F&B.
+Lakukan Analisa Deteksi Kebocoran.
 
 === DATA AKUMULASI BULAN INI (${monthStr}) ===
-- Total Pemasukan/Omzet: Rp ${monthlyOmzet}
-- Total Belanja Bahan (HPP Bulanan): Rp ${monthlyHPP} (Rasio HPP: ${rasioBulanIni}%)
-- Total Biaya Operasional & Tagihan: Rp ${monthlyOpr}
-- Total Beban Potongan/Cicilan: Rp ${monthlyDeduction}
+- Total Pemasukan: Rp ${monthlyOmzet}
+- Total HPP (Bahan): Rp ${monthlyHPP} (Rasio: ${rasioBulanIni}%)
+- Total Operasional: Rp ${monthlyOpr}
+- Total Potongan/Cicilan: Rp ${monthlyDeduction}
 
 === DATA HARIAN HARI INI (${hppDate}) ===
-- Pemasukan Kotor: Rp ${totalGross} | Pemasukan Bersih: Rp ${totalNet} (Potongan Admin: Rp ${totalPlatformFee})
-- Belanja Hari Ini: Rp ${tBelanja} | HPP Terpakai Real: Rp ${realHpp}
-Daftar Belanjaan: ${tItems || 'Tidak ada belanja'}
-Penjualan per Channel:
-${salesListText || 'Belum ada penjualan'}
+- Pemasukan Kotor: Rp ${totalGross} | Pemasukan Bersih: Rp ${totalNet} (Potongan Admin Ojol: Rp ${totalPlatformFee})
+- Belanja Hari Ini: Rp ${tBelanja} | HPP Terpakai: Rp ${realHpp}
+Daftar Belanja: ${tItems || 'N/A'}
 
-=== DATA DAFTAR MENU & HARGA SAAT INI ===
-${menuListText || 'Belum ada menu diatur. Berikan simulasi tabel untuk 5 menu standar warung makan.'}
-
-TUGAS ANDA (Gunakan format Markdown rapi, tajam menganalisa, panggil user "Bos"):
-1. **Evaluasi Kebocoran (Harian & Bulanan)**: Analisa rasio HPP bulanan (${rasioBulanIni}%) vs beban operasional. Apakah sudah sehat atau boncos? Apakah ada indikasi kebocoran dari daftar belanja hari ini?
-2. **Evaluasi Potongan Platform**: Analisa potongan dari aplikasi Gofood/Grabfood hari ini.
-3. **TABEL REKOMENDASI HARGA JUAL IDEAL**: Berdasarkan seluruh beban biaya bulanan di atas, buatkan TABEL MARKDOWN untuk merekomendasikan harga jual baru setiap menu (atau 5 menu simulasi). 
-Tabel WAJIB memiliki susunan kolom persis seperti ini:
-| Nama Menu | Estimasi HPP | Harga Bersih (Tiba di Kas) | Harga Kotor Aplikasi (+25% s/d 30%) | Margin Profit |
-
-*Aturan Rumus Harga AI: Harga Bersih harus memperhitungkan HPP + Porsi Operasional + Target Laba Sehat. Harga Kotor Aplikasi dinaikkan min 25% dari Harga Bersih agar warung tidak nombok biaya admin.*
-
-Jawab tanpa basa-basi, langsung berikan evaluasi taktis dan tampilkan tabel rekomendasi harga!`;
+TUGAS ANDA:
+1. Berikan evaluasi tajam mengenai profitabilitas. Apakah HPP dan Operasional membengkak atau aman?
+2. Berikan "Action Plan" 3 langkah untuk menekan kebocoran atau menaikkan profit berdasarkan data hari ini.
+(Gunakan format Markdown rapi, panggil user "Bos", tidak perlu mengenerate tabel harga lagi karena sudah otomatis tertampil di dashboard).`;
 
                     var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
                     const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3 } };
@@ -2321,11 +2302,81 @@ Jawab tanpa basa-basi, langsung berikan evaluasi taktis dan tampilkan tabel reko
                                                 </div>
                                             )}
 
+                                            {/* AUTO-EVALUASI HARGA MENU (SELALU MUNCUL) */}
+                                            <div className="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 mb-4 overflow-hidden">
+                                                <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest mb-3 border-b border-slate-100 dark:border-slate-700 pb-2 flex items-center gap-2">
+                                                    <div className="w-4 h-4 text-indigo-500"><Icons.ShopBag /></div> Rekomendasi Harga Aplikasi
+                                                </h4>
+                                                {menus.length === 0 ? (
+                                                    <p className="text-[10px] text-slate-400 italic text-center py-2">Belum ada menu tersimpan. Tambahkan menu di tab "Harga Menu".</p>
+                                                ) : (
+                                                    <div className="overflow-x-auto no-scrollbar">
+                                                        <table className="w-full text-left border-collapse min-w-[400px]">
+                                                            <thead>
+                                                                <tr className="bg-slate-50 dark:bg-slate-900 text-[9px] uppercase text-slate-500 font-bold tracking-widest">
+                                                                    <th className="p-2 border-b border-slate-200 dark:border-slate-700 rounded-tl-lg">Nama Menu</th>
+                                                                    <th className="p-2 border-b border-slate-200 dark:border-slate-700 text-right">Harga Offline (Dasar)</th>
+                                                                    <th className="p-2 border-b border-slate-200 dark:border-slate-700 text-right">Rek. Kotor Ojol (+25%)</th>
+                                                                    <th className="p-2 border-b border-slate-200 dark:border-slate-700 text-center rounded-tr-lg">Status Margin Online</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {menus.map(m => {
+                                                                    const offPrice = m.prices?.['Offline'] || 0;
+                                                                    const idealAppPrice = offPrice > 0 ? Math.round(offPrice * 1.25) : 0;
+                                                                    
+                                                                    // Cek channel online
+                                                                    const onlineCh = salesChannels.filter(c => c !== 'Offline');
+                                                                    let worstNet = Infinity;
+                                                                    let hasOnline = false;
+                                                                    
+                                                                    onlineCh.forEach(ch => {
+                                                                        const net = m.prices?.[ch];
+                                                                        if (net > 0) {
+                                                                            hasOnline = true;
+                                                                            if (net < worstNet) worstNet = net;
+                                                                        }
+                                                                    });
+                                                                    
+                                                                    let statusBadge = <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-[8px] font-bold">Belum Lengkap</span>;
+                                                                    if (offPrice > 0 && hasOnline) {
+                                                                        if (worstNet < offPrice) {
+                                                                            statusBadge = <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded text-[8px] font-bold animate-pulse" title={`Ada harga bersih channel yang cuma Rp ${formatNumber(worstNet)}`}>⚠️ BOCOR (Subsidi Ojol)</span>;
+                                                                        } else if (worstNet >= offPrice) {
+                                                                            statusBadge = <span className="bg-green-100 text-green-600 px-2 py-0.5 rounded text-[8px] font-bold" title={`Terendah bersih Rp ${formatNumber(worstNet)}`}>✅ AMAN</span>;
+                                                                        }
+                                                                    } else if (offPrice === 0) {
+                                                                        statusBadge = <span className="bg-orange-100 text-orange-600 px-2 py-0.5 rounded text-[8px] font-bold">Butuh Hrg Offline</span>;
+                                                                    }
+
+                                                                    return (
+                                                                        <tr key={m.id} className="border-b border-slate-100 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                                                            <td className="p-2 font-black text-[11px] text-slate-800 dark:text-slate-100 uppercase">{m.name}</td>
+                                                                            <td className="p-2 text-[10px] font-bold text-slate-600 dark:text-slate-300 text-right">Rp {formatNumber(offPrice)}</td>
+                                                                            <td className="p-2 text-[10px] font-black text-indigo-600 dark:text-indigo-400 text-right">Rp {formatNumber(idealAppPrice)}</td>
+                                                                            <td className="p-2 text-center">{statusBadge}</td>
+                                                                        </tr>
+                                                                    );
+                                                                })}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                )}
+                                                <p className="text-[8.5px] text-slate-400 mt-2 leading-relaxed italic border-t border-slate-100 dark:border-slate-700 pt-2">*Harga Rekomendasi Ojol = Harga Offline + 25% (estimasi rata-rata markup agar bersihnya sama dengan offline). Pastikan <b>Harga Bersih</b> di setingan channel online tidak lebih rendah dari Harga Offline agar margin tetap sehat.</p>
+                                            </div>
+
                                             {/* AI INSIGHT BOX */}
                                             <div className="border-t-2 border-slate-100 dark:border-slate-700 pt-4 mt-2">
-                                                <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest mb-3 flex items-center gap-2">
-                                                    <div className="w-4 h-4 text-indigo-500"><Icons.Bot/></div> Insight Mendalam AI
-                                                </h4>
+                                                <div className="flex justify-between items-center mb-3">
+                                                    <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest flex items-center gap-2">
+                                                        <div className="w-4 h-4 text-indigo-500"><Icons.Bot/></div> Insight Mendalam AI
+                                                    </h4>
+                                                    {hppAiInsight && !isAnalyzingHpp && (
+                                                        <button onClick={requestHppAnalysisAI} className="text-[9px] bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 px-2 py-1.5 rounded-lg font-bold uppercase tracking-widest hover:bg-indigo-200 transition-colors flex items-center gap-1 shadow-sm">
+                                                            <div className="w-3 h-3"><Icons.Refresh /></div> Update Data Terbaru
+                                                        </button>
+                                                    )}
+                                                </div>
                                                 
                                                 {!hppAiInsight && !isAnalyzingHpp && (
                                                     <div className="bg-slate-50 dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-600 p-6 rounded-2xl text-center">
@@ -2345,7 +2396,6 @@ Jawab tanpa basa-basi, langsung berikan evaluasi taktis dan tampilkan tabel reko
 
                                                 {hppAiInsight && !isAnalyzingHpp && (
                                                     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-4 rounded-2xl shadow-sm relative">
-                                                        <button onClick={requestHppAnalysisAI} className="absolute top-3 right-3 text-[9px] bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded font-bold text-slate-500 hover:text-indigo-500">Refresh</button>
                                                         <div className="text-[11px] leading-relaxed markdown-body text-slate-800 dark:text-slate-200 mt-2" dangerouslySetInnerHTML={{__html: window.marked ? window.marked.parse(hppAiInsight) : hppAiInsight}} />
                                                     </div>
                                                 )}
