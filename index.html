@@ -307,6 +307,9 @@
             const [isAnalyzingGlobal, setIsAnalyzingGlobal] = useState(false);
             const [selectedGlobalInsight, setSelectedGlobalInsight] = useState(null);
 
+            // FITUR BARU: State untuk Rekomendasi Harga Presisi
+            const [priceRecommendations, setPriceRecommendations] = useState(() => JSON.parse(localStorage.getItem('fin-price-recs') || 'null'));
+
             const [showSettings, setShowSettings] = useState(false);
             const [isSaving, setIsSaving] = useState(false);
             const [isExited, setIsExited] = useState(false); 
@@ -552,6 +555,7 @@
             useEffect(() => { localStorage.setItem('fin-menus', JSON.stringify(menus)); }, [menus]);
             useEffect(() => { localStorage.setItem('fin-daily-stocks', JSON.stringify(dailyStocks)); }, [dailyStocks]);
             useEffect(() => { localStorage.setItem('fin-global-insights', JSON.stringify(globalInsights)); }, [globalInsights]);
+            useEffect(() => { localStorage.setItem('fin-price-recs', JSON.stringify(priceRecommendations)); }, [priceRecommendations]);
 
             useEffect(() => { if (isChatOpen) chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chats, isTyping, isChatOpen]);
 
@@ -1449,7 +1453,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                             </select>
                                         </div>
 
-                                        <input type="text" inputMode="numeric" value={formatInputRp(item.actualTotal)} onChange={(e) => updateCartActual(item.id, 'actualTotal', parseInputRp(e.target.value))} placeholder="H. Asli" className={`w-[65px] px-1.5 py-1.5 rounded-lg text-[10px] font-black outline-none focus:ring-2 focus:ring-green-400 transition-colors text-right shrink-0 ${item.isBought ? 'bg-white dark:bg-slate-900 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800' : 'bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700'}`} />
+                                        <input type="text" inputMode="numeric" value={formatInputRp(item.actualTotal)} onChange={(e) => updateCartActual(item.id, 'actualTotal', parseInputRp(e.target.value))} placeholder="H. Asli" className={`w-[85px] min-w-[85px] px-1.5 py-1.5 rounded-lg text-[10px] font-black outline-none focus:ring-2 focus:ring-green-400 transition-colors text-right shrink-0 ${item.isBought ? 'bg-white dark:bg-slate-900 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800' : 'bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700'}`} />
                                         
                                         <button onClick={() => setCart(cart.filter(i => i.id !== item.id))} className="w-5 h-5 shrink-0 flex items-center justify-center text-red-400 hover:text-red-500 transition-colors">
                                             <Icons.Trash/>
@@ -1469,7 +1473,7 @@ ATURAN WAJIB: Langsung output text JSON murni tanpa markdown \`\`\`json.`;
                                     </select>
                                 </div>
 
-                                <input type="text" inputMode="numeric" value={formatInputRp(marketNewItem.actualTotal)} onChange={e => setMarketNewItem({...marketNewItem, actualTotal: parseInputRp(e.target.value)})} placeholder="H.Asli" className="w-[60px] p-2 rounded-lg text-[10px] font-bold text-right bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 outline-none" />
+                                <input type="text" inputMode="numeric" value={formatInputRp(marketNewItem.actualTotal)} onChange={e => setMarketNewItem({...marketNewItem, actualTotal: parseInputRp(e.target.value)})} placeholder="H.Asli" className="w-[85px] shrink-0 p-2 rounded-lg text-[10px] font-bold text-right bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 outline-none" />
                                 <button type="submit" className="bg-indigo-600 text-white p-2.5 rounded-lg shadow-sm hover:bg-indigo-700 shrink-0"><div className="w-3.5 h-3.5"><Icons.Plus /></div></button>
                             </form>
 
@@ -2064,8 +2068,8 @@ Tugas Anda (Jawab langsung dengan format Markdown yang rapi tanpa JSON wrap, tan
                 const tStockObj = dailyStocks.find(s => s.date === hppDate);
                 const tStock = tStockObj ? tStockObj.totalValue : 0;
                 
-                const tBelanja = history.filter(h => h.date === hppDate).reduce((s, h) => s + h.total, 0);
-                const realHpp = Math.max(0, yStock + tBelanja - tStock); 
+                    const tBelanja = history.filter(h => h.date === hppDate).reduce((s, h) => s + h.total, 0);
+                    const realHpp = Math.max(0, yStock + tBelanja - tStock); 
 
                 // Income calculations
                 const incs = incomes.filter(i => i.date === hppDate && i.category === 'Penjualan');
@@ -2313,69 +2317,6 @@ TUGAS ANDA:
                                                     )}
                                                 </div>
                                             )}
-
-                                            {/* AUTO-EVALUASI HARGA MENU (SELALU MUNCUL) */}
-                                            <div className="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 mb-4 overflow-hidden">
-                                                <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest mb-3 border-b border-slate-100 dark:border-slate-700 pb-2 flex items-center gap-2">
-                                                    <div className="w-4 h-4 text-indigo-500"><Icons.ShopBag /></div> Rekomendasi Harga Aplikasi
-                                                </h4>
-                                                {menus.length === 0 ? (
-                                                    <p className="text-[10px] text-slate-400 italic text-center py-2">Belum ada menu tersimpan. Tambahkan menu di tab "Harga Menu".</p>
-                                                ) : (
-                                                    <div className="overflow-x-auto no-scrollbar">
-                                                        <table className="w-full text-left border-collapse min-w-[400px]">
-                                                            <thead>
-                                                                <tr className="bg-slate-50 dark:bg-slate-900 text-[9px] uppercase text-slate-500 font-bold tracking-widest">
-                                                                    <th className="p-2 border-b border-slate-200 dark:border-slate-700 rounded-tl-lg">Nama Menu</th>
-                                                                    <th className="p-2 border-b border-slate-200 dark:border-slate-700 text-right">Harga Offline (Dasar)</th>
-                                                                    <th className="p-2 border-b border-slate-200 dark:border-slate-700 text-right">Rek. Kotor Ojol (+25%)</th>
-                                                                    <th className="p-2 border-b border-slate-200 dark:border-slate-700 text-center rounded-tr-lg">Status Margin Online</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {menus.map(m => {
-                                                                    const offPrice = m.prices?.['Offline'] || 0;
-                                                                    const idealAppPrice = offPrice > 0 ? Math.round(offPrice * 1.25) : 0;
-                                                                    
-                                                                    // Cek channel online
-                                                                    const onlineCh = salesChannels.filter(c => c !== 'Offline');
-                                                                    let worstNet = Infinity;
-                                                                    let hasOnline = false;
-                                                                    
-                                                                    onlineCh.forEach(ch => {
-                                                                        const net = m.prices?.[ch];
-                                                                        if (net > 0) {
-                                                                            hasOnline = true;
-                                                                            if (net < worstNet) worstNet = net;
-                                                                        }
-                                                                    });
-                                                                    
-                                                                    let statusBadge = <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-[8px] font-bold">Belum Lengkap</span>;
-                                                                    if (offPrice > 0 && hasOnline) {
-                                                                        if (worstNet < offPrice) {
-                                                                            statusBadge = <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded text-[8px] font-bold animate-pulse" title={`Ada harga bersih channel yang cuma Rp ${formatNumber(worstNet)}`}>⚠️ BOCOR (Subsidi Ojol)</span>;
-                                                                        } else if (worstNet >= offPrice) {
-                                                                            statusBadge = <span className="bg-green-100 text-green-600 px-2 py-0.5 rounded text-[8px] font-bold" title={`Terendah bersih Rp ${formatNumber(worstNet)}`}>✅ AMAN</span>;
-                                                                        }
-                                                                    } else if (offPrice === 0) {
-                                                                        statusBadge = <span className="bg-orange-100 text-orange-600 px-2 py-0.5 rounded text-[8px] font-bold">Butuh Hrg Offline</span>;
-                                                                    }
-
-                                                                    return (
-                                                                        <tr key={m.id} className="border-b border-slate-100 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                                                                            <td className="p-2 font-black text-[11px] text-slate-800 dark:text-slate-100 uppercase">{m.name}</td>
-                                                                            <td className="p-2 text-[10px] font-bold text-slate-600 dark:text-slate-300 text-right">Rp {formatNumber(offPrice)}</td>
-                                                                            <td className="p-2 text-[10px] font-black text-indigo-600 dark:text-indigo-400 text-right">Rp {formatNumber(idealAppPrice)}</td>
-                                                                            <td className="p-2 text-center">{statusBadge}</td>
-                                                                        </tr>
-                                                                    );
-                                                                })}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                )}
-                                                <p className="text-[8.5px] text-slate-400 mt-2 leading-relaxed italic border-t border-slate-100 dark:border-slate-700 pt-2">*Harga Rekomendasi Ojol = Harga Offline + 25% (estimasi rata-rata markup agar bersihnya sama dengan offline). Pastikan <b>Harga Bersih</b> di setingan channel online tidak lebih rendah dari Harga Offline agar margin tetap sehat.</p>
-                                            </div>
 
                                             {/* AI INSIGHT BOX */}
                                             <div className="border-t-2 border-slate-100 dark:border-slate-700 pt-4 mt-2">
@@ -2893,7 +2834,67 @@ Instruksi:
 
                                             const predLabaBersih = (totalBlnBersih / (passedDays || 1)) * daysInMonth - totalOprBulanIni - totalDeductionBulanIni;
 
-                                            // Fungsi Generate Insight Global
+                                            // Fungsi Generate Rekomendasi Harga
+                                            const handleGeneratePriceRecs = () => {
+                                                showStatus('Menganalisa Histori & Potongan...', 'loading');
+                                                
+                                                // 1. Kalkulasi rata-rata fee merchant berdasar historis
+                                                let channelStats = {};
+                                                salesChannels.filter(c => c !== 'Offline').forEach(ch => {
+                                                    let tGross = 0; let tNet = 0;
+                                                    incomes.filter(i => i.source === ch).forEach(i => {
+                                                        tNet += i.amount;
+                                                        tGross += (i.grossAmount || i.amount);
+                                                    });
+                                                    // Ambil margin potongan rill, jika data kosong defaultnya estimasi 25%
+                                                    channelStats[ch] = tGross > 0 ? ((tGross - tNet) / tGross) : 0.25; 
+                                                });
+
+                                                // 2. Evaluasi tiap menu
+                                                const recs = menus.map(m => {
+                                                    const hpp = m.hpp || 0;
+                                                    const currentOffline = m.offline || m.prices?.['Offline'] || 0;
+                                                    
+                                                    // Ideal Offline = Ambil Untung 50% dari Harga Jual (Harga = Modal x 2)
+                                                    const idealOffline = hpp > 0 ? hpp * 2 : currentOffline;
+                                                    
+                                                    let offlineEval = "⚠️ HPP Kosong";
+                                                    if (hpp > 0) {
+                                                        if (currentOffline < idealOffline * 0.85) offlineEval = "🚨 Rugi (Naikkan)";
+                                                        else if (currentOffline > idealOffline * 1.5) offlineEval = "💎 Premium";
+                                                        else offlineEval = "✅ Ideal Sehat";
+                                                    } else if (currentOffline > 0) {
+                                                        offlineEval = "❓ Isi HPP Dulu";
+                                                    }
+
+                                                    const channelRecs = salesChannels.filter(c => c !== 'Offline').map(ch => {
+                                                        const feeRatio = channelStats[ch] || 0.25;
+                                                        // Rumus Harga Online Kotor ideal = Ideal Offline / (1 - Potongan Aplikasi)
+                                                        const targetNet = idealOffline > 0 ? idealOffline : currentOffline;
+                                                        let idealOnline = targetNet > 0 ? Math.round(targetNet / (1 - feeRatio)) : 0;
+                                                        idealOnline = Math.ceil(idealOnline / 500) * 500; // Pembulatan ke kelipatan 500 terdekat
+                                                        
+                                                        const cNet = m.inputs?.[ch]?.net || 0;
+                                                        const cGross = m.inputs?.[ch]?.gross || 0;
+
+                                                        let evalOnline = "⚠️ Belum Diatur";
+                                                        if (cGross > 0) {
+                                                            if (cNet < currentOffline) evalOnline = "🚨 Bocor (Subsidi Ojol)";
+                                                            else if (cGross < idealOnline * 0.9) evalOnline = "⚠️ Kemurahan";
+                                                            else evalOnline = "✅ Margin Aman";
+                                                        }
+
+                                                        return { ch, feeRatio, idealOnline, cGross, cNet, evalOnline };
+                                                    });
+
+                                                    return { id: m.id, name: m.name, hpp, currentOffline, idealOffline, offlineEval, channelRecs };
+                                                });
+
+                                                setPriceRecommendations({ timestamp: Date.now(), data: recs });
+                                                showStatus('Rekomendasi Harga Berhasil Diperbarui!', 'success');
+                                            };
+
+                                            // Fungsi Generate Insight Global AI
                                             const requestGlobalInsightAI = async () => {
                                                 const apiKey = localStorage.getItem('fin-gemini-api-key') || ""; 
                                                 if (!apiKey) return showStatus("API Key Gemini belum diatur!", "error");
@@ -3051,6 +3052,80 @@ Balas dalam format Markdown yang elegan dan profesional. Panggil user "Bos".`;
                                                                     </div>
                                                                 ))}
                                                                 <p className="text-center text-[9px] text-slate-400 font-bold mt-2">Minta AI menganalisa penyebab hari-hari di atas bocor.</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* REKOMENDASI HARGA PRESISI */}
+                                                    <div className="bg-white dark:bg-slate-800 p-5 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
+                                                        <div className="flex justify-between items-center mb-4 border-b border-slate-100 dark:border-slate-700 pb-3">
+                                                            <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest flex items-center gap-2">
+                                                                <div className="w-4 h-4 text-green-500"><Icons.ShopBag /></div> Rekomendasi Harga Aplikasi
+                                                            </h4>
+                                                            <button onClick={handleGeneratePriceRecs} className="text-[9px] bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400 px-3 py-1.5 rounded-lg font-black uppercase tracking-widest hover:bg-green-200 transition-colors flex items-center gap-1 shadow-sm">
+                                                                <div className="w-3 h-3"><Icons.Refresh /></div> GENERATE ULANG
+                                                            </button>
+                                                        </div>
+                                                        
+                                                        {!priceRecommendations ? (
+                                                            <div className="text-center py-8 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
+                                                                <p className="text-[11px] text-slate-500 font-black uppercase mb-2">Belum Ada Analisa Harga Tersimpan</p>
+                                                                <p className="text-[10px] text-slate-400 font-medium px-4">Klik tombol <b>GENERATE ULANG</b> di atas untuk mulai menganalisa histori potongan Ojol per Merchant dan membandingkannya dengan HPP (Modal) Anda.</p>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="space-y-4">
+                                                                <p className="text-[9px] text-slate-400 font-bold uppercase text-right">Update Terakhir: {new Date(priceRecommendations.timestamp).toLocaleString('id-ID')}</p>
+                                                                <div className="space-y-3 max-h-[60vh] overflow-y-auto no-scrollbar pb-2">
+                                                                    {priceRecommendations.data.map(m => (
+                                                                        <div key={m.id} className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-sm relative overflow-hidden">
+                                                                            <div className="flex justify-between items-start border-b border-slate-200 dark:border-slate-700 pb-3 mb-3">
+                                                                                <div>
+                                                                                    <h5 className="font-black text-[13px] uppercase text-slate-800 dark:text-slate-100">{m.name}</h5>
+                                                                                    <p className="text-[10px] font-bold text-orange-500 mt-1">HPP / Modal: Rp {formatNumber(m.hpp)}</p>
+                                                                                </div>
+                                                                                <div className="text-right">
+                                                                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Harga Offline</p>
+                                                                                    <p className="text-[12px] font-black text-indigo-600 dark:text-indigo-400">Rp {formatNumber(m.currentOffline)}</p>
+                                                                                    <div className="mt-1.5 inline-block">
+                                                                                        <span className={`text-[8px] font-black px-2 py-1 rounded-md uppercase tracking-widest shadow-sm ${m.offlineEval.includes('Ideal') || m.offlineEval.includes('Premium') ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400' : (m.offlineEval.includes('Rugi') ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400')}`}>
+                                                                                            {m.offlineEval}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            <div className="space-y-2.5">
+                                                                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Analisa Harga Merchant (Ojol)</p>
+                                                                                {m.channelRecs.length === 0 ? <p className="text-[10px] text-slate-400 italic font-bold">Tidak ada channel online.</p> : m.channelRecs.map(ch => (
+                                                                                    <div key={ch.ch} className="flex flex-col sm:flex-row justify-between sm:items-center bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 gap-3">
+                                                                                        <div className="flex-1">
+                                                                                            <p className="font-black text-[11px] text-slate-700 dark:text-slate-200 uppercase mb-1">
+                                                                                                {ch.ch} <span className="text-[8px] text-red-500 bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded ml-1 tracking-widest">Fee {(ch.feeRatio * 100).toFixed(1)}%</span>
+                                                                                            </p>
+                                                                                            <div className="flex items-center gap-3">
+                                                                                                <div className="text-[9px] text-slate-500 font-bold"><span className="uppercase text-[8px] tracking-widest block opacity-70">Harga Kotor</span> Rp {formatNumber(ch.cGross)}</div>
+                                                                                                <div className="text-[9px] text-green-600 dark:text-green-400 font-bold"><span className="uppercase text-[8px] tracking-widest block opacity-70">Terima Bersih</span> Rp {formatNumber(ch.cNet)}</div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <div className="flex flex-col sm:items-end text-left sm:text-right shrink-0 bg-indigo-50/50 dark:bg-slate-900/50 p-2 rounded-lg border border-indigo-100 dark:border-slate-700">
+                                                                                            <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Rekomendasi (Kotor)</p>
+                                                                                            <p className="text-[12px] font-black text-indigo-600 dark:text-indigo-400 mt-0.5 mb-1.5">Rp {formatNumber(ch.idealOnline)}</p>
+                                                                                            <span className={`text-[8px] font-black uppercase tracking-widest w-fit sm:ml-auto px-1.5 py-0.5 rounded shadow-sm ${ch.evalOnline.includes('Aman') ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+                                                                                                {ch.evalOnline}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                            {m.hpp > 0 && m.idealOffline > m.currentOffline && (
+                                                                                <div className="mt-4 bg-indigo-50 dark:bg-indigo-900/30 p-2.5 rounded-xl border border-indigo-100 dark:border-indigo-800/50 flex gap-2 items-start">
+                                                                                    <div className="w-3 h-3 text-indigo-500 shrink-0 mt-0.5"><Icons.Info /></div>
+                                                                                    <p className="text-[9px] text-indigo-600 dark:text-indigo-300 font-medium">💡 <b>Saran Sistem:</b> Naikkan harga Offline Anda minimal menjadi <b>Rp {formatNumber(m.idealOffline)}</b> agar mendapatkan target aman Margin Laba 50%.</p>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
                                                             </div>
                                                         )}
                                                     </div>
