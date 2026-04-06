@@ -296,6 +296,10 @@
             const [isAnalyzingHpp, setIsAnalyzingHpp] = useState(false);
             const [newChannelName, setNewChannelName] = useState('');
 
+            // FITUR BARU: State untuk Recipe Editor AI
+            const [isGeneratingRecipe, setIsGeneratingRecipe] = useState(false);
+            const [showRecipeModal, setShowRecipeModal] = useState(false);
+
             const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null });
             const [showSettings, setShowSettings] = useState(false);
             const [isSaving, setIsSaving] = useState(false);
@@ -2494,105 +2498,295 @@ TUGAS ANDA:
                                 )}
 
                                 {hppTab === 'menu' && (
-                                    <div className="animate-fadeIn space-y-4">
-                                        <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
-                                            <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest mb-2 border-b border-slate-100 dark:border-slate-700 pb-2">Manajemen Channel Jualan</h4>
-                                            
-                                            <div className="flex flex-wrap gap-2 mb-4">
-                                                {salesChannels.map(ch => (
-                                                    <span key={ch} className="text-[10px] bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-full font-bold flex items-center gap-1 border border-slate-200 dark:border-slate-600 shadow-sm">
-                                                        {ch}
-                                                        {ch !== 'Offline' && (
-                                                            <button onClick={() => setSalesChannels(salesChannels.filter(c => c !== ch))} className="text-red-400 hover:text-red-500 ml-1"><div className="w-3 h-3"><Icons.X/></div></button>
-                                                        )}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                            <form onSubmit={handleAddChannel} className="flex gap-2">
-                                                <input type="text" value={newChannelName} onChange={e=>setNewChannelName(e.target.value)} placeholder="Nama Channel Baru (Cth: Tokopedia)" className="flex-1 p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-[11px] outline-none border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200" />
-                                                <button type="submit" className="px-4 bg-indigo-600 text-white font-black rounded-xl text-[10px] uppercase shadow-md">TAMBAH</button>
-                                            </form>
-                                        </div>
+                                    <div className="animate-fadeIn space-y-4 relative">
+                                        {(() => {
+                                            const roundPrice = (p) => Math.ceil(p / 500) * 500;
 
-                                        <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
-                                            <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest mb-2 border-b border-slate-100 dark:border-slate-700 pb-2">Harga Jual Menu</h4>
-                                            <p className="text-[10px] text-slate-500 mb-4 leading-relaxed">Masukkan daftar menu dan bedakan harga jualnya per channel untuk deteksi kebocoran margin online.</p>
-                                            
-                                            <form onSubmit={handleSaveMenu} className="space-y-4 bg-slate-50 dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-700">
-                                                <div>
-                                                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nama Menu</label>
-                                                    <input type="text" value={menuForm.name} onChange={e=>setMenuForm({...menuForm, name: e.target.value})} placeholder="Nama Menu (Cth: Nasi Ayam)" className="w-full p-3 bg-white dark:bg-slate-800 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-slate-700 uppercase text-slate-800 dark:text-slate-200 shadow-sm" required/>
-                                                </div>
+                                            // Buka form edit
+                                            const handleEditMenu = (m) => {
+                                                setMenuForm({
+                                                    id: m.id,
+                                                    name: m.name || '',
+                                                    hpp: m.hpp || 0,
+                                                    offline: m.offline || '',
+                                                    inputs: m.inputs || {},
+                                                    recipe: m.recipe || []
+                                                });
+                                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                                            };
+
+                                            const resetMenuForm = () => {
+                                                setMenuForm({ name: '', hpp: '', offline: '', inputs: {}, recipe: [] });
+                                            };
+
+                                            // Simpan Menu Komprehensif
+                                            const handleSaveComprehensiveMenu = (e) => {
+                                                e.preventDefault();
+                                                if(!menuForm.name) return showStatus('Nama menu wajib diisi', 'error');
                                                 
-                                                <div>
-                                                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Harga Jual Per Channel</label>
-                                                    <div className="space-y-3">
-                                                        {salesChannels.map(ch => {
-                                                            const inp = menuForm.inputs?.[ch] || { gross: '', pct: '', net: '' };
-                                                            return (
-                                                                <div key={ch} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3 shadow-sm">
-                                                                    <p className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 mb-2">{ch}</p>
-                                                                    <div className="grid grid-cols-12 gap-2 items-center">
-                                                                        <div className="col-span-5">
-                                                                            <label className="text-[8px] font-bold text-slate-400 uppercase">Harga Kotor</label>
-                                                                            <input type="text" inputMode="numeric" placeholder="0" 
-                                                                                value={formatInputRp(inp.gross).replace('Rp ', '')} 
-                                                                                onChange={e => updateMenuInput(ch, 'gross', parseInputRp(e.target.value))} 
-                                                                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-2 py-1.5 text-[11px] font-bold outline-none mt-1 text-slate-700 dark:text-slate-200" />
-                                                                        </div>
-                                                                        <div className="col-span-2">
-                                                                            <label className="text-[8px] font-bold text-slate-400 uppercase">Pot (%)</label>
-                                                                            <input type="number" placeholder="0" 
-                                                                                value={inp.pct} 
-                                                                                onChange={e => updateMenuInput(ch, 'pct', e.target.value)} 
-                                                                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-1 py-1.5 text-[11px] font-bold outline-none mt-1 text-center text-red-500 dark:text-red-400 appearance-none" />
-                                                                        </div>
-                                                                        <div className="col-span-5">
-                                                                            <label className="text-[8px] font-bold text-green-500 uppercase">Harga Bersih</label>
-                                                                            <input type="text" inputMode="numeric" placeholder="0" 
-                                                                                value={formatInputRp(inp.net).replace('Rp ', '')} 
-                                                                                onChange={e => updateMenuInput(ch, 'net', parseInputRp(e.target.value))} 
-                                                                                className="w-full bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded px-2 py-1.5 text-[11px] font-black outline-none mt-1 text-green-700 dark:text-green-400 text-right" />
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                                <button type="submit" className="w-full py-4 mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl text-[11px] uppercase tracking-widest shadow-md transition-colors">SIMPAN MENU BARU</button>
-                                            </form>
+                                                const hppVal = parseFloat(menuForm.hpp.toString().replace(/[^0-9]/g, '')) || 0;
+                                                const offlineVal = parseFloat(menuForm.offline?.toString().replace(/[^0-9]/g, '')) || 0;
+                                                
+                                                // Bersihkan inputs channel
+                                                const cleanInputs = {};
+                                                salesChannels.filter(c => c !== 'Offline').forEach(ch => {
+                                                    const g = parseFloat(menuForm.inputs[ch]?.gross?.toString().replace(/[^0-9]/g, '')) || 0;
+                                                    const n = parseFloat(menuForm.inputs[ch]?.net?.toString().replace(/[^0-9]/g, '')) || 0;
+                                                    cleanInputs[ch] = { gross: g, net: n };
+                                                });
 
-                                            <div className="mt-6 space-y-3">
-                                                {menus.length === 0 ? <p className="text-xs text-slate-400 font-bold italic text-center py-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">Belum ada menu tersimpan.</p> :
-                                                    <div className="overflow-x-auto no-scrollbar border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
-                                                        <table className="w-full text-left border-collapse min-w-[500px]">
-                                                            <thead>
-                                                                <tr className="bg-slate-100 dark:bg-slate-800 text-[10px] uppercase text-slate-500 font-bold tracking-widest">
-                                                                    <th className="p-3 border-b border-slate-200 dark:border-slate-700 whitespace-nowrap">Nama Menu</th>
-                                                                    {salesChannels.map(ch => <th key={ch} className="p-3 border-b border-slate-200 dark:border-slate-700 whitespace-nowrap text-right">{ch}</th>)}
-                                                                    <th className="p-3 border-b border-slate-200 dark:border-slate-700 text-center">Aksi</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {menus.map(m => (
-                                                                    <tr key={m.id} className="border-b border-slate-100 dark:border-slate-700 last:border-0 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                                                        <td className="p-3 font-black text-xs uppercase whitespace-nowrap text-slate-800 dark:text-slate-100">{m.name}</td>
-                                                                        {salesChannels.map(ch => {
-                                                                            const pr = m.prices?.[ch] || (m['price'+ch] || 0);
-                                                                            return <td key={ch} className="p-3 text-[11px] font-bold text-slate-600 dark:text-slate-300 text-right whitespace-nowrap">Rp {formatNumber(pr)}</td>
-                                                                        })}
-                                                                        <td className="p-3 text-center">
-                                                                            <button onClick={() => setMenus(menus.filter(x => x.id !== m.id))} className="text-red-400 hover:text-red-600 p-1.5 bg-red-50 dark:bg-red-900/30 rounded-md transition-colors"><div className="w-4 h-4 mx-auto"><Icons.Trash/></div></button>
-                                                                        </td>
-                                                                    </tr>
-                                                                ))}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
+                                                const newM = {
+                                                    id: menuForm.id || Date.now(),
+                                                    name: menuForm.name,
+                                                    hpp: hppVal,
+                                                    offline: offlineVal,
+                                                    inputs: cleanInputs,
+                                                    recipe: menuForm.recipe || []
+                                                };
+
+                                                if (menuForm.id) {
+                                                    setMenus(menus.map(m => m.id === menuForm.id ? newM : m));
+                                                    showStatus('Menu Diperbarui', 'success');
+                                                } else {
+                                                    setMenus([...menus, newM]);
+                                                    showStatus('Menu Tersimpan', 'success');
                                                 }
-                                            </div>
-                                        </div>
+                                                resetMenuForm();
+                                            };
+
+                                            const updateChannelInput = (ch, field, val) => {
+                                                setMenuForm(prev => {
+                                                    const currentCh = prev.inputs[ch] || { gross: '', net: '' };
+                                                    return { ...prev, inputs: { ...prev.inputs, [ch]: { ...currentCh, [field]: val } } };
+                                                });
+                                            };
+
+                                            // --- AI RECIPE GENERATOR ---
+                                            const generateRecipeWithAI = async () => {
+                                                if(!menuForm.name) return showStatus('Isi nama menu dulu Bos!', 'error');
+                                                
+                                                const apiKey = localStorage.getItem('fin-gemini-api-key') || ""; 
+                                                if (!apiKey) return showStatus("API Key Gemini belum diatur!", "error");
+
+                                                setIsGeneratingRecipe(true);
+                                                
+                                                // Ekstrak histori bahan yang pernah dibeli agar harganya akurat
+                                                let historyBahan = new Set();
+                                                history.forEach(h => h.items.forEach(i => historyBahan.add(`${i.name} (Sekitar Rp${Math.round(i.total/i.qty)}/${i.unit})`)));
+                                                const historyText = Array.from(historyBahan).join(', ');
+
+                                                const prompt = `Anda adalah Chef & Financial AI untuk warung makan.
+Tugas: Buat resep dan estimasi modal (HPP) untuk 1 Porsi menu "${menuForm.name}".
+Daftar harga bahan dari histori warung: ${historyText || 'Kosong, gunakan estimasi pasar'}.
+
+Instruksi:
+1. Rinci bahan utama, bumbu, dan kemasan (opsional).
+2. Jika bahan ada di histori, gunakan harga tersebut untuk mengestimasi porsi kecilnya. Jika tidak, gunakan harga pasar standar.
+3. WAJIB balas HANYA dengan array JSON murni tanpa markdown \`\`\`json. Formatnya:
+[
+  {"name": "Nasi Putih 150gr", "price": 1500},
+  {"name": "Ayam Potong 1 potong", "price": 5000},
+  {"name": "Bumbu & Sambal", "price": 1000},
+  {"name": "Kemasan/Box", "price": 1000}
+]`;
+
+                                                var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
+                                                const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2 } };
+                                                
+                                                try {
+                                                    const res = await fetch(url, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }});
+                                                    const data = await res.json();
+                                                    if(data.error) throw new Error(data.error.message);
+                                                    
+                                                    let rawText = data.candidates[0].content.parts[0].text;
+                                                    let cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+                                                    let recipeArr = JSON.parse(cleanJson);
+                                                    
+                                                    // Hitung total HPP
+                                                    let totalHpp = recipeArr.reduce((s, item) => s + (Number(item.price) || 0), 0);
+                                                    
+                                                    setMenuForm(prev => ({ ...prev, recipe: recipeArr, hpp: totalHpp }));
+                                                    setShowRecipeModal(true);
+                                                    showStatus('Resep berhasil dibuat AI!', 'success');
+                                                } catch(e) {
+                                                    showStatus(`Gagal generate resep. Error: ${e.message}`, 'error');
+                                                } finally {
+                                                    setIsGeneratingRecipe(false);
+                                                }
+                                            };
+
+                                            const updateRecipeItem = (index, field, value) => {
+                                                const newRecipe = [...(menuForm.recipe || [])];
+                                                newRecipe[index][field] = value;
+                                                const newHpp = newRecipe.reduce((s, item) => s + (parseFloat(item.price?.toString().replace(/[^0-9]/g, '')) || 0), 0);
+                                                setMenuForm(prev => ({ ...prev, recipe: newRecipe, hpp: newHpp }));
+                                            };
+
+                                            const addRecipeItem = () => {
+                                                setMenuForm(prev => ({ ...prev, recipe: [...(prev.recipe || []), { name: '', price: '' }] }));
+                                            };
+
+                                            const removeRecipeItem = (index) => {
+                                                const newRecipe = (menuForm.recipe || []).filter((_, i) => i !== index);
+                                                const newHpp = newRecipe.reduce((s, item) => s + (parseFloat(item.price?.toString().replace(/[^0-9]/g, '')) || 0), 0);
+                                                setMenuForm(prev => ({ ...prev, recipe: newRecipe, hpp: newHpp }));
+                                            };
+
+                                            return (
+                                                <>
+                                                    <div className="bg-indigo-50 dark:bg-indigo-900/30 p-5 rounded-3xl border border-indigo-100 dark:border-indigo-800 flex justify-between items-center">
+                                                        <div>
+                                                            <h4 className="font-black text-indigo-800 dark:text-indigo-300 uppercase text-[11px] tracking-widest mb-1">Manajemen Menu & HPP</h4>
+                                                            <p className="text-[10px] text-indigo-600 dark:text-indigo-400">Atur harga per channel dan gunakan AI untuk menghitung modal bahan baku.</p>
+                                                        </div>
+                                                        {menuForm.id && (
+                                                            <button onClick={resetMenuForm} className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase shadow-sm">Batal Edit</button>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
+                                                        <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest mb-4 border-b border-slate-100 dark:border-slate-700 pb-2">{menuForm.id ? 'Edit Menu' : 'Input Menu Baru'}</h4>
+                                                        
+                                                        <form onSubmit={handleSaveComprehensiveMenu} className="space-y-4">
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                                <div>
+                                                                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nama Menu</label>
+                                                                    <input type="text" value={menuForm.name || ''} onChange={e=>setMenuForm({...menuForm, name: e.target.value})} placeholder="Cth: Nasi Ayam Geprek" className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-xs outline-none border border-slate-200 dark:border-slate-700 uppercase text-slate-800 dark:text-slate-200" required/>
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Harga Jual Offline</label>
+                                                                    <input type="text" inputMode="numeric" value={formatInputRp(menuForm.offline || '')} onChange={e=>setMenuForm({...menuForm, offline: parseInputRp(e.target.value)})} placeholder="Rp Offline" className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-black text-xs outline-none border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-right" required/>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* HPP & AI GENERATOR */}
+                                                            <div className="bg-orange-50 dark:bg-orange-900/10 p-4 rounded-2xl border border-orange-200 dark:border-orange-800/50">
+                                                                <div className="flex justify-between items-center mb-3">
+                                                                    <label className="block text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">Modal Bahan (HPP / Porsi)</label>
+                                                                    <button type="button" onClick={() => setShowRecipeModal(true)} disabled={!(menuForm.recipe && menuForm.recipe.length > 0)} className={`text-[9px] font-bold px-2 py-1 rounded-md uppercase ${menuForm.recipe && menuForm.recipe.length > 0 ? 'bg-orange-200 text-orange-700 hover:bg-orange-300' : 'bg-slate-200 text-slate-400 opacity-50'}`}>Lihat Resep</button>
+                                                                </div>
+                                                                <div className="flex gap-2">
+                                                                    <input type="text" inputMode="numeric" value={formatInputRp(menuForm.hpp || '')} onChange={e=>setMenuForm({...menuForm, hpp: parseInputRp(e.target.value)})} placeholder="Rp HPP Manual/Auto" className="w-1/2 p-4 bg-white dark:bg-slate-800 rounded-xl font-black text-xs outline-none border border-orange-200 dark:border-orange-700 text-orange-600 dark:text-orange-400 text-right shadow-sm" required/>
+                                                                    <button type="button" onClick={generateRecipeWithAI} disabled={isGeneratingRecipe} className="w-1/2 flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:opacity-90 text-white font-black rounded-xl text-[10px] uppercase shadow-md transition-opacity disabled:opacity-50">
+                                                                        <div className="w-4 h-4"><Icons.Bot/></div> {isGeneratingRecipe ? 'Menganalisa...' : 'Generate HPP AI'}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* DYNAMIC CHANNELS */}
+                                                            <div className="pt-2">
+                                                                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 border-b border-slate-100 dark:border-slate-700 pb-2">Harga Aplikasi Online (Opsi)</label>
+                                                                <div className="space-y-3">
+                                                                    {salesChannels.filter(c => c !== 'Offline').map(ch => (
+                                                                        <div key={ch} className="flex flex-col sm:flex-row items-center gap-2 bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-700">
+                                                                            <span className="text-[11px] font-black uppercase text-slate-600 dark:text-slate-300 w-full sm:w-1/3 truncate">{ch}</span>
+                                                                            <div className="flex w-full sm:w-2/3 gap-2">
+                                                                                <input type="text" inputMode="numeric" value={formatInputRp(menuForm.inputs[ch]?.gross || '')} onChange={e=>updateChannelInput(ch, 'gross', parseInputRp(e.target.value))} placeholder="Hrg Kotor (Aplikasi)" className="w-1/2 p-2.5 bg-white dark:bg-slate-800 rounded-lg text-[10px] font-bold outline-none border border-slate-200 dark:border-slate-600 text-right" />
+                                                                                <input type="text" inputMode="numeric" value={formatInputRp(menuForm.inputs[ch]?.net || '')} onChange={e=>updateChannelInput(ch, 'net', parseInputRp(e.target.value))} placeholder="Hrg Bersih (Terima)" className="w-1/2 p-2.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-lg text-[10px] font-bold outline-none border border-green-200 dark:border-green-800/50 text-right" />
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+
+                                                            <button type="submit" className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl text-[11px] uppercase tracking-widest shadow-md transition-colors mt-4">
+                                                                {menuForm.id ? 'UPDATE MENU & RESEP' : 'SIMPAN MENU BARU'}
+                                                            </button>
+                                                        </form>
+                                                    </div>
+
+                                                    {/* TABEL DAFTAR MENU */}
+                                                    <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
+                                                        <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest mb-4 border-b border-slate-100 dark:border-slate-700 pb-2 flex items-center gap-2">
+                                                            <div className="w-4 h-4 text-green-500"><Icons.Check /></div> Daftar Menu Tersimpan
+                                                        </h4>
+                                                        
+                                                        {menus.length === 0 ? <p className="text-xs text-slate-400 font-bold italic text-center py-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">Belum ada menu yang tersimpan.</p> :
+                                                            <div className="overflow-x-auto no-scrollbar border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+                                                                <table className="w-full text-left border-collapse min-w-[700px]">
+                                                                    <thead>
+                                                                        <tr className="bg-slate-100 dark:bg-slate-800 text-[9px] uppercase text-slate-500 font-bold tracking-widest">
+                                                                            <th className="p-4 border-b border-slate-200 dark:border-slate-700">Menu & HPP</th>
+                                                                            <th className="p-4 border-b border-slate-200 dark:border-slate-700 text-right text-indigo-600">Offline</th>
+                                                                            {salesChannels.filter(c => c !== 'Offline').map(ch => (
+                                                                                <th key={ch} className="p-4 border-b border-slate-200 dark:border-slate-700 text-right">{ch} (Bersih)</th>
+                                                                            ))}
+                                                                            <th className="p-4 border-b border-slate-200 dark:border-slate-700 text-center">Aksi</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {menus.map(m => (
+                                                                            <tr key={m.id} className="border-b border-slate-100 dark:border-slate-700 last:border-0 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                                                                <td className="p-4">
+                                                                                    <p className="font-black text-[12px] uppercase text-slate-800 dark:text-slate-100">{m.name}</p>
+                                                                                    <div className="flex items-center gap-2 mt-1">
+                                                                                        <span className="text-[9px] font-bold text-orange-500 bg-orange-50 dark:bg-orange-900/30 px-1.5 py-0.5 rounded">Modal: Rp {formatNumber(m.hpp)}</span>
+                                                                                        {m.recipe && m.recipe.length > 0 && <span className="text-[8px] text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded font-bold">{m.recipe.length} Bahan AI</span>}
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="p-4 text-[12px] font-black text-indigo-600 dark:text-indigo-400 text-right">
+                                                                                    Rp {formatNumber(m.offline)}
+                                                                                </td>
+                                                                                {salesChannels.filter(c => c !== 'Offline').map(ch => (
+                                                                                    <td key={ch} className="p-4 text-[11px] font-bold text-slate-600 dark:text-slate-300 text-right">
+                                                                                        Rp {formatNumber(m.inputs?.[ch]?.net || 0)}
+                                                                                    </td>
+                                                                                ))}
+                                                                                <td className="p-4 text-center">
+                                                                                    <div className="flex justify-center gap-2">
+                                                                                        <button onClick={() => handleEditMenu(m)} className="text-indigo-500 hover:text-indigo-600 p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg transition-colors"><div className="w-4 h-4"><Icons.Edit/></div></button>
+                                                                                        <button onClick={() => setMenus(menus.filter(x => x.id !== m.id))} className="text-red-400 hover:text-red-600 p-2 bg-red-50 dark:bg-red-900/30 rounded-lg transition-colors"><div className="w-4 h-4"><Icons.Trash/></div></button>
+                                                                                    </div>
+                                                                                </td>
+                                                                            </tr>
+                                                                        ))}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        }
+                                                    </div>
+
+                                                    {/* MODAL RECIPE EDITOR AI */}
+                                                    {showRecipeModal && (
+                                                        <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+                                                            <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700 flex flex-col max-h-[85vh]">
+                                                                <div className="p-5 bg-orange-500 text-white flex justify-between items-center shrink-0">
+                                                                    <div>
+                                                                        <h3 className="font-black uppercase tracking-widest text-sm flex items-center gap-2"><div className="w-4 h-4"><Icons.Bot/></div> Resep & HPP AI</h3>
+                                                                        <p className="text-[10px] font-bold text-orange-100 mt-1">{menuForm.name || 'Menu Baru'}</p>
+                                                                    </div>
+                                                                    <button onClick={() => setShowRecipeModal(false)} className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30"><div className="w-4 h-4"><Icons.X/></div></button>
+                                                                </div>
+
+                                                                <div className="p-4 flex-1 overflow-y-auto no-scrollbar space-y-3">
+                                                                    {menuForm.recipe && menuForm.recipe.length > 0 ? (
+                                                                        menuForm.recipe.map((item, idx) => (
+                                                                            <div key={idx} className="flex gap-2 items-center bg-slate-50 dark:bg-slate-800 p-2 rounded-xl border border-slate-100 dark:border-slate-700">
+                                                                                <input type="text" value={item.name} onChange={(e) => updateRecipeItem(idx, 'name', e.target.value)} placeholder="Nama Bahan (Cth: Nasi)" className="flex-1 p-2.5 bg-white dark:bg-slate-900 text-[11px] font-bold rounded-lg outline-none border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100" />
+                                                                                <input type="text" inputMode="numeric" value={formatInputRp(item.price)} onChange={(e) => updateRecipeItem(idx, 'price', parseInputRp(e.target.value))} placeholder="Rp" className="w-24 p-2.5 bg-white dark:bg-slate-900 text-[11px] font-black text-right rounded-lg outline-none border border-slate-200 dark:border-slate-600 text-orange-600 dark:text-orange-400" />
+                                                                                <button onClick={() => removeRecipeItem(idx)} className="w-8 h-8 shrink-0 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-lg flex items-center justify-center hover:bg-red-200"><div className="w-3.5 h-3.5"><Icons.Trash/></div></button>
+                                                                            </div>
+                                                                        ))
+                                                                    ) : (
+                                                                        <p className="text-center text-xs text-slate-400 py-6 font-bold">Resep kosong. Klik tambah bahan atau Generate AI.</p>
+                                                                    )}
+                                                                    <button onClick={addRecipeItem} className="w-full py-3 bg-slate-100 dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 rounded-xl text-[10px] font-black uppercase hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">+ TAMBAH BAHAN MANUAL</button>
+                                                                </div>
+
+                                                                <div className="p-5 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 shrink-0">
+                                                                    <div className="flex justify-between items-center mb-4">
+                                                                        <span className="text-[11px] font-black uppercase text-slate-500 dark:text-slate-400">Total HPP Modal</span>
+                                                                        <span className="text-lg font-black text-orange-600 dark:text-orange-400">Rp {formatNumber(menuForm.hpp)}</span>
+                                                                    </div>
+                                                                    <button onClick={() => setShowRecipeModal(false)} className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white font-black rounded-xl text-[11px] uppercase tracking-widest shadow-md transition-colors">SIMPAN RESEP & TERAPKAN</button>
+                                                                    <p className="text-[9px] text-center text-slate-400 mt-3 font-medium">Klik Simpan Resep untuk kembali ke form dan jangan lupa klik "Simpan Menu" untuk menyimpan total.</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                 )}
                             </div>
