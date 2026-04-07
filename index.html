@@ -2243,10 +2243,10 @@ TUGAS ANDA:
                         </div>
 
                         <div className="flex bg-white dark:bg-slate-800 shadow-sm shrink-0 border-b border-slate-200 dark:border-slate-700 overflow-x-auto no-scrollbar">
+                            <button onClick={() => setHppTab('global')} className={`px-4 py-3 shrink-0 text-[10px] font-black uppercase tracking-widest ${hppTab === 'global' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20' : 'text-slate-400'}`}>Analisa Global</button>
                             <button onClick={() => setHppTab('analisa')} className={`px-4 py-3 shrink-0 text-[10px] font-black uppercase tracking-widest ${hppTab === 'analisa' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20' : 'text-slate-400'}`}>Analisa AI</button>
                             <button onClick={() => setHppTab('stok')} className={`px-4 py-3 shrink-0 text-[10px] font-black uppercase tracking-widest ${hppTab === 'stok' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20' : 'text-slate-400'}`}>Sisa Stok</button>
                             <button onClick={() => setHppTab('menu')} className={`px-4 py-3 shrink-0 text-[10px] font-black uppercase tracking-widest ${hppTab === 'menu' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20' : 'text-slate-400'}`}>Harga Menu & Channel</button>
-                            <button onClick={() => setHppTab('global')} className={`px-4 py-3 shrink-0 text-[10px] font-black uppercase tracking-widest ${hppTab === 'global' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20' : 'text-slate-400'}`}>Analisa Global</button>
                         </div>
 
                         <div className="flex-1 overflow-y-auto no-scrollbar p-4 flex flex-col items-center pb-10">
@@ -2909,7 +2909,7 @@ Instruksi:
                                                         return { ch, feeRatio, cGross, cNet, idealGross, estNetFromIdeal, evalStatus, evalColor };
                                                     });
 
-                                                    return { id: m.id, name: m.name, hpp, currentOffline, targetNet, offlineEval, channelRecs };
+                                                    return { id: m.id, name: m.name, hpp, currentOffline, targetNet, targetNetIdeal, offlineEval, channelRecs };
                                                 });
 
                                                 // 3. Generate Insight Strategi Promosi
@@ -3120,67 +3120,62 @@ Balas dalam format Markdown yang elegan dan profesional. Panggil user "Bos".`;
                                                                 <p className="text-[9px] text-slate-400 font-bold uppercase text-right">Update Terakhir: {new Date(priceRecommendations.timestamp).toLocaleString('id-ID')}</p>
                                                                 <div className="space-y-4 max-h-[60vh] overflow-y-auto no-scrollbar pb-2">
                                                                     {priceRecommendations.data.map(m => (
-                                                                        <div key={m.id} className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-sm relative overflow-hidden">
-                                                                            <div className="flex justify-between items-start border-b border-slate-200 dark:border-slate-700 pb-3 mb-3">
-                                                                                <div>
-                                                                                    <h5 className="font-black text-[14px] uppercase text-slate-800 dark:text-slate-100">{m.name}</h5>
-                                                                                    <div className="flex items-center gap-2 mt-1">
-                                                                                        <p className="text-[10px] font-black text-orange-500 bg-orange-50 dark:bg-orange-900/30 px-2 py-0.5 rounded-md border border-orange-200/50">HPP / Modal: Rp {formatNumber(m.hpp)}</p>
+                                                                        <div key={m.id} className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl mb-3 shadow-sm overflow-hidden">
+                                                                            <div className="bg-white dark:bg-slate-800 p-2.5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-start">
+                                                                                <div className="pr-2">
+                                                                                    <h5 className="font-black text-[12px] uppercase text-slate-800 dark:text-slate-100 leading-tight">{m.name}</h5>
+                                                                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-[9px] font-bold">
+                                                                                        <span className="text-orange-500">Modal: Rp {formatNumber(m.hpp)}</span>
+                                                                                        <span className="text-slate-400">|</span>
+                                                                                        <span className="text-indigo-500">Offline: Rp {formatNumber(m.currentOffline)}</span>
+                                                                                        {m.hpp > 0 && (
+                                                                                            <>
+                                                                                                <span className="text-slate-400">|</span>
+                                                                                                <span className="text-green-600 dark:text-green-400">Ideal: Rp {formatNumber(m.targetNetIdeal)}</span>
+                                                                                            </>
+                                                                                        )}
                                                                                     </div>
                                                                                 </div>
-                                                                                <div className="text-right">
-                                                                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Offline / Makan Ditempat</p>
-                                                                                    <p className="text-[13px] font-black text-indigo-600 dark:text-indigo-400">Rp {formatNumber(m.currentOffline)}</p>
-                                                                                    <div className="mt-1.5 inline-block">
-                                                                                        <span className={`text-[8px] font-black px-2 py-1 rounded-md uppercase tracking-widest shadow-sm ${m.offlineEval.includes('Ideal') || m.offlineEval.includes('Premium') ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400' : (m.offlineEval.includes('Rugi') ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400')}`}>
-                                                                                            {m.offlineEval}
-                                                                                        </span>
-                                                                                    </div>
+                                                                                <div className="shrink-0 flex flex-col items-end gap-1">
+                                                                                    <span className={`text-[8px] font-black px-1.5 py-1 rounded-md uppercase tracking-widest shadow-sm text-center ${m.offlineEval.includes('Ideal') || m.offlineEval.includes('Premium') ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400' : (m.offlineEval.includes('Rugi') ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400')}`}>
+                                                                                        {m.offlineEval}
+                                                                                    </span>
                                                                                 </div>
                                                                             </div>
 
-                                                                            <div className="space-y-3">
-                                                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-200 dark:border-slate-700 pb-1">Analisa Harga Aplikasi (Ojol)</p>
-                                                                                {m.channelRecs.length === 0 ? <p className="text-[10px] text-slate-400 italic font-bold">Tidak ada channel online diset.</p> : m.channelRecs.map(ch => (
-                                                                                    <div key={ch.ch} className="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-100 dark:border-slate-700 flex flex-col gap-3 shadow-sm hover:border-indigo-300 transition-colors">
-                                                                                        <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700/50 pb-2">
-                                                                                            <p className="font-black text-[12px] text-slate-700 dark:text-slate-200 uppercase flex items-center gap-2">
-                                                                                                {ch.ch} 
-                                                                                                <span className="text-[8px] bg-red-50 text-red-600 border border-red-200 px-1.5 py-0.5 rounded tracking-widest font-black">
-                                                                                                    Potongan Riil: {(ch.feeRatio * 100).toFixed(1)}%
-                                                                                                </span>
-                                                                                            </p>
-                                                                                            <span className={`text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md ${ch.evalColor}`}>
+                                                                            <div className="p-2 space-y-2">
+                                                                                {m.channelRecs.length === 0 ? <p className="text-[10px] text-slate-400 italic font-bold px-2">Tidak ada channel online diset.</p> : m.channelRecs.map(ch => (
+                                                                                    <div key={ch.ch} className="bg-white dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+                                                                                        <div className="flex justify-between items-center bg-slate-100/50 dark:bg-slate-900/30 px-2 py-1.5 border-b border-slate-100 dark:border-slate-700">
+                                                                                            <span className="font-black text-[10px] text-slate-700 dark:text-slate-200 uppercase flex items-center gap-1.5">
+                                                                                                {ch.ch} <span className="text-[8px] bg-red-50 text-red-600 border border-red-200 px-1 py-0.5 rounded">Potongan: {(ch.feeRatio * 100).toFixed(0)}%</span>
+                                                                                            </span>
+                                                                                            <span className={`text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${ch.evalColor}`}>
                                                                                                 {ch.evalStatus}
                                                                                             </span>
                                                                                         </div>
-
-                                                                                        <div className="grid grid-cols-2 gap-3">
-                                                                                            {/* Box Harga Saat Ini */}
-                                                                                            <div className="bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700">
-                                                                                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Setelan Saat Ini</p>
-                                                                                                <div className="flex justify-between items-center text-[10px] mb-1">
-                                                                                                    <span className="text-slate-500 font-bold">Harga Kotor:</span>
+                                                                                        <div className="grid grid-cols-2 text-[9px] divide-x divide-slate-100 dark:divide-slate-700">
+                                                                                            <div className="p-1.5">
+                                                                                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-1">Saat Ini</p>
+                                                                                                <div className="flex justify-between items-center mb-0.5">
+                                                                                                    <span className="text-slate-500 font-bold">Kotor:</span>
                                                                                                     <span className="font-black text-slate-700 dark:text-slate-200">Rp {formatNumber(ch.cGross)}</span>
                                                                                                 </div>
-                                                                                                <div className="flex justify-between items-center text-[10px]">
-                                                                                                    <span className="text-slate-500 font-bold">Terima Bersih:</span>
-                                                                                                    <span className={`font-black ${ch.evalStatus.includes('RUGI') ? 'text-red-500' : 'text-green-600 dark:text-green-400'}`}>
-                                                                                                        Rp {formatNumber(ch.cNet > 0 ? ch.cNet : ch.cGross * (1 - ch.feeRatio))}
-                                                                                                    </span>
+                                                                                                <div className="flex justify-between items-center">
+                                                                                                    <span className="text-slate-500 font-bold">Bersih:</span>
+                                                                                                    <span className={`font-black ${ch.evalStatus.includes('RUGI') ? 'text-red-500' : 'text-green-600 dark:text-green-400'}`}>Rp {formatNumber(ch.cNet > 0 ? ch.cNet : ch.cGross * (1 - ch.feeRatio))}</span>
                                                                                                 </div>
                                                                                             </div>
-
-                                                                                            {/* Box Rekomendasi Presisi */}
-                                                                                            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-2.5 rounded-lg border border-indigo-200 dark:border-indigo-800/50 relative overflow-hidden">
-                                                                                                <div className="absolute top-0 right-0 w-8 h-8 bg-indigo-500/10 rounded-bl-full"></div>
-                                                                                                <p className="text-[8px] font-bold text-indigo-500 uppercase tracking-widest mb-1.5 flex items-center gap-1"><Icons.Check className="w-2.5 h-2.5"/> Rekomendasi</p>
-                                                                                                <div className="flex justify-between items-center text-[10px] mb-1">
-                                                                                                    <span className="text-indigo-400 font-bold">Set Kotor:</span>
-                                                                                                    <span className="font-black text-indigo-600 dark:text-indigo-400 text-[11px]">Rp {formatNumber(ch.idealGross)}</span>
+                                                                                            <div className="p-1.5 bg-indigo-50/50 dark:bg-indigo-900/10">
+                                                                                                <p className="text-[8px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+                                                                                                    <span className="w-2 h-2 shrink-0 flex items-center justify-center"><Icons.Check/></span> Rekomendasi
+                                                                                                </p>
+                                                                                                <div className="flex justify-between items-center mb-0.5">
+                                                                                                    <span className="text-indigo-500 dark:text-indigo-400 font-bold">Set Kotor:</span>
+                                                                                                    <span className="font-black text-indigo-600 dark:text-indigo-300">Rp {formatNumber(ch.idealGross)}</span>
                                                                                                 </div>
-                                                                                                <div className="flex justify-between items-center text-[10px]">
-                                                                                                    <span className="text-indigo-400 font-bold">Est. Bersih:</span>
+                                                                                                <div className="flex justify-between items-center">
+                                                                                                    <span className="text-indigo-500 dark:text-indigo-400 font-bold">Est. Bersih:</span>
                                                                                                     <span className="font-black text-green-600 dark:text-green-400">Rp {formatNumber(ch.estNetFromIdeal)}</span>
                                                                                                 </div>
                                                                                             </div>
