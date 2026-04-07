@@ -2835,107 +2835,115 @@ Instruksi:
                                             const predLabaBersih = (totalBlnBersih / (passedDays || 1)) * daysInMonth - totalOprBulanIni - totalDeductionBulanIni;
 
                                             // Fungsi Generate Rekomendasi Harga
-                                            const handleGeneratePriceRecs = () => {
-                                                showStatus('Menganalisa Histori & Potongan Riil...', 'loading');
-                                                
-                                                // 1. Kalkulasi rata-rata potongan asli merchant berdasar historis (termasuk ads/diskon)
-                                                let channelStats = {};
-                                                salesChannels.filter(c => c !== 'Offline').forEach(ch => {
-                                                    let tGross = 0; let tNet = 0; let trxCount = 0;
-                                                    incomes.filter(i => i.source === ch && i.category === 'Penjualan').forEach(i => {
-                                                        tNet += i.amount;
-                                                        tGross += (i.grossAmount || i.amount);
-                                                        trxCount++;
-                                                    });
-                                                    // Ambil margin potongan riil, jika data kosong defaultnya estimasi 25% (0.25)
-                                                    const realFeeRatio = tGross > 0 ? ((tGross - tNet) / tGross) : 0.25; 
-                                                    channelStats[ch] = { feeRatio: realFeeRatio, trxCount };
-                                                });
+const handleGeneratePriceRecs = () => {
+    showStatus('Menganalisa Histori & Potongan Riil...', 'loading');
+    
+    // 1. Kalkulasi rata-rata potongan asli merchant berdasar historis (termasuk ads/diskon)
+    let channelStats = {};
+    salesChannels.filter(c => c !== 'Offline').forEach(ch => {
+        let tGross = 0; let tNet = 0; let trxCount = 0;
+        incomes.filter(i => i.source === ch && i.category === 'Penjualan').forEach(i => {
+            tNet += i.amount;
+            tGross += (i.grossAmount || i.amount);
+            trxCount++;
+        });
+        // Ambil margin potongan riil, jika data kosong defaultnya estimasi 25% (0.25)
+        const realFeeRatio = tGross > 0 ? ((tGross - tNet) / tGross) : 0.25; 
+        channelStats[ch] = { feeRatio: realFeeRatio, trxCount };
+    });
 
-                                                // 2. Evaluasi tiap menu
-                                                let warningCount = 0;
-                                                const recs = menus.map(m => {
-                                                    const hpp = m.hpp || 0;
-                                                    const currentOffline = m.offline || m.prices?.['Offline'] || 0;
-                                                    
-                                                    // Target Bersih: Ambil yang terbesar antara (HPP x 2) atau Harga Offline saat ini
-                                                    const targetNetIdeal = hpp > 0 ? hpp * 2 : currentOffline;
-                                                    const targetNet = Math.max(targetNetIdeal, currentOffline);
-                                                    
-                                                    let offlineEval = "⚠️ HPP Kosong";
-                                                    if (hpp > 0) {
-                                                        if (currentOffline < targetNetIdeal * 0.85) offlineEval = "🚨 Rugi/Kemurahan";
-                                                        else if (currentOffline > targetNetIdeal * 1.5) offlineEval = "💎 Premium";
-                                                        else offlineEval = "✅ Ideal Sehat";
-                                                    } else if (currentOffline > 0) {
-                                                        offlineEval = "❓ Isi HPP Dulu";
-                                                    }
+    // 2. Evaluasi tiap menu
+    let warningCount = 0;
+    const recs = menus.map(m => {
+        const hpp = m.hpp || 0;
+        const currentOffline = m.offline || m.prices?.['Offline'] || 0;
+        
+        // MODIFIKASI 1: Target Bersih Ideal Offline lebih realistis (Markup ~85% dari HPP)
+        const targetNetIdeal = hpp > 0 ? hpp * 1.85 : currentOffline;
+        
+        // Kalkulasi Persentase Margin Profit Offline
+        const marginOfflineIdeal = targetNetIdeal > 0 ? ((targetNetIdeal - hpp) / targetNetIdeal) * 100 : 0;
+        const marginOfflineSaatIni = currentOffline > 0 ? ((currentOffline - hpp) / currentOffline) * 100 : 0;
+        
+        // MODIFIKASI 2: Patokan terima bersih online difokuskan ke harga Offline aktual agar tidak terlalu melambung
+        const baselineNet = currentOffline > 0 ? currentOffline : targetNetIdeal;
+        
+        let offlineEval = "⚠️ HPP Kosong";
+        if (hpp > 0) {
+            if (currentOffline < targetNetIdeal * 0.85) offlineEval = "🚨 Rugi/Kemurahan";
+            else if (currentOffline > targetNetIdeal * 1.35) offlineEval = "💎 Premium";
+            else offlineEval = "✅ Ideal Sehat";
+        } else if (currentOffline > 0) {
+            offlineEval = "❓ Isi HPP Dulu";
+        }
 
-                                                    const channelRecs = salesChannels.filter(c => c !== 'Offline').map(ch => {
-                                                        const stats = channelStats[ch] || { feeRatio: 0.25 };
-                                                        const feeRatio = stats.feeRatio;
-                                                        
-                                                        const cGross = m.inputs?.[ch]?.gross || 0;
-                                                        const cNet = m.inputs?.[ch]?.net || 0;
+        const channelRecs = salesChannels.filter(c => c !== 'Offline').map(ch => {
+            const stats = channelStats[ch] || { feeRatio: 0.25 };
+            const feeRatio = stats.feeRatio;
+            
+            const cGross = m.inputs?.[ch]?.gross || 0;
+            const cNet = m.inputs?.[ch]?.net || 0;
 
-                                                        // Rumus Harga Online Kotor ideal = Target Bersih / (1 - Potongan Riil)
-                                                        let idealGross = targetNet > 0 ? (targetNet / (1 - feeRatio)) : 0;
-                                                        idealGross = Math.ceil(idealGross / 500) * 500; // Pembulatan ke 500 teratas
-                                                        let estNetFromIdeal = idealGross * (1 - feeRatio);
+            // Rumus Harga Online Kotor ideal = Acuan Bersih (Offline) / (1 - Potongan Riil)
+            let idealGross = baselineNet > 0 ? (baselineNet / (1 - feeRatio)) : 0;
+            idealGross = Math.ceil(idealGross / 500) * 500; // Pembulatan ke 500 teratas
+            let estNetFromIdeal = idealGross * (1 - feeRatio);
+            
+            // Kalkulasi Persentase Margin Profit Online (Ideal vs Saat Ini)
+            let idealMarginPct = estNetFromIdeal > 0 ? ((estNetFromIdeal - hpp) / estNetFromIdeal) * 100 : 0;
+            const simulatedNetFallback = cNet > 0 ? cNet : (cGross * (1 - feeRatio));
+            const currentMarginPct = simulatedNetFallback > 0 ? ((simulatedNetFallback - hpp) / simulatedNetFallback) * 100 : 0;
 
-                                                        // Evaluasi Harga SAAT INI terhadap HPP
-                                                        let evalStatus = "⚠️ BELUM DIATUR";
-                                                        let evalColor = "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400";
-                                                        
-                                                        if (cGross > 0) {
-                                                            // Jika net kosong, simulasikan dari gross.
-                                                            const simulatedNet = cNet > 0 ? cNet : (cGross * (1 - feeRatio));
-                                                            
-                                                            if (hpp === 0) {
-                                                                evalStatus = "❓ HPP KOSONG"; evalColor = "bg-slate-200 text-slate-600";
-                                                            } else if (simulatedNet < hpp) {
-                                                                evalStatus = "🚨 RUGI (BONCOS)"; evalColor = "bg-red-500 text-white shadow-red-500/40 shadow-lg animate-pulse";
-                                                                warningCount++;
-                                                            } else if (simulatedNet < hpp * 1.35) { // Margin bersih di bawah 35%
-                                                                evalStatus = "⚠️ MARGIN TIPIS"; evalColor = "bg-orange-500 text-white shadow-orange-500/40 shadow-md";
-                                                                warningCount++;
-                                                            } else if (simulatedNet >= targetNet) {
-                                                                evalStatus = "🔥 AMAN & UNTUNG"; evalColor = "bg-green-500 text-white shadow-green-500/40 shadow-md";
-                                                            } else {
-                                                                evalStatus = "⚖️ CUKUP / STANDAR"; evalColor = "bg-indigo-500 text-white shadow-indigo-500/40 shadow-md";
-                                                            }
-                                                        }
+            // Evaluasi Harga SAAT INI terhadap HPP
+            let evalStatus = "⚠️ BELUM DIATUR";
+            let evalColor = "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400";
+            
+            if (cGross > 0) {
+                if (hpp === 0) {
+                    evalStatus = "❓ HPP KOSONG"; evalColor = "bg-slate-200 text-slate-600";
+                } else if (simulatedNetFallback < hpp) {
+                    evalStatus = "🚨 RUGI (BONCOS)"; evalColor = "bg-red-500 text-white shadow-red-500/40 shadow-lg animate-pulse";
+                    warningCount++;
+                } else if (simulatedNetFallback < hpp * 1.35) { // Margin bersih di bawah 35%
+                    evalStatus = "⚠️ MARGIN TIPIS"; evalColor = "bg-orange-500 text-white shadow-orange-500/40 shadow-md";
+                    warningCount++;
+                } else if (simulatedNetFallback >= baselineNet * 0.95) {
+                    evalStatus = "🔥 AMAN & UNTUNG"; evalColor = "bg-green-500 text-white shadow-green-500/40 shadow-md";
+                } else {
+                    evalStatus = "⚖️ CUKUP / STANDAR"; evalColor = "bg-indigo-500 text-white shadow-indigo-500/40 shadow-md";
+                }
+            }
 
-                                                        return { ch, feeRatio, cGross, cNet, idealGross, estNetFromIdeal, evalStatus, evalColor };
-                                                    });
+            return { ch, feeRatio, cGross, cNet, idealGross, estNetFromIdeal, evalStatus, evalColor, currentMarginPct, idealMarginPct };
+        });
 
-                                                    return { id: m.id, name: m.name, hpp, currentOffline, targetNet, targetNetIdeal, offlineEval, channelRecs };
-                                                });
+        return { id: m.id, name: m.name, hpp, currentOffline, targetNet: baselineNet, targetNetIdeal, offlineEval, channelRecs, marginOfflineIdeal, marginOfflineSaatIni };
+    });
 
-                                                // 3. Generate Insight Strategi Promosi
-                                                let insightStr = "";
-                                                const highestFeeChannel = Object.entries(channelStats).sort((a,b) => b[1].feeRatio - a[1].feeRatio)[0];
+    // 3. Generate Insight Strategi Promosi
+    let insightStr = "";
+    const highestFeeChannel = Object.entries(channelStats).sort((a,b) => b[1].feeRatio - a[1].feeRatio)[0];
 
-                                                if (highestFeeChannel && highestFeeChannel[1].trxCount > 0) {
-                                                    const chName = highestFeeChannel[0];
-                                                    const feePct = (highestFeeChannel[1].feeRatio * 100).toFixed(1);
-                                                    
-                                                    insightStr += `📊 **Analisa Potongan Riil:** Berdasarkan histori kasir Anda, aplikasi **${chName}** saat ini memiliki potongan riil rata-rata tertinggi sebesar **${feePct}%** (Ini sudah termasuk bagi hasil, pajak, subsidi ongkir, & ads yang Anda tanggung).\n\n`;
-                                                    insightStr += `💡 **Rekomendasi Taktik Promo/Diskon Coret:**\n`;
-                                                    insightStr += `- Jika Anda berencana mengikuti program Diskon 20% di aplikasi tersebut, Anda HARUS menaikkan "Harga Kotor" minimal **${(parseFloat(feePct) + 20).toFixed(0)}%** dari harga Target Bersih agar tidak nombok.\n`;
-                                                    
-                                                    if (warningCount > 0) {
-                                                        insightStr += `- 🚨 **PERHATIAN KRITIS:** Sistem mendeteksi ada **${warningCount}** pengaturan harga aplikasi yang berstatus RUGI atau TIPIS! Segera samakan *Harga Kotor* menu tersebut dengan angka *Rekomendasi Set Kotor* di tabel atas.\n`;
-                                                    }
-                                                    
-                                                    insightStr += `- *Tips Trik:* Ambil angka "Set Kotor" dari tabel di atas, lalu tambahkan mark-up palsu 15%. Gunakan angka markup tersebut sebagai Harga Awal di aplikasi, lalu berikan "Diskon Coret 15%". Pelanggan akan melihat diskon besar, tapi margin laba bersih Anda tetap utuh! 💸`;
-                                                } else {
-                                                    insightStr = "Belum ada riwayat transaksi aplikasi online (Grab/Shopee/dll) yang cukup di kasir bulan ini. Terus catat pendapatan kotor dan bersih Anda untuk mengaktifkan Analisa Diskon Presisi AI.";
-                                                }
+    if (highestFeeChannel && highestFeeChannel[1].trxCount > 0) {
+        const chName = highestFeeChannel[0];
+        const feePct = (highestFeeChannel[1].feeRatio * 100).toFixed(1);
+        
+        insightStr += `📊 **Analisa Potongan Riil:** Berdasarkan histori kasir Anda, aplikasi **${chName}** saat ini memiliki potongan riil rata-rata tertinggi sebesar **${feePct}%** (Ini sudah termasuk bagi hasil, pajak, subsidi ongkir, & ads yang Anda tanggung).\n\n`;
+        insightStr += `💡 **Rekomendasi Taktik Promo/Diskon Coret:**\n`;
+        insightStr += `- Jika Anda berencana mengikuti program Diskon 20% di aplikasi tersebut, Anda HARUS menaikkan "Harga Kotor" minimal **${(parseFloat(feePct) + 20).toFixed(0)}%** dari harga Target Bersih agar tidak nombok.\n`;
+        
+        if (warningCount > 0) {
+            insightStr += `- 🚨 **PERHATIAN KRITIS:** Sistem mendeteksi ada **${warningCount}** pengaturan harga aplikasi yang berstatus RUGI atau TIPIS! Segera samakan *Harga Kotor* menu tersebut dengan angka *Rekomendasi Set Kotor* di tabel atas.\n`;
+        }
+        
+        insightStr += `- *Tips Trik:* Ambil angka "Set Kotor" dari tabel di atas, lalu tambahkan mark-up palsu 15%. Gunakan angka markup tersebut sebagai Harga Awal di aplikasi, lalu berikan "Diskon Coret 15%". Pelanggan akan melihat diskon besar, tapi margin laba bersih Anda tetap utuh! 💸`;
+    } else {
+        insightStr = "Belum ada riwayat transaksi aplikasi online (Grab/Shopee/dll) yang cukup di kasir bulan ini. Terus catat pendapatan kotor dan bersih Anda untuk mengaktifkan Analisa Diskon Presisi AI.";
+    }
 
-                                                setPriceRecommendations({ timestamp: Date.now(), data: recs, insight: insightStr });
-                                                showStatus('Rekomendasi Presisi Selesai!', 'success');
-                                            };
+    setPriceRecommendations({ timestamp: Date.now(), data: recs, insight: insightStr });
+    showStatus('Rekomendasi Presisi Selesai!', 'success');
+};
 
                                             // Fungsi Generate Insight Global AI
                                             const requestGlobalInsightAI = async () => {
@@ -3119,72 +3127,79 @@ Balas dalam format Markdown yang elegan dan profesional. Panggil user "Bos".`;
                                                             <div className="space-y-4">
                                                                 <p className="text-[9px] text-slate-400 font-bold uppercase text-right">Update Terakhir: {new Date(priceRecommendations.timestamp).toLocaleString('id-ID')}</p>
                                                                 <div className="space-y-4 max-h-[60vh] overflow-y-auto no-scrollbar pb-2">
-                                                                    {priceRecommendations.data.map(m => (
-                                                                        <div key={m.id} className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl mb-3 shadow-sm overflow-hidden">
-                                                                            <div className="bg-white dark:bg-slate-800 p-2.5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-start">
-                                                                                <div className="pr-2">
-                                                                                    <h5 className="font-black text-[12px] uppercase text-slate-800 dark:text-slate-100 leading-tight">{m.name}</h5>
-                                                                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-[9px] font-bold">
-                                                                                        <span className="text-orange-500">Modal: Rp {formatNumber(m.hpp)}</span>
-                                                                                        <span className="text-slate-400">|</span>
-                                                                                        <span className="text-indigo-500">Offline: Rp {formatNumber(m.currentOffline)}</span>
-                                                                                        {m.hpp > 0 && (
-                                                                                            <>
-                                                                                                <span className="text-slate-400">|</span>
-                                                                                                <span className="text-green-600 dark:text-green-400">Ideal: Rp {formatNumber(m.targetNetIdeal)}</span>
-                                                                                            </>
-                                                                                        )}
-                                                                                    </div>
-                                                                                </div>
-                                                                                <div className="shrink-0 flex flex-col items-end gap-1">
-                                                                                    <span className={`text-[8px] font-black px-1.5 py-1 rounded-md uppercase tracking-widest shadow-sm text-center ${m.offlineEval.includes('Ideal') || m.offlineEval.includes('Premium') ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400' : (m.offlineEval.includes('Rugi') ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400')}`}>
-                                                                                        {m.offlineEval}
-                                                                                    </span>
-                                                                                </div>
-                                                                            </div>
+    {priceRecommendations.data.map(m => (
+        <div key={m.id} className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl mb-3 shadow-sm overflow-hidden">
+            <div className="bg-white dark:bg-slate-800 p-2.5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-start">
+                <div className="pr-2">
+                    <h5 className="font-black text-[12px] uppercase text-slate-800 dark:text-slate-100 leading-tight">{m.name}</h5>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-[9px] font-bold">
+                        <span className="text-orange-500">Modal: Rp {formatNumber(m.hpp)}</span>
+                        <span className="text-slate-400">|</span>
+                        <span className="text-indigo-500">Offline: Rp {formatNumber(m.currentOffline)} <span className="opacity-70">({Math.round(m.marginOfflineSaatIni)}%)</span></span>
+                        {m.hpp > 0 && (
+                            <>
+                                <span className="text-slate-400">|</span>
+                                <span className="text-green-600 dark:text-green-400">Ideal: Rp {formatNumber(m.targetNetIdeal)} <span className="opacity-70">({Math.round(m.marginOfflineIdeal)}%)</span></span>
+                            </>
+                        )}
+                    </div>
+                </div>
+                <div className="shrink-0 flex flex-col items-end gap-1">
+                    <span className={`text-[8px] font-black px-1.5 py-1 rounded-md uppercase tracking-widest shadow-sm text-center ${m.offlineEval.includes('Ideal') || m.offlineEval.includes('Premium') ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400' : (m.offlineEval.includes('Rugi') ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400')}`}>
+                        {m.offlineEval}
+                    </span>
+                </div>
+            </div>
 
-                                                                            <div className="p-2 space-y-2">
-                                                                                {m.channelRecs.length === 0 ? <p className="text-[10px] text-slate-400 italic font-bold px-2">Tidak ada channel online diset.</p> : m.channelRecs.map(ch => (
-                                                                                    <div key={ch.ch} className="bg-white dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
-                                                                                        <div className="flex justify-between items-center bg-slate-100/50 dark:bg-slate-900/30 px-2 py-1.5 border-b border-slate-100 dark:border-slate-700">
-                                                                                            <span className="font-black text-[10px] text-slate-700 dark:text-slate-200 uppercase flex items-center gap-1.5">
-                                                                                                {ch.ch} <span className="text-[8px] bg-red-50 text-red-600 border border-red-200 px-1 py-0.5 rounded">Potongan: {(ch.feeRatio * 100).toFixed(0)}%</span>
-                                                                                            </span>
-                                                                                            <span className={`text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${ch.evalColor}`}>
-                                                                                                {ch.evalStatus}
-                                                                                            </span>
-                                                                                        </div>
-                                                                                        <div className="grid grid-cols-2 text-[9px] divide-x divide-slate-100 dark:divide-slate-700">
-                                                                                            <div className="p-1.5">
-                                                                                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-1">Saat Ini</p>
-                                                                                                <div className="flex justify-between items-center mb-0.5">
-                                                                                                    <span className="text-slate-500 font-bold">Kotor:</span>
-                                                                                                    <span className="font-black text-slate-700 dark:text-slate-200">Rp {formatNumber(ch.cGross)}</span>
-                                                                                                </div>
-                                                                                                <div className="flex justify-between items-center">
-                                                                                                    <span className="text-slate-500 font-bold">Bersih:</span>
-                                                                                                    <span className={`font-black ${ch.evalStatus.includes('RUGI') ? 'text-red-500' : 'text-green-600 dark:text-green-400'}`}>Rp {formatNumber(ch.cNet > 0 ? ch.cNet : ch.cGross * (1 - ch.feeRatio))}</span>
-                                                                                                </div>
-                                                                                            </div>
-                                                                                            <div className="p-1.5 bg-indigo-50/50 dark:bg-indigo-900/10">
-                                                                                                <p className="text-[8px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest mb-1 flex items-center gap-1">
-                                                                                                    <span className="w-2 h-2 shrink-0 flex items-center justify-center"><Icons.Check/></span> Rekomendasi
-                                                                                                </p>
-                                                                                                <div className="flex justify-between items-center mb-0.5">
-                                                                                                    <span className="text-indigo-500 dark:text-indigo-400 font-bold">Set Kotor:</span>
-                                                                                                    <span className="font-black text-indigo-600 dark:text-indigo-300">Rp {formatNumber(ch.idealGross)}</span>
-                                                                                                </div>
-                                                                                                <div className="flex justify-between items-center">
-                                                                                                    <span className="text-indigo-500 dark:text-indigo-400 font-bold">Est. Bersih:</span>
-                                                                                                    <span className="font-black text-green-600 dark:text-green-400">Rp {formatNumber(ch.estNetFromIdeal)}</span>
-                                                                                                </div>
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                ))}
-                                                                            </div>
-                                                                        </div>
-                                                                    ))}
+            <div className="p-2 space-y-2">
+                {m.channelRecs.length === 0 ? <p className="text-[10px] text-slate-400 italic font-bold px-2">Tidak ada channel online diset.</p> : m.channelRecs.map(ch => (
+                    <div key={ch.ch} className="bg-white dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+                        <div className="flex justify-between items-center bg-slate-100/50 dark:bg-slate-900/30 px-2 py-1.5 border-b border-slate-100 dark:border-slate-700">
+                            <span className="font-black text-[10px] text-slate-700 dark:text-slate-200 uppercase flex items-center gap-1.5">
+                                {ch.ch} <span className="text-[8px] bg-red-50 text-red-600 border border-red-200 px-1 py-0.5 rounded">Potongan: {(ch.feeRatio * 100).toFixed(0)}%</span>
+                            </span>
+                            <span className={`text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${ch.evalColor}`}>
+                                {ch.evalStatus}
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-2 text-[9px] divide-x divide-slate-100 dark:divide-slate-700">
+                            <div className="p-1.5">
+                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-1">Saat Ini</p>
+                                <div className="flex justify-between items-center mb-0.5">
+                                    <span className="text-slate-500 font-bold">Kotor:</span>
+                                    <span className="font-black text-slate-700 dark:text-slate-200">Rp {formatNumber(ch.cGross)}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-slate-500 font-bold">Bersih:</span>
+                                    <span className={`font-black flex items-center gap-1 ${ch.evalStatus.includes('RUGI') ? 'text-red-500' : 'text-green-600 dark:text-green-400'}`}>
+                                        Rp {formatNumber(ch.cNet > 0 ? ch.cNet : ch.cGross * (1 - ch.feeRatio))}
+                                        <span className="text-[8px] opacity-70">({Math.round(ch.currentMarginPct)}%)</span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="p-1.5 bg-indigo-50/50 dark:bg-indigo-900/10">
+                                <p className="text-[8px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+                                    <span className="w-2 h-2 shrink-0 flex items-center justify-center"><Icons.Check/></span> Rekomendasi
+                                </p>
+                                <div className="flex justify-between items-center mb-0.5">
+                                    <span className="text-indigo-500 dark:text-indigo-400 font-bold">Set Kotor:</span>
+                                    <span className="font-black text-indigo-600 dark:text-indigo-300">Rp {formatNumber(ch.idealGross)}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-indigo-500 dark:text-indigo-400 font-bold">Est. Bersih:</span>
+                                    <span className="font-black text-green-600 dark:text-green-400 flex items-center gap-1">
+                                        Rp {formatNumber(ch.estNetFromIdeal)}
+                                        <span className="text-[8px] opacity-70">({Math.round(ch.idealMarginPct)}%)</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    ))}
+
                                                                     
                                                                     {/* Insight Diskon Promo */}
                                                                     {priceRecommendations.insight && (
