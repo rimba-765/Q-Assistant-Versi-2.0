@@ -209,6 +209,7 @@
             // FITUR BARU 1: Deductions State
             const [deductions, setDeductions] = useState(() => JSON.parse(localStorage.getItem('fin-deductions') || '[]'));
             const [newDeduction, setNewDeduction] = useState({ name: '', amount: '', startDate: getLocalDateStr(), endDate: getLocalDateStr() });
+            
             // FITUR BARU: State untuk menampung hasil editan manual deduction di hari tertentu
             const [deductionOverrides, setDeductionOverrides] = useState(() => JSON.parse(localStorage.getItem('fin-deduction-overrides') || '{}'));
             const [editingDeductDate, setEditingDeductDate] = useState(null);
@@ -227,10 +228,14 @@
             const [newChannelInput, setNewChannelInput] = useState('');
             const [samplingArchives, setSamplingArchives] = useState(() => JSON.parse(localStorage.getItem('fin-sampling-archives') || '[]'));
             
+            // FITUR BARU: Simulasi Proyeksi Realistis
+            const [simulationArchives, setSimulationArchives] = useState(() => JSON.parse(localStorage.getItem('fin-simulations') || '[]'));
+
             // Simpan otomatis jika ada perubahan
             useEffect(() => { localStorage.setItem('fin-channels', JSON.stringify(salesChannels)); }, [salesChannels]);
             useEffect(() => { localStorage.setItem('fin-sampling-archives', JSON.stringify(samplingArchives)); }, [samplingArchives]);
             useEffect(() => { localStorage.setItem('fin-deduction-overrides', JSON.stringify(deductionOverrides)); }, [deductionOverrides]);
+            useEffect(() => { localStorage.setItem('fin-simulations', JSON.stringify(simulationArchives)); }, [simulationArchives]);
 
             const [geminiApiKey, setGeminiApiKey] = useState(() => localStorage.getItem('fin-gemini-api-key') || '');
             const [user, setUser] = useState(null);
@@ -276,7 +281,7 @@
             const [showSuggestions, setShowSuggestions] = useState(false);
             const [currentNoteId, setCurrentNoteId] = useState(null);
 
-            const [incomeGrossAmount, setIncomeGrossAmount] = useState(''); // Added missing state for defensive programming
+            const [incomeGrossAmount, setIncomeGrossAmount] = useState(''); 
             const [incomeDate, setIncomeDate] = useState(getLocalDateStr());
             const [incomeSource, setIncomeSource] = useState('');
             const [incomeAmount, setIncomeAmount] = useState('');
@@ -485,72 +490,71 @@
                 });
             };
 
-            // Helper Deductions aktif
             // Helper Deductions aktif (Engine Akumulasi Cerdas & Libur)
-const effectiveDailyDeductions = useMemo(() => {
-    const result = {};
-    let carryOver = 0; // Menyimpan akumulasi hutang potongan
+            const effectiveDailyDeductions = useMemo(() => {
+                const result = {};
+                let carryOver = 0; // Menyimpan akumulasi hutang potongan
 
-    if (deductions.length === 0 && Object.keys(deductionOverrides).length === 0) return result;
+                if (deductions.length === 0 && Object.keys(deductionOverrides).length === 0) return result;
 
-    // Cari tanggal paling awal dari semua deduction
-    let minDate = '9999-12-31';
-    deductions.forEach(d => { if (d.startDate < minDate) minDate = d.startDate; });
-    if (minDate === '9999-12-31') minDate = Object.keys(deductionOverrides).sort()[0] || getLocalDateStr();
+                // Cari tanggal paling awal dari semua deduction
+                let minDate = '9999-12-31';
+                deductions.forEach(d => { if (d.startDate < minDate) minDate = d.startDate; });
+                if (minDate === '9999-12-31') minDate = Object.keys(deductionOverrides).sort()[0] || getLocalDateStr();
 
-    // Cari tanggal paling akhir (minimal hari ini, atau sampai akhir bulan di dashboard)
-    let maxDate = getLocalDateStr();
-    const [dYear, dMonth] = dashboardMonth.split('-');
-    const endOfMonthStr = getLocalDateStr(new Date(parseInt(dYear), parseInt(dMonth), 0));
-    if (endOfMonthStr > maxDate) maxDate = endOfMonthStr;
-    deductions.forEach(d => { if (d.endDate > maxDate) maxDate = d.endDate; });
+                // Cari tanggal paling akhir (minimal hari ini, atau sampai akhir bulan di dashboard)
+                let maxDate = getLocalDateStr();
+                const [dYear, dMonth] = dashboardMonth.split('-');
+                const endOfMonthStr = getLocalDateStr(new Date(parseInt(dYear), parseInt(dMonth), 0));
+                if (endOfMonthStr > maxDate) maxDate = endOfMonthStr;
+                deductions.forEach(d => { if (d.endDate > maxDate) maxDate = d.endDate; });
 
-    let currDateObj = new Date(minDate);
-    let maxDateObj = new Date(maxDate);
+                let currDateObj = new Date(minDate);
+                let maxDateObj = new Date(maxDate);
 
-    // Looping simulasi dari hari pertama sampai terakhir
-    while (currDateObj <= maxDateObj || carryOver > 0) {
-        const dStr = getLocalDateStr(currDateObj);
-        
-        // 1. Hitung base wajib hari ini
-        let baseToday = 0;
-        deductions.forEach(d => {
-            if (dStr >= d.startDate && dStr <= d.endDate) baseToday += d.amount;
-        });
+                // Looping simulasi dari hari pertama sampai terakhir
+                while (currDateObj <= maxDateObj || carryOver > 0) {
+                    const dStr = getLocalDateStr(currDateObj);
+                    
+                    // 1. Hitung base wajib hari ini
+                    let baseToday = 0;
+                    deductions.forEach(d => {
+                        if (dStr >= d.startDate && dStr <= d.endDate) baseToday += d.amount;
+                    });
 
-        // 2. Tambahkan ke akumulasi hutang
-        carryOver += baseToday;
+                    // 2. Tambahkan ke akumulasi hutang
+                    carryOver += baseToday;
 
-        // 3. Tentukan potongan aktual yang terjadi hari ini
-        let actualToday = 0;
+                    // 3. Tentukan potongan aktual yang terjadi hari ini
+                    let actualToday = 0;
 
-        if (deductionOverrides[dStr] !== undefined) {
-            // Jika user mengedit manual hari ini
-            actualToday = deductionOverrides[dStr];
-            // Potong hutang akumulasi (hutang tidak boleh minus)
-            carryOver = Math.max(0, carryOver - actualToday);
-        } else if (holidays.includes(dStr)) {
-            // Jika libur, hari ini tidak bayar (0), tapi hutang tetap menumpuk di carryOver
-            actualToday = 0;
-        } else {
-            // Hari kerja normal: lunasi semua hutang yang menumpuk
-            actualToday = carryOver;
-            carryOver = 0; // Hutang lunas
-        }
+                    if (deductionOverrides[dStr] !== undefined) {
+                        // Jika user mengedit manual hari ini
+                        actualToday = deductionOverrides[dStr];
+                        // Potong hutang akumulasi (hutang tidak boleh minus)
+                        carryOver = Math.max(0, carryOver - actualToday);
+                    } else if (holidays.includes(dStr)) {
+                        // Jika libur, hari ini tidak bayar (0), tapi hutang tetap menumpuk di carryOver
+                        actualToday = 0;
+                    } else {
+                        // Hari kerja normal: lunasi semua hutang yang menumpuk
+                        actualToday = carryOver;
+                        carryOver = 0; // Hutang lunas
+                    }
 
-        if (actualToday > 0 || deductionOverrides[dStr] !== undefined) {
-            result[dStr] = actualToday;
-        }
+                    if (actualToday > 0 || deductionOverrides[dStr] !== undefined) {
+                        result[dStr] = actualToday;
+                    }
 
-        currDateObj.setDate(currDateObj.getDate() + 1);
-        if (currDateObj.getFullYear() > 2100) break; // Failsafe
-    }
-    return result;
-}, [deductions, holidays, deductionOverrides, dashboardMonth]);
+                    currDateObj.setDate(currDateObj.getDate() + 1);
+                    if (currDateObj.getFullYear() > 2100) break; // Failsafe
+                }
+                return result;
+            }, [deductions, holidays, deductionOverrides, dashboardMonth]);
 
-const getActiveDeductionsTotal = (targetDateStr) => {
-    return effectiveDailyDeductions[targetDateStr] || 0;
-};
+            const getActiveDeductionsTotal = (targetDateStr) => {
+                return effectiveDailyDeductions[targetDateStr] || 0;
+            };
 
             // Modifikasi perhitungan Cash Flow (menambahkan Pengeluaran Pribadi dan Deductions)
             const getBalanceUpTo = (targetDateStr) => {
@@ -570,8 +574,9 @@ const getActiveDeductionsTotal = (targetDateStr) => {
 
                 // Kalkulasi pemotongan saldo dari engine baru
                 Object.keys(effectiveDailyDeductions).forEach(dateStr => {
-                if (dateStr <= targetDateStr) {bal -= effectiveDailyDeductions[dateStr];
-                }
+                    if (dateStr <= targetDateStr) {
+                        bal -= effectiveDailyDeductions[dateStr];
+                    }
                 });
 
                 agendas.filter(a => a.date <= targetDateStr).forEach(a => {
@@ -581,7 +586,7 @@ const getActiveDeductionsTotal = (targetDateStr) => {
                 return bal;
             };
 
-            const currentBalance = useMemo(() => getBalanceUpTo(getLocalDateStr()), [incomes, history, agendas, settings, deductions]);
+            const currentBalance = useMemo(() => getBalanceUpTo(getLocalDateStr()), [incomes, history, agendas, settings, deductions, effectiveDailyDeductions]);
 
             // Kalkulasi Rekap Belanja per Item Bulanan
             const monthlyItemRecap = useMemo(() => {
@@ -2486,6 +2491,169 @@ TUGAS ANDA:
 
                                 {hppTab === 'stok' && (
                                     <div className="animate-fadeIn space-y-4">
+                                        
+                                        {/* FITUR BARU: ENGINE 3 HARI - PROYEKSI TARGET & MODAL */}
+                                        <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
+                                            <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest mb-2 flex items-center gap-2">
+                                                <div className="w-4 h-4 text-indigo-500"><Icons.Chart/></div> Proyeksi Target & Modal
+                                            </h4>
+                                            <p className="text-[10px] text-slate-500 mb-4 leading-relaxed">Sistem membutuhkan setidaknya 3 hari data silang (Input Sisa Stok + Sampling Penjualan Kasir) untuk mengkalkulasi simulasi modal dan target omzet warung.</p>
+                                            
+                                            {(() => {
+                                                // 1. Dapatkan daftar tanggal yang punya data "Opname Stok" DAN "Sampling Kasir"
+                                                const matchedDates = [...new Set(dailyStocks.map(s => s.date))]
+                                                    .filter(date => samplingArchives.some(sa => sa.date === date))
+                                                    .sort((a, b) => new Date(b) - new Date(a));
+                                                
+                                                const matchedCount = matchedDates.length;
+                                                const progressPct = Math.min(100, Math.round((matchedCount / 3) * 100));
+
+                                                const handleGenerateSimulation = () => {
+                                                    const latest3 = matchedDates.slice(0, 3);
+                                                    let totalHpp = 0;
+                                                    let totalBelanja = 0;
+                                                    let totalOmzet = 0;
+                                                    let totalMenuTerjual = 0;
+
+                                                    latest3.forEach(dStr => {
+                                                        // Real HPP & Belanja
+                                                        const yDateObj = new Date(dStr); yDateObj.setDate(yDateObj.getDate() - 1);
+                                                        const yStrForSim = getLocalDateStr(yDateObj);
+                                                        const stockPagi = dailyStocks.find(s => s.date === yStrForSim)?.totalValue || 0;
+                                                        const stockMalam = dailyStocks.find(s => s.date === dStr)?.totalValue || 0;
+                                                        const bljHariItu = history.filter(h => h.date === dStr).reduce((s, h) => s + h.total, 0);
+                                                        
+                                                        const hppTerpakai = Math.max(0, stockPagi + bljHariItu - stockMalam);
+                                                        totalHpp += hppTerpakai;
+                                                        totalBelanja += bljHariItu;
+
+                                                        // Omzet
+                                                        const omzetKasir = incomes.filter(i => i.date === dStr && i.category !== 'Lainnya').reduce((s, i) => s + i.amount, 0);
+                                                        totalOmzet += omzetKasir;
+
+                                                        // Item terjual
+                                                        const arcSampling = samplingArchives.find(sa => sa.date === dStr);
+                                                        if (arcSampling && arcSampling.data) {
+                                                            Object.values(arcSampling.data).forEach(qty => totalMenuTerjual += qty);
+                                                        }
+                                                    });
+
+                                                    const avgHpp = totalHpp / latest3.length;
+                                                    const avgBelanja = totalBelanja / latest3.length;
+                                                    const avgOmzet = totalOmzet / latest3.length;
+                                                    const avgItems = Math.round(totalMenuTerjual / latest3.length);
+                                                    
+                                                    const hppRatio = avgOmzet > 0 ? avgHpp / avgOmzet : 0;
+                                                    
+                                                    // Titik Impas (BEP) - Lebih realistis
+                                                    const monthStrFilter = getLocalDateStr().substring(0, 7);
+                                                    const oprBulanIniList = agendas.filter(a => a.date.startsWith(monthStrFilter) && a.type === 'keluar').reduce((s,a) => s + a.amount, 0);
+                                                    
+                                                    let totalDeductionBln = 0;
+                                                    const [yStrD, mStrD] = monthStrFilter.split('-');
+                                                    const dInMonth = new Date(parseInt(yStrD), parseInt(mStrD), 0).getDate();
+                                                    for(let d=1; d<=dInMonth; d++){
+                                                        let dStrFormated = getLocalDateStr(new Date(parseInt(yStrD), parseInt(mStrD)-1, d));
+                                                        deductions.forEach(ded => {
+                                                            if(dStrFormated >= ded.startDate && dStrFormated <= ded.endDate) totalDeductionBln += ded.amount;
+                                                        });
+                                                    }
+
+                                                    const avgFixedDaily = (oprBulanIniList + totalDeductionBln) / dInMonth; 
+                                                    
+                                                    // Modal Minimal Harian adalah HPP Bahan Baku terpakai
+                                                    const modalMinimalHarian = avgHpp;
+                                                    
+                                                    // BEP Harian = Modal Minimal Bahan + Operasional Harian
+                                                    const minOmzetBEP = modalMinimalHarian + avgFixedDaily;
+                                                    
+                                                    // Max Omzet (Jika uang rata-rata belanja habis terjual)
+                                                    const maxOmzet = hppRatio > 0 ? avgBelanja / hppRatio : 0;
+
+                                                    const newSim = {
+                                                        id: Date.now(),
+                                                        timestamp: new Date().toLocaleString('id-ID'),
+                                                        dates: latest3,
+                                                        avgHpp: modalMinimalHarian, // Kita simpan sebagai avgHpp
+                                                        avgBelanja,
+                                                        avgOmzet,
+                                                        avgItems,
+                                                        maxOmzet,
+                                                        minOmzetBEP,
+                                                        hppRatio: hppRatio * 100
+                                                    };
+
+                                                    setSimulationArchives([newSim, ...simulationArchives]);
+                                                    showStatus('Simulasi Realistis Berhasil Dibuat!', 'success');
+                                                };
+
+                                                return (
+                                                    <>
+                                                        <div className="mb-4">
+                                                            <div className="flex justify-between text-[9px] font-bold mb-1.5 uppercase tracking-widest">
+                                                                <span className="text-slate-500">Progres Data Valid</span>
+                                                                <span className={matchedCount >= 3 ? 'text-green-500' : 'text-indigo-500'}>{matchedCount} dari 3 Hari</span>
+                                                            </div>
+                                                            <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                                                                <div className={`h-full rounded-full transition-all duration-1000 ${matchedCount >= 3 ? 'bg-green-500' : 'bg-indigo-500'}`} style={{ width: `${progressPct}%` }}></div>
+                                                            </div>
+                                                        </div>
+
+                                                        <button onClick={handleGenerateSimulation} disabled={matchedCount < 3} className="w-full py-3.5 bg-indigo-600 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:text-slate-500 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-md transition-all hover:bg-indigo-700 active:scale-[0.98]">
+                                                            {matchedCount < 3 ? 'KUMPULKAN DATA DULU' : 'GENERATE SIMULASI REALISTIS'}
+                                                        </button>
+
+                                                        {simulationArchives.length > 0 && (
+                                                            <div className="mt-5 space-y-3 max-h-[40vh] overflow-y-auto no-scrollbar border-t border-slate-100 dark:border-slate-700 pt-4">
+                                                                <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Arsip Hasil Proyeksi</h5>
+                                                                {simulationArchives.map(sim => (
+                                                                    <div key={sim.id} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 relative shadow-sm">
+                                                                        <button onClick={()=>setSimulationArchives(simulationArchives.filter(s=>s.id !== sim.id))} className="absolute top-3 right-3 text-red-400 hover:text-red-600"><div className="w-3.5 h-3.5"><Icons.Trash/></div></button>
+                                                                        <div className="border-b border-slate-100 dark:border-slate-800 pb-2 mb-3">
+                                                                            <p className="text-[11px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest">Proyeksi Modal & Target</p>
+                                                                            <p className="text-[8px] font-bold text-slate-400 uppercase mt-0.5">Tgl Data: {sim.dates.map(d => d.split('-')[2]).join(', ')}</p>
+                                                                        </div>
+                                                                        
+                                                                        <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-xl border border-indigo-100 dark:border-indigo-800/50 mb-3">
+                                                                            <p className="text-[10px] font-black text-indigo-700 dark:text-indigo-400 uppercase mb-1">💡 Kesimpulan Budget Besok:</p>
+                                                                            <p className="text-[9px] text-indigo-600 dark:text-indigo-300 leading-relaxed">
+                                                                                Untuk memastikan semua menu tersedia (full stock), siapkan uang tunai minimal <b>Rp {formatNumber(Math.round(sim.avgBelanja))}</b> untuk dibawa ke pasar. Dari belanjaan tersebut, modal murni yang "wajib balik" (BEP) agar warung tidak rugi hari itu adalah <b>Rp {formatNumber(Math.round(sim.minOmzetBEP))}</b>.
+                                                                            </p>
+                                                                        </div>
+
+                                                                        <div className="space-y-2">
+                                                                            <div className="grid grid-cols-2 gap-2">
+                                                                                <div className="bg-slate-50 dark:bg-slate-800 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
+                                                                                    <span className="block text-[8px] font-bold text-slate-500 uppercase">Uang Bawa ke Pasar</span>
+                                                                                    <span className="block font-black text-[11px] text-slate-700 dark:text-slate-200">Rp {formatNumber(Math.round(sim.avgBelanja))}</span>
+                                                                                </div>
+                                                                                <div className="bg-slate-50 dark:bg-slate-800 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
+                                                                                    <span className="block text-[8px] font-bold text-slate-500 uppercase">HPP Terpakai (Minimal)</span>
+                                                                                    <span className="block font-black text-[11px] text-orange-500">Rp {formatNumber(Math.round(sim.avgHpp))}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                            
+                                                                            <div className="grid grid-cols-2 gap-2 mt-1">
+                                                                                <div className="bg-red-50 dark:bg-red-900/20 p-2 rounded-lg border border-red-100 dark:border-red-900/30">
+                                                                                    <span className="block text-[8px] font-bold text-red-500 uppercase">Target Minimal (BEP)</span>
+                                                                                    <span className="block font-black text-[12px] text-red-600 dark:text-red-400">Rp {formatNumber(Math.round(sim.minOmzetBEP))}</span>
+                                                                                </div>
+                                                                                <div className="bg-green-50 dark:bg-green-900/20 p-2 rounded-lg border border-green-100 dark:border-green-900/30">
+                                                                                    <span className="block text-[8px] font-bold text-green-600 uppercase">Potensi Omzet Max</span>
+                                                                                    <span className="block font-black text-[12px] text-green-600 dark:text-green-400">Rp {formatNumber(Math.round(sim.maxOmzet))}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                            <p className="text-[8px] text-center text-slate-400 font-bold mt-2 pt-1 border-t border-slate-100 dark:border-slate-700">Estimasi Laku: {sim.avgItems} Porsi</p>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                );
+                                            })()}
+                                        </div>
+
                                         <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
                                             <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest mb-2">Input Sisa Bahan (Opname)</h4>
                                             <p className="text-[10px] text-slate-500 mb-6 leading-relaxed">Cek kulkas, lalu taksir nilai sisa bahan utama (beras, ayam, dll) yang masih bisa dipakai besok. Ini wajib agar AI tahu HPP Modal yang benar-benar habis dipakai jualan hari ini.</p>
