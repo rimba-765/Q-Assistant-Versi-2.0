@@ -309,8 +309,13 @@
             // FITUR BARU: State untuk Sampling Penjualan
             const [samplingDate, setSamplingDate] = useState(getLocalDateStr());
             const [samplingData, setSamplingData] = useState({});
+            const [currentSamplingId, setCurrentSamplingId] = useState(null);
             const [customFeeRatios, setCustomFeeRatios] = useState(() => JSON.parse(localStorage.getItem('fin-custom-fees') || '{}'));
             
+            // State untuk AI Insight khusus di tab Sampling
+            const [samplingAiInsight, setSamplingAiInsight] = useState('');
+            const [isAnalyzingSampling, setIsAnalyzingSampling] = useState(false);
+
             useEffect(() => { localStorage.setItem('fin-custom-fees', JSON.stringify(customFeeRatios)); }, [customFeeRatios]);
 
             // FITUR BARU: State untuk Recipe Editor AI
@@ -2492,7 +2497,7 @@ TUGAS ANDA:
                                                 {salesChannels.filter(c => c !== 'Offline').map(ch => (
                                                     <span key={ch} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1.5 shadow-sm">
                                                         {ch}
-                                                        <button type="button" onClick={() => handleDeleteChannel(ch)} className="text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 w-4 h-4 flex items-center justify-center rounded-full transition-colors" title="Hapus Channel">
+                                                        <button type="button" onClick={() => handleDeleteChannel(ch)} className="text-red-400 hover:text-red-600 hover:bg-red-50 dark:bg-red-900/30 w-4 h-4 flex items-center justify-center rounded-full transition-colors" title="Hapus Channel">
                                                             <div className="w-2.5 h-2.5"><Icons.X/></div>
                                                         </button>
                                                     </span>
@@ -2816,11 +2821,22 @@ Instruksi:
 
                                             const samplingActualIncomes = incomes.filter(i => i.date === samplingDate && i.category === 'Penjualan');
                                             let actualByChannel = {};
-                                            salesChannels.forEach(ch => { actualByChannel[ch] = { gross: 0, net: 0 }; });
+                                            
+                                            salesChannels.forEach(ch => { 
+                                                actualByChannel[ch] = { gross: 0, net: 0 }; 
+                                            });
+                                            
                                             samplingActualIncomes.forEach(i => {
-                                                if(!actualByChannel[i.source]) actualByChannel[i.source] = { gross: 0, net: 0 };
-                                                actualByChannel[i.source].net += i.amount;
-                                                actualByChannel[i.source].gross += (i.grossAmount || i.amount);
+                                                const cleanSource = i.source.toLowerCase().replace(/\s/g, '');
+                                                let matched = salesChannels.find(c => c.toLowerCase().replace(/\s/g, '') === cleanSource);
+                                                
+                                                if(matched) {
+                                                    actualByChannel[matched].net += i.amount;
+                                                    actualByChannel[matched].gross += (i.grossAmount || i.amount);
+                                                } else if (cleanSource.includes('offline')) {
+                                                    actualByChannel['Offline'].net += i.amount;
+                                                    actualByChannel['Offline'].gross += (i.grossAmount || i.amount);
+                                                }
                                             });
 
                                             let theoByChannel = {};
@@ -2833,6 +2849,7 @@ Instruksi:
                                                         let grossPrice = ch === 'Offline' ? (m.offline || 0) : (m.inputs?.[ch]?.gross || 0);
                                                         let netPrice = ch === 'Offline' ? (m.offline || 0) : (m.inputs?.[ch]?.net || 0);
                                                         const hpp = m.hpp || 0;
+                                                        
                                                         theoByChannel[ch].gross += (qty * grossPrice);
                                                         theoByChannel[ch].net += (qty * netPrice);
                                                         theoByChannel[ch].hpp += (qty * hpp);
@@ -2843,17 +2860,94 @@ Instruksi:
                                             salesChannels.forEach(ch => { theoByChannel[ch].profit = theoByChannel[ch].net - theoByChannel[ch].hpp; });
 
                                             const handleSaveArchive = () => {
-                                                const newArchive = { id: Date.now(), date: samplingDate, theo: theoByChannel, actual: actualByChannel, timestamp: new Date().toLocaleString() };
-                                                setSamplingArchives([newArchive, ...samplingArchives]);
-                                                showStatus('Hasil Sampling Berhasil Diarsipkan!', 'success');
+                                                const newArchive = { id: currentSamplingId || Date.now(), date: samplingDate, data: samplingData, theo: theoByChannel, actual: actualByChannel, timestamp: new Date().toLocaleString() };
+                                                if (currentSamplingId) {
+                                                    setSamplingArchives(samplingArchives.map(a => a.id === currentSamplingId ? newArchive : a));
+                                                } else {
+                                                    setSamplingArchives([newArchive, ...samplingArchives]);
+                                                }
+                                                setCurrentSamplingId(null);
+                                                showStatus(currentSamplingId ? 'Arsip Diperbarui!' : 'Hasil Sampling Berhasil Diarsipkan!', 'success');
+                                            };
+                                            
+                                            const handleGenerateSamplingAI = async () => {
+                                                const apiKey = localStorage.getItem('fin-gemini-api-key') || ""; 
+                                                if (!apiKey) return showStatus("API Key Gemini belum diatur!", "error");
+
+                                                setIsAnalyzingSampling(true);
+                                                
+                                                let promptData = `Data Sampling Penjualan Tanggal ${samplingDate}:\n`;
+                                                salesChannels.forEach(ch => {
+                                                    const tGross = theoByChannel[ch].gross;
+                                                    const aGross = actualByChannel[ch].gross;
+                                                    if (tGross > 0 || aGross > 0) {
+                                                         const tNet = theoByChannel[ch].net;
+                                                         const aNet = actualByChannel[ch].net;
+                                                         const tHpp = theoByChannel[ch].hpp;
+                                                         const aFee = aGross > 0 ? ((aGross - aNet)/aGross)*100 : 0;
+                                                         const tFee = tGross > 0 ? ((tGross - tNet)/tGross)*100 : 0;
+                                                         
+                                                         promptData += `- Channel ${ch}:\n`;
+                                                         promptData += `  Teori (Sistem): Omzet Rp${tGross}, Terima Rp${tNet}, Potongan ${tFee.toFixed(1)}%, Modal/HPP Rp${tHpp}\n`;
+                                                         promptData += `  Fakta (Kasir): Omzet Rp${aGross}, Terima Rp${aNet}, Potongan ${aFee.toFixed(1)}%\n`;
+                                                         
+                                                         // Menyisipkan proporsi per menu untuk AI
+                                                         const menusSold = menus.filter(m => (samplingData[`${m.id}_${ch}`] || 0) > 0);
+                                                         if (menusSold.length > 0) {
+                                                              promptData += `  Rincian Kinerja Per Menu:\n`;
+                                                              menusSold.forEach(m => {
+                                                                   const qty = samplingData[`${m.id}_${ch}`];
+                                                                   const mNetPrice = ch === 'Offline' ? (m.offline || 0) : (m.inputs?.[ch]?.net || 0);
+                                                                   const propNet = tNet > 0 ? (qty * mNetPrice) / tNet : 0;
+                                                                   const baseNet = aNet > 0 ? aNet : tNet;
+                                                                   const estActualNet = baseNet * propNet;
+                                                                   const estProfit = estActualNet - (qty * (m.hpp || 0));
+                                                                   promptData += `   > ${qty}x ${m.name}: Est.TerimaBersih Rp${Math.round(estActualNet)}, ModalHPP Rp${qty * (m.hpp || 0)}, Profit Rp${Math.round(estProfit)}\n`;
+                                                              });
+                                                         }
+
+                                                         if (aNet > 0 && aNet < tHpp) promptData += `  STATUS: RUGI/BONCOS (Terima bersih channel lebih kecil dari Modal)\n`;
+                                                         if (aGross > 0 && Math.abs(tFee - aFee) > 1.5) promptData += `  STATUS: ANOMALI POTONGAN (Selisih potongan fakta vs teori)\n`;
+                                                    }
+                                                });
+                                                
+                                                const prompt = `Anda adalah "Fin", Analis Keuangan & Auditor Khusus F&B. 
+Tugas Anda adalah mengevaluasi hasil Sidak/Sampling Penjualan harian warung.
+Berikut datanya:
+${promptData}
+
+Instruksi:
+1. Jika ada status RUGI/BONCOS atau menu yang profitnya MINUS, sebutkan secara spesifik nama menu tersebut dan jelaskan mengapa ini terjadi (biasanya harga jual online kurang dinaikkan untuk menutupi potongan aplikasi).
+2. Jika ada ANOMALI POTONGAN, sarankan user untuk menekan tombol "Sesuai Potongan Override" di sistem agar harga margin dihitung ulang, atau mengecek promo/diskon platform yang mungkin membengkak.
+3. Berikan solusi konkrit langkah demi langkah agar tidak rugi keesokan harinya.
+Gunakan format Markdown yang profesional namun mudah dipahami. Sapa user dengan panggilan "Bos".`;
+
+                                                var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
+                                                const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3 } };
+                                                
+                                                try {
+                                                    const res = await fetch(url, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }});
+                                                    const data = await res.json();
+                                                    if(data.error) throw new Error(data.error.message);
+                                                    
+                                                    setSamplingAiInsight(data.candidates[0].content.parts[0].text);
+                                                    showStatus('Analisa Sampling Selesai!', 'success');
+                                                } catch(e) {
+                                                    setSamplingAiInsight(`*Gagal menganalisa. Pastikan API Key valid. Error: ${e.message}*`);
+                                                } finally {
+                                                    setIsAnalyzingSampling(false);
+                                                }
                                             };
 
                                             return (
                                                 <>
                                                     <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
                                                         <div className="flex justify-between items-center mb-4 border-b border-slate-100 dark:border-slate-700 pb-3">
-                                                            <div>
-                                                                <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest">Input Sampel Terjual</h4>
+                                                            <div className="flex items-center gap-2">
+                                                                <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest">{currentSamplingId ? 'Edit Sampel Terjual' : 'Input Sampel Terjual'}</h4>
+                                                                {(Object.keys(samplingData).length > 0 || currentSamplingId) && (
+                                                                    <button onClick={() => { setSamplingData({}); setCurrentSamplingId(null); }} className="text-[8px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold uppercase hover:bg-red-200 transition-colors">Reset</button>
+                                                                )}
                                                             </div>
                                                             <input type="date" value={samplingDate} onChange={e => setSamplingDate(e.target.value)} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-bold outline-none text-indigo-600" />
                                                         </div>
@@ -2880,7 +2974,7 @@ Instruksi:
                                                         <div className="flex justify-between items-center mb-4 border-b border-slate-100 dark:border-slate-700 pb-2">
                                                             <h4 className="font-black text-slate-800 dark:text-slate-100 uppercase text-[11px] tracking-widest">Hasil Analisis Potongan</h4>
                                                             {salesChannels.some(ch => theoByChannel[ch].gross > 0) && (
-                                                                <button onClick={handleSaveArchive} className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-indigo-200">💾 Simpan Arsip</button>
+                                                                <button onClick={handleSaveArchive} className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-indigo-200 transition-colors">💾 {currentSamplingId ? 'Update Arsip' : 'Simpan Arsip'}</button>
                                                             )}
                                                         </div>
 
@@ -2888,17 +2982,44 @@ Instruksi:
                                                             {salesChannels.map(ch => {
                                                                 const tGross = theoByChannel[ch].gross;
                                                                 const tNet = theoByChannel[ch].net;
+                                                                const tHpp = theoByChannel[ch].hpp;
                                                                 const tSystemFee = tGross > 0 ? ((tGross - tNet) / tGross) * 100 : 0;
+                                                                
                                                                 const aGross = actualByChannel[ch].gross;
                                                                 const aNet = actualByChannel[ch].net;
                                                                 const aActualFee = aGross > 0 ? ((aGross - aNet) / aGross) * 100 : 0;
+                                                                
                                                                 const isCustomized = customFeeRatios[ch] !== undefined;
                                                                 
-                                                                if(tGross === 0 && aGross === 0) return null;
+                                                                // Validasi jika tidak ada data
+                                                                const hasSales = tGross > 0 || aGross > 0;
+                                                                if (!hasSales) return null;
+                                                                
+                                                                // Flagging System
+                                                                const isAnomaly = aGross > 0 && Math.abs(tSystemFee - aActualFee) > 1.5;
+                                                                const isBoncos = (aNet > 0 && aNet < tHpp) || (aNet === 0 && tNet > 0 && tNet < tHpp);
+                                                                const actualProfit = aNet > 0 ? (aNet - tHpp) : (tNet - tHpp);
+                                                                const marginPct = aNet > 0 ? (actualProfit / aNet * 100) : (tNet > 0 ? (actualProfit / tNet * 100) : 0);
+
+                                                                let cardClass = "bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 transition-all";
+                                                                if (isBoncos) {
+                                                                    cardClass = "bg-red-50 dark:bg-red-900/20 p-4 rounded-2xl border-2 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] transition-all";
+                                                                } else if (isAnomaly) {
+                                                                    cardClass = "bg-orange-50 dark:bg-orange-900/20 p-4 rounded-2xl border-2 border-orange-400 transition-all";
+                                                                }
+
+                                                                // Filter Menu yang Terjual di Channel Ini
+                                                                const menusSold = menus.filter(m => (samplingData[`${m.id}_${ch}`] || 0) > 0);
 
                                                                 return (
-                                                                    <div key={ch} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
-                                                                        <h5 className="font-black text-[13px] uppercase text-slate-800 dark:text-slate-100 mb-2">{ch}</h5>
+                                                                    <div key={ch} className={cardClass}>
+                                                                        <div className="flex justify-between items-center mb-3">
+                                                                            <h5 className="font-black text-[14px] uppercase text-slate-800 dark:text-slate-100">{ch}</h5>
+                                                                            <div className="flex gap-1">
+                                                                                {isAnomaly && <span className="bg-orange-500 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-md animate-pulse">⚠️ Anomali Potongan</span>}
+                                                                                {isBoncos && <span className="bg-red-600 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-md animate-pulse shadow-md">🚨 JUAL RUGI / BONCOS</span>}
+                                                                            </div>
+                                                                        </div>
                                                                         
                                                                         {/* Kotak Informasi Jika Sudah Disesuaikan */}
                                                                         {isCustomized && (
@@ -2909,14 +3030,79 @@ Instruksi:
 
                                                                         <div className="grid grid-cols-2 gap-4 text-[10px] mb-3">
                                                                             <div className="space-y-1">
-                                                                                <p className="font-bold text-slate-400 uppercase">Perhitungan Sistem</p>
+                                                                                <p className="font-bold text-slate-400 uppercase tracking-widest">Perhitungan Sistem</p>
                                                                                 <div className="flex justify-between"><span>Potongan Default:</span> <span className="font-black">{tSystemFee.toFixed(1)}%</span></div>
                                                                                 <div className="flex justify-between"><span>Ekspektasi Bersih:</span> <span className="font-black text-indigo-500">Rp {formatNumber(tNet)}</span></div>
                                                                             </div>
-                                                                            <div className="space-y-1">
-                                                                                <p className="font-bold text-slate-400 uppercase">Riil Sampling Kasir</p>
-                                                                                <div className="flex justify-between"><span>Potongan Kasir:</span> <span className="font-black text-red-500">{aActualFee.toFixed(1)}%</span></div>
-                                                                                <div className="flex justify-between"><span>Uang Diterima:</span> <span className="font-black text-green-500">Rp {formatNumber(aNet)}</span></div>
+                                                                            <div className="space-y-1 p-2 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                                                                                <p className="font-bold text-slate-500 uppercase tracking-widest">Fakta Kasir Realtime</p>
+                                                                                <div className="flex justify-between"><span>Potongan Kasir:</span> <span className={`font-black ${isAnomaly ? 'text-orange-500' : 'text-slate-700 dark:text-slate-300'}`}>{aActualFee.toFixed(1)}%</span></div>
+                                                                                <div className="flex justify-between border-t border-slate-200 dark:border-slate-700 pt-1 mt-1"><span>Income Bersih Harian:</span> <span className="font-black text-green-600 dark:text-green-400">Rp {formatNumber(aNet)}</span></div>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* UI BARU: ESTIMASI KINERJA PER-MENU BERDASARKAN PROPORSI */}
+                                                                        {menusSold.length > 0 && (
+                                                                            <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700/50">
+                                                                                <p className="text-[9px] font-black uppercase text-indigo-500 dark:text-indigo-400 tracking-widest mb-2 flex justify-between items-center">
+                                                                                    <span>📊 Proporsi & Kinerja Menu</span>
+                                                                                    <span className="text-[7px] font-bold bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 px-1.5 py-0.5 rounded">Berdasarkan Fakta Kasir</span>
+                                                                                </p>
+                                                                                <div className="space-y-2">
+                                                                                    {menusSold.map(m => {
+                                                                                        const qty = samplingData[`${m.id}_${ch}`] || 0;
+                                                                                        const mNetPrice = ch === 'Offline' ? (m.offline || 0) : (m.inputs?.[ch]?.net || 0);
+                                                                                        
+                                                                                        const mTheoNet = qty * mNetPrice;
+                                                                                        const mHppTotal = qty * (m.hpp || 0);
+                                                                                        
+                                                                                        // Hitung proporsi sumbangan menu ini terhadap total estimasi bersih channel
+                                                                                        const propNet = tNet > 0 ? mTheoNet / tNet : 0;
+                                                                                        
+                                                                                        // Jika Fakta Kasir (aNet) 0, fallback ke Teori (tNet)
+                                                                                        const baseNet = aNet > 0 ? aNet : tNet;
+                                                                                        
+                                                                                        // Terapkan proporsi ke Fakta Kasir
+                                                                                        const estActualNet = baseNet * propNet;
+                                                                                        const estProfit = estActualNet - mHppTotal;
+
+                                                                                        return (
+                                                                                            <div key={m.id} className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-2.5 rounded-xl shadow-sm">
+                                                                                                <div className="flex justify-between items-start mb-1.5">
+                                                                                                    <p className="font-black text-[10px] text-slate-800 dark:text-slate-200 uppercase">{qty}x {m.name}</p>
+                                                                                                    <p className="text-[9px] font-black text-indigo-500">{(propNet * 100).toFixed(1)}% <span className="text-[7px] text-slate-400 font-bold uppercase">Sumbangan</span></p>
+                                                                                                </div>
+                                                                                                <div className="grid grid-cols-3 gap-1 text-[9px] text-center">
+                                                                                                    <div className="bg-slate-50 dark:bg-slate-900 rounded p-1.5 border border-slate-100 dark:border-slate-700">
+                                                                                                        <p className="text-slate-400 font-bold uppercase mb-0.5 tracking-widest">Est. Bersih</p>
+                                                                                                        <p className="font-black text-green-600 dark:text-green-400">Rp {formatNumber(Math.round(estActualNet))}</p>
+                                                                                                    </div>
+                                                                                                    <div className="bg-slate-50 dark:bg-slate-900 rounded p-1.5 border border-slate-100 dark:border-slate-700">
+                                                                                                        <p className="text-slate-400 font-bold uppercase mb-0.5 tracking-widest">Total Modal</p>
+                                                                                                        <p className="font-black text-orange-500">Rp {formatNumber(mHppTotal)}</p>
+                                                                                                    </div>
+                                                                                                    <div className={`${estProfit >= 0 ? 'bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50' : 'bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/50'} rounded p-1.5`}>
+                                                                                                        <p className={`${estProfit >= 0 ? 'text-indigo-500' : 'text-red-500'} font-bold uppercase mb-0.5 tracking-widest`}>Margin</p>
+                                                                                                        <p className={`font-black ${estProfit >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-red-600 dark:text-red-400'}`}>{estProfit >= 0 ? '+' : ''}Rp {formatNumber(Math.round(estProfit))}</p>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        );
+                                                                                    })}
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+
+                                                                        <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700/50 flex justify-between items-center">
+                                                                            <div>
+                                                                                <p className="text-[8px] font-bold uppercase tracking-widest text-slate-400">Total HPP Terjual</p>
+                                                                                <p className="text-[11px] font-black text-orange-500">Rp {formatNumber(tHpp)}</p>
+                                                                            </div>
+                                                                            <div className="text-right">
+                                                                                <p className="text-[8px] font-bold uppercase tracking-widest text-slate-400">Total Margin Profit Murni</p>
+                                                                                <p className={`text-[13px] font-black ${isBoncos ? 'text-red-500' : 'text-green-500'}`}>
+                                                                                    {actualProfit > 0 ? '+' : ''}Rp {formatNumber(actualProfit)} <span className="text-[9px]">({marginPct.toFixed(1)}%)</span>
+                                                                                </p>
                                                                             </div>
                                                                         </div>
 
@@ -2924,7 +3110,7 @@ Instruksi:
                                                                             <button onClick={() => {
                                                                                 setCustomFeeRatios({...customFeeRatios, [ch]: aActualFee / 100});
                                                                                 showStatus(`Potongan ${ch} disesuaikan ke ${aActualFee.toFixed(1)}%`, 'success');
-                                                                            }} className="w-full mt-2 py-2 bg-amber-500 text-white font-black text-[9px] uppercase tracking-widest rounded-xl hover:bg-amber-600">
+                                                                            }} className="w-full mt-3 py-2 bg-amber-500 text-white font-black text-[9px] uppercase tracking-widest rounded-xl hover:bg-amber-600 shadow-md">
                                                                                 ⚠️ SESUAIKAN POTONGAN (Override) KE {aActualFee.toFixed(1)}%
                                                                             </button>
                                                                         )}
@@ -2941,10 +3127,32 @@ Instruksi:
                                                                     {samplingArchives.slice(0, 5).map(arc => (
                                                                         <div key={arc.id} className="text-[9px] font-bold bg-slate-100 dark:bg-slate-900 p-2 rounded-lg flex justify-between items-center text-slate-600 dark:text-slate-400">
                                                                             <span>{arc.date} - {arc.timestamp}</span>
-                                                                            <button onClick={() => setSamplingArchives(samplingArchives.filter(a => a.id !== arc.id))} className="text-red-500 hover:text-red-700">Hapus</button>
+                                                                            <div className="flex gap-2 items-center">
+                                                                                <button onClick={() => { setSamplingDate(arc.date); setSamplingData(arc.data || {}); setCurrentSamplingId(arc.id); showStatus('Data dimuat ke form', 'success'); }} className="text-indigo-500 hover:text-indigo-700 transition-colors">Edit</button>
+                                                                                <button onClick={() => setSamplingArchives(samplingArchives.filter(a => a.id !== arc.id))} className="text-red-500 hover:text-red-700 transition-colors">Hapus</button>
+                                                                            </div>
                                                                         </div>
                                                                     ))}
                                                                 </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* TOMBOL AI INSIGHT SAMPLING KHUSUS */}
+                                                    <div className="bg-gradient-to-r from-slate-800 to-slate-900 text-white p-5 rounded-3xl shadow-lg border border-slate-700 relative overflow-hidden">
+                                                        <h4 className="font-black text-indigo-300 uppercase text-[11px] tracking-widest flex items-center gap-2 mb-3">
+                                                            <div className="w-4 h-4"><Icons.Bot /></div> Audit Kasir dengan AI
+                                                        </h4>
+                                                        <p className="text-[10px] text-slate-400 mb-4 leading-relaxed">Minta AI untuk mengevaluasi data anomali atau kerugian (jual boncos) di setiap channel, serta mendapatkan rekomendasi cara mengatasi potongan aplikasi yang bengkak.</p>
+                                                        
+                                                        <button onClick={handleGenerateSamplingAI} disabled={isAnalyzingSampling} className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl text-[10px] uppercase shadow-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                                                            {isAnalyzingSampling ? <div className="w-4 h-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div> : <div className="w-4 h-4"><Icons.Refresh/></div>}
+                                                            {isAnalyzingSampling ? 'MENGANALISA FAKTA KASIR...' : '🤖 ANALISA KEBOCORAN DENGAN AI'}
+                                                        </button>
+
+                                                        {samplingAiInsight && (
+                                                            <div className="mt-5 pt-4 border-t border-slate-700 animate-fadeIn">
+                                                                <div className="text-[11px] leading-relaxed markdown-body text-slate-200" dangerouslySetInnerHTML={{__html: window.marked ? window.marked.parse(samplingAiInsight) : samplingAiInsight}} />
                                                             </div>
                                                         )}
                                                     </div>
