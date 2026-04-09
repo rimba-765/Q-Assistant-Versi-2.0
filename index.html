@@ -209,6 +209,10 @@
             // FITUR BARU 1: Deductions State
             const [deductions, setDeductions] = useState(() => JSON.parse(localStorage.getItem('fin-deductions') || '[]'));
             const [newDeduction, setNewDeduction] = useState({ name: '', amount: '', startDate: getLocalDateStr(), endDate: getLocalDateStr() });
+            // FITUR BARU: State untuk menampung hasil editan manual deduction di hari tertentu
+            const [deductionOverrides, setDeductionOverrides] = useState(() => JSON.parse(localStorage.getItem('fin-deduction-overrides') || '{}'));
+            const [editingDeductDate, setEditingDeductDate] = useState(null);
+            const [editDeductAmount, setEditDeductAmount] = useState('');
             
             // FITUR LAPORAN & ARSIP
             const [reportArchives, setReportArchives] = useState(() => JSON.parse(localStorage.getItem('fin-reports') || '[]'));
@@ -226,6 +230,7 @@
             // Simpan otomatis jika ada perubahan
             useEffect(() => { localStorage.setItem('fin-channels', JSON.stringify(salesChannels)); }, [salesChannels]);
             useEffect(() => { localStorage.setItem('fin-sampling-archives', JSON.stringify(samplingArchives)); }, [samplingArchives]);
+            useEffect(() => { localStorage.setItem('fin-deduction-overrides', JSON.stringify(deductionOverrides)); }, [deductionOverrides]);
 
             const [geminiApiKey, setGeminiApiKey] = useState(() => localStorage.getItem('fin-gemini-api-key') || '');
             const [user, setUser] = useState(null);
@@ -481,11 +486,71 @@
             };
 
             // Helper Deductions aktif
-            const getActiveDeductionsTotal = (targetDateStr) => {
-                return deductions
-                    .filter(d => targetDateStr >= d.startDate && targetDateStr <= d.endDate)
-                    .reduce((sum, d) => sum + d.amount, 0);
-            };
+            // Helper Deductions aktif (Engine Akumulasi Cerdas & Libur)
+const effectiveDailyDeductions = useMemo(() => {
+    const result = {};
+    let carryOver = 0; // Menyimpan akumulasi hutang potongan
+
+    if (deductions.length === 0 && Object.keys(deductionOverrides).length === 0) return result;
+
+    // Cari tanggal paling awal dari semua deduction
+    let minDate = '9999-12-31';
+    deductions.forEach(d => { if (d.startDate < minDate) minDate = d.startDate; });
+    if (minDate === '9999-12-31') minDate = Object.keys(deductionOverrides).sort()[0] || getLocalDateStr();
+
+    // Cari tanggal paling akhir (minimal hari ini, atau sampai akhir bulan di dashboard)
+    let maxDate = getLocalDateStr();
+    const [dYear, dMonth] = dashboardMonth.split('-');
+    const endOfMonthStr = getLocalDateStr(new Date(parseInt(dYear), parseInt(dMonth), 0));
+    if (endOfMonthStr > maxDate) maxDate = endOfMonthStr;
+    deductions.forEach(d => { if (d.endDate > maxDate) maxDate = d.endDate; });
+
+    let currDateObj = new Date(minDate);
+    let maxDateObj = new Date(maxDate);
+
+    // Looping simulasi dari hari pertama sampai terakhir
+    while (currDateObj <= maxDateObj || carryOver > 0) {
+        const dStr = getLocalDateStr(currDateObj);
+        
+        // 1. Hitung base wajib hari ini
+        let baseToday = 0;
+        deductions.forEach(d => {
+            if (dStr >= d.startDate && dStr <= d.endDate) baseToday += d.amount;
+        });
+
+        // 2. Tambahkan ke akumulasi hutang
+        carryOver += baseToday;
+
+        // 3. Tentukan potongan aktual yang terjadi hari ini
+        let actualToday = 0;
+
+        if (deductionOverrides[dStr] !== undefined) {
+            // Jika user mengedit manual hari ini
+            actualToday = deductionOverrides[dStr];
+            // Potong hutang akumulasi (hutang tidak boleh minus)
+            carryOver = Math.max(0, carryOver - actualToday);
+        } else if (holidays.includes(dStr)) {
+            // Jika libur, hari ini tidak bayar (0), tapi hutang tetap menumpuk di carryOver
+            actualToday = 0;
+        } else {
+            // Hari kerja normal: lunasi semua hutang yang menumpuk
+            actualToday = carryOver;
+            carryOver = 0; // Hutang lunas
+        }
+
+        if (actualToday > 0 || deductionOverrides[dStr] !== undefined) {
+            result[dStr] = actualToday;
+        }
+
+        currDateObj.setDate(currDateObj.getDate() + 1);
+        if (currDateObj.getFullYear() > 2100) break; // Failsafe
+    }
+    return result;
+}, [deductions, holidays, deductionOverrides, dashboardMonth]);
+
+const getActiveDeductionsTotal = (targetDateStr) => {
+    return effectiveDailyDeductions[targetDateStr] || 0;
+};
 
             // Modifikasi perhitungan Cash Flow (menambahkan Pengeluaran Pribadi dan Deductions)
             const getBalanceUpTo = (targetDateStr) => {
@@ -503,8 +568,10 @@
                 const todayStr = getLocalDateStr();
                 if(targetDateStr >= todayStr) uniqueDates.add(todayStr);
 
-                uniqueDates.forEach(dateStr => {
-                     bal -= getActiveDeductionsTotal(dateStr);
+                // Kalkulasi pemotongan saldo dari engine baru
+                Object.keys(effectiveDailyDeductions).forEach(dateStr => {
+                if (dateStr <= targetDateStr) {bal -= effectiveDailyDeductions[dateStr];
+                }
                 });
 
                 agendas.filter(a => a.date <= targetDateStr).forEach(a => {
@@ -4109,12 +4176,54 @@ Balas dalam format Markdown yang elegan dan profesional. Panggil user "Bos".`;
                                                             <span className="font-black text-red-500 dark:text-red-400">-{formatNumber(ag.amount)}</span>
                                                         </div>
                                                     ))}
-                                                    {day.details.deductions > 0 && (
-                                                        <div className="flex justify-between text-[10px]">
-                                                            <span className="font-bold text-slate-600 dark:text-slate-300 uppercase">🔸 Potongan Sistem (Deductions)</span>
-                                                            <span className="font-black text-orange-500 dark:text-orange-400">-{formatNumber(day.details.deductions)}</span>
-                                                        </div>
-                                                    )}
+                                                    {/* FITUR BARU: Edit Deduction Langsung & Info Akumulasi Libur */}
+{(day.details.deductions > 0 || deductionOverrides[day.date] !== undefined || deductions.some(d => day.date >= d.startDate && day.date <= d.endDate)) && (
+    <div className="flex flex-col text-[10px] mt-1 pt-1 border-t border-dashed border-slate-200 dark:border-slate-700">
+        {editingDeductDate === day.date ? (
+            <div className="flex items-center gap-2 mt-1">
+                <span className="font-bold text-slate-600 uppercase flex-1">🔸 Edit Potongan</span>
+                <input 
+                    type="text" 
+                    inputMode="numeric"
+                    autoFocus
+                    value={formatInputRp(editDeductAmount)} 
+                    onChange={e => setEditDeductAmount(parseInputRp(e.target.value))} 
+                    className="w-24 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 outline-none text-right font-black text-orange-500"
+                />
+                <button onClick={() => {
+                    setDeductionOverrides(prev => ({...prev, [day.date]: parseFloat(editDeductAmount) || 0}));
+                    setEditingDeductDate(null);
+                    showStatus('Potongan harian diubah!', 'success');
+                }} className="bg-indigo-500 text-white px-2 py-1 rounded font-bold shadow-sm">OK</button>
+                <button onClick={() => setEditingDeductDate(null)} className="bg-slate-300 text-slate-700 px-2 py-1 rounded font-bold">X</button>
+            </div>
+        ) : (
+            <div className="flex justify-between items-center group cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 p-1 -mx-1 rounded transition-colors" onClick={() => { setEditingDeductDate(day.date); setEditDeductAmount(day.details.deductions); }}>
+                <span className="font-bold text-slate-600 dark:text-slate-300 uppercase flex items-center gap-1">
+                    🔸 Potongan Sistem 
+                    <span className="text-[8px] bg-slate-200 dark:bg-slate-700 text-slate-500 px-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">Edit</span>
+                    {deductionOverrides[day.date] !== undefined && <span className="text-[8px] bg-indigo-100 text-indigo-600 px-1 rounded">Diedit Manual</span>}
+                </span>
+                <div className="flex items-center gap-2">
+                        <span className="font-black text-orange-500 dark:text-orange-400">-{formatNumber(day.details.deductions)}</span>
+                        {deductionOverrides[day.date] !== undefined && (
+                            <button onClick={(e) => {
+                                e.stopPropagation();
+                                const newOverrides = {...deductionOverrides};
+                                delete newOverrides[day.date];
+                                setDeductionOverrides(newOverrides);
+                                showStatus('Dikembalikan ke otomatis', 'success');
+                            }} className="text-red-400 hover:text-red-600 p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30">
+                                {/* FIX: Tambahkan pembungkus div w-3.5 h-3.5 di sini */}
+                                <div className="w-3.5 h-3.5"><Icons.Trash /></div>
+                            </button>
+                        )}
+                    </div>
+            </div>
+        )}
+        {day.isHoliday && day.details.deductions === 0 && <p className="text-[8px] text-amber-500 font-medium italic ml-1 mt-0.5">Hari libur, potongan diakumulasi ke hari buka selanjutnya.</p>}
+    </div>
+)}
                                                     {(!day.details.incomes.length && !day.details.expenses.length && !day.details.agendas.length && day.details.deductions === 0) && (
                                                         <div className="text-center text-[9px] text-slate-400 dark:text-slate-500 italic font-bold">Tidak ada rincian data aktual</div>
                                                     )}
